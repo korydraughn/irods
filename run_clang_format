@@ -1,0 +1,4 @@
+#! /bin/bash
+
+# All source files.
+clang-format -i $(find . \( -name '*.[hc]' -o -name '*.[hct]pp' \) \! -path '*build*' \! -path '*doxygen*' | sort)
