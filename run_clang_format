@@ -1,0 +1,4 @@
+#! /bin/bash
+
+# Only implementation files.
+clang-format -i $(find . \( -name '*.c' -o -name '*.[ct]pp' \) \! -path '*build*' \! -path '*doxygen*' | sort)
