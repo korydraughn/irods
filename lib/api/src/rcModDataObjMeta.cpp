@@ -18,20 +18,18 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcModDataObjMeta( rcComm_t *conn, modDataObjMeta_t *modDataObjMetaInp ) {
+ **/
+int rcModDataObjMeta(rcComm_t* conn, modDataObjMeta_t* modDataObjMetaInp)
+{
     int status;
-    dataObjInfo_t *srcNext;
+    dataObjInfo_t* srcNext;
 
     srcNext = modDataObjMetaInp->dataObjInfo->next;
     modDataObjMetaInp->dataObjInfo->next = NULL;
 
-    status = procApiRequest( conn, MOD_DATA_OBJ_META_AN, modDataObjMetaInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, MOD_DATA_OBJ_META_AN, modDataObjMetaInp, NULL, (void**) NULL, NULL);
 
     modDataObjMetaInp->dataObjInfo->next = srcNext;
-
 
     return status;
 }

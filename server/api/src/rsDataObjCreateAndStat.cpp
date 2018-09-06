@@ -10,23 +10,20 @@
 #include "rcGlobalExtern.h"
 #include "rsDataObjCreate.hpp"
 
-int
-rsDataObjCreateAndStat( rsComm_t *rsComm, dataObjInp_t *dataObjInp,
-                        openStat_t **openStat ) {
+int rsDataObjCreateAndStat(rsComm_t* rsComm, dataObjInp_t* dataObjInp, openStat_t** openStat)
+{
     int status;
 
-    status = rsDataObjCreate( rsComm, dataObjInp );
+    status = rsDataObjCreate(rsComm, dataObjInp);
 
-    if ( status >= 0 ) {
-        *openStat = ( openStat_t* )malloc( sizeof( openStat_t ) );
-        ( *openStat )->dataSize = L1desc[status].dataObjInfo->dataSize;
-        rstrcpy( ( *openStat )->dataMode, L1desc[status].dataObjInfo->dataMode,
-                 SHORT_STR_LEN );
-        rstrcpy( ( *openStat )->dataType, L1desc[status].dataObjInfo->dataType,
-                 NAME_LEN );
-        ( *openStat )->l3descInx = L1desc[status].l3descInx;
-        ( *openStat )->replStatus = L1desc[status].replStatus;
-        ( *openStat )->replNum = L1desc[status].dataObjInfo->replNum;
+    if (status >= 0) {
+        *openStat = (openStat_t*) malloc(sizeof(openStat_t));
+        (*openStat)->dataSize = L1desc[status].dataObjInfo->dataSize;
+        rstrcpy((*openStat)->dataMode, L1desc[status].dataObjInfo->dataMode, SHORT_STR_LEN);
+        rstrcpy((*openStat)->dataType, L1desc[status].dataObjInfo->dataType, NAME_LEN);
+        (*openStat)->l3descInx = L1desc[status].l3descInx;
+        (*openStat)->replStatus = L1desc[status].replStatus;
+        (*openStat)->replNum = L1desc[status].dataObjInfo->replNum;
     }
     else {
         *openStat = NULL;

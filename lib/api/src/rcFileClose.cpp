@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileClose( rcComm_t *conn, fileCloseInp_t *fileCloseInp ) {
+ **/
+int rcFileClose(rcComm_t* conn, fileCloseInp_t* fileCloseInp)
+{
     int status;
-    status = procApiRequest( conn, FILE_CLOSE_AN,  fileCloseInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, FILE_CLOSE_AN, fileCloseInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

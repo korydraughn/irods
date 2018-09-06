@@ -20,7 +20,7 @@
  * \remark none
  *
  * \note none
-*
+ *
  * \param[in] conn - A rcComm_t connection handle to the server.
  * \param[in] ruleExecDelInp
  *
@@ -30,13 +30,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcRuleExecDel( rcComm_t *conn, ruleExecDelInp_t *ruleExecDelInp ) {
+ **/
+int rcRuleExecDel(rcComm_t* conn, ruleExecDelInp_t* ruleExecDelInp)
+{
     int status;
-    status = procApiRequest( conn, RULE_EXEC_DEL_AN, ruleExecDelInp,
-                             NULL, ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, RULE_EXEC_DEL_AN, ruleExecDelInp, NULL, (void**) NULL, NULL);
 
     return status;
 }
-

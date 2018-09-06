@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileOpendir( rcComm_t *conn, fileOpendirInp_t *fileOpendirInp ) {
+ **/
+int rcFileOpendir(rcComm_t* conn, fileOpendirInp_t* fileOpendirInp)
+{
     int status;
-    status = procApiRequest( conn, FILE_OPENDIR_AN,  fileOpendirInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, FILE_OPENDIR_AN, fileOpendirInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

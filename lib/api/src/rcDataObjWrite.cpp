@@ -73,14 +73,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcDataObjWrite( rcComm_t *conn, openedDataObjInp_t *dataObjWriteInp,
-                bytesBuf_t *dataObjWriteInpBBuf ) {
+int rcDataObjWrite(rcComm_t* conn, openedDataObjInp_t* dataObjWriteInp, bytesBuf_t* dataObjWriteInpBBuf)
+{
     int status;
-    status = procApiRequest( conn, DATA_OBJ_WRITE_AN,  dataObjWriteInp,
-                             dataObjWriteInpBBuf, ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, DATA_OBJ_WRITE_AN, dataObjWriteInp, dataObjWriteInpBBuf, (void**) NULL, NULL);
 
     return status;
 }

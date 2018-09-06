@@ -57,13 +57,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcDataObjClose( rcComm_t *conn, openedDataObjInp_t *dataObjCloseInp ) {
+int rcDataObjClose(rcComm_t* conn, openedDataObjInp_t* dataObjCloseInp)
+{
     int status;
-    status = procApiRequest( conn, DATA_OBJ_CLOSE_AN,  dataObjCloseInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, DATA_OBJ_CLOSE_AN, dataObjCloseInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

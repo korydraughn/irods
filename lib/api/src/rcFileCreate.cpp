@@ -19,14 +19,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileCreate( rcComm_t *conn, fileCreateInp_t *fileCreateInp, fileCreateOut_t** _out ) {
+ **/
+int rcFileCreate(rcComm_t* conn, fileCreateInp_t* fileCreateInp, fileCreateOut_t** _out)
+{
     int status;
 
-    status = procApiRequest( conn, FILE_CREATE_AN, fileCreateInp, NULL,
-                             ( void ** ) _out, NULL );
+    status = procApiRequest(conn, FILE_CREATE_AN, fileCreateInp, NULL, (void**) _out, NULL);
 
     return status;
 }
-

@@ -10,100 +10,86 @@
 #include "irods_random.hpp"
 #include "irods_configuration_keywords.hpp"
 
-int
-rsRuleExecSubmit( rsComm_t *rsComm, ruleExecSubmitInp_t *ruleExecSubmitInp,
-                  char **ruleExecId ) {
-    rodsServerHost_t *rodsServerHost;
+int rsRuleExecSubmit(rsComm_t* rsComm, ruleExecSubmitInp_t* ruleExecSubmitInp, char** ruleExecId)
+{
+    rodsServerHost_t* rodsServerHost;
     int status;
 
     *ruleExecId = NULL;
 
-    if ( ruleExecSubmitInp == NULL ||
-            ruleExecSubmitInp->packedReiAndArgBBuf == NULL ||
-            ruleExecSubmitInp->packedReiAndArgBBuf->len <= 0 ||
-            ruleExecSubmitInp->packedReiAndArgBBuf->buf == NULL ) {
-        rodsLog( LOG_NOTICE,
-                 "rsRuleExecSubmit error. NULL input" );
+    if (ruleExecSubmitInp == NULL || ruleExecSubmitInp->packedReiAndArgBBuf == NULL ||
+        ruleExecSubmitInp->packedReiAndArgBBuf->len <= 0 || ruleExecSubmitInp->packedReiAndArgBBuf->buf == NULL) {
+        rodsLog(LOG_NOTICE, "rsRuleExecSubmit error. NULL input");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    status = getAndConnReHost( rsComm, &rodsServerHost );
-    if ( status < 0 ) {
+    status = getAndConnReHost(rsComm, &rodsServerHost);
+    if (status < 0) {
         return status;
     }
 
-    if ( rodsServerHost->localFlag == LOCAL_HOST ) {
+    if (rodsServerHost->localFlag == LOCAL_HOST) {
         std::string svc_role;
         irods::error ret = get_catalog_service_role(svc_role);
-        if(!ret.ok()) {
+        if (!ret.ok()) {
             irods::log(PASS(ret));
             return ret.code();
         }
 
-        if( irods::CFG_SERVICE_ROLE_PROVIDER == svc_role ) {
-            status = _rsRuleExecSubmit( rsComm, ruleExecSubmitInp );
-            if ( status >= 0 ) {
-                *ruleExecId = strdup( ruleExecSubmitInp->ruleExecId );
+        if (irods::CFG_SERVICE_ROLE_PROVIDER == svc_role) {
+            status = _rsRuleExecSubmit(rsComm, ruleExecSubmitInp);
+            if (status >= 0) {
+                *ruleExecId = strdup(ruleExecSubmitInp->ruleExecId);
             }
-        } else if( irods::CFG_SERVICE_ROLE_CONSUMER == svc_role ) {
-            rodsLog( LOG_NOTICE,
-                     "rsRuleExecSubmit error. ICAT is not configured on this host" );
+        }
+        else if (irods::CFG_SERVICE_ROLE_CONSUMER == svc_role) {
+            rodsLog(LOG_NOTICE, "rsRuleExecSubmit error. ICAT is not configured on this host");
             return SYS_NO_ICAT_SERVER_ERR;
-        } else {
-            rodsLog(
-                LOG_ERROR,
-                "role not supported [%s]",
-                svc_role.c_str() );
+        }
+        else {
+            rodsLog(LOG_ERROR, "role not supported [%s]", svc_role.c_str());
             status = SYS_SERVICE_ROLE_NOT_SUPPORTED;
         }
-
     }
     else {
-        if ( getValByKey( &ruleExecSubmitInp->condInput, EXEC_LOCALLY_KW ) !=
-                NULL ) {
-            rodsLog( LOG_ERROR,
-                     "rsRuleExecSubmit: reHost config error. reServer not running locally" );
+        if (getValByKey(&ruleExecSubmitInp->condInput, EXEC_LOCALLY_KW) != NULL) {
+            rodsLog(LOG_ERROR, "rsRuleExecSubmit: reHost config error. reServer not running locally");
             return SYS_CONFIG_FILE_ERR;
         }
         else {
-            addKeyVal( &ruleExecSubmitInp->condInput, EXEC_LOCALLY_KW, "" );
+            addKeyVal(&ruleExecSubmitInp->condInput, EXEC_LOCALLY_KW, "");
         }
-        status = rcRuleExecSubmit( rodsServerHost->conn, ruleExecSubmitInp,
-                                   ruleExecId );
+        status = rcRuleExecSubmit(rodsServerHost->conn, ruleExecSubmitInp, ruleExecId);
     }
-    if ( status < 0 ) {
-        rodsLog( LOG_ERROR,
-                 "rsRuleExecSubmit: rcRuleExecSubmit failed, status = %d",
-                 status );
+    if (status < 0) {
+        rodsLog(LOG_ERROR, "rsRuleExecSubmit: rcRuleExecSubmit failed, status = %d", status);
     }
     return status;
 }
 
-int
-_rsRuleExecSubmit( rsComm_t *rsComm, ruleExecSubmitInp_t *ruleExecSubmitInp ) {
+int _rsRuleExecSubmit(rsComm_t* rsComm, ruleExecSubmitInp_t* ruleExecSubmitInp)
+{
     int reiFd;
     int status;
 
     /* write the packedReiAndArgBBuf to local file */
-    while ( 1 ) {
-        status = getReiFilePath( ruleExecSubmitInp->reiFilePath,
-                                 ruleExecSubmitInp->userName );
-        if ( status < 0 ) {
-            rodsLog( LOG_ERROR,
-                     "rsRuleExecSubmit: getReiFilePath failed, status = %d", status );
+    while (1) {
+        status = getReiFilePath(ruleExecSubmitInp->reiFilePath, ruleExecSubmitInp->userName);
+        if (status < 0) {
+            rodsLog(LOG_ERROR, "rsRuleExecSubmit: getReiFilePath failed, status = %d", status);
             return status;
         }
-        reiFd = open( ruleExecSubmitInp->reiFilePath, O_CREAT | O_EXCL | O_RDWR,
-                      0640 );
-        if ( reiFd < 0 ) {
-            if ( errno == EEXIST ) {
+        reiFd = open(ruleExecSubmitInp->reiFilePath, O_CREAT | O_EXCL | O_RDWR, 0640);
+        if (reiFd < 0) {
+            if (errno == EEXIST) {
                 continue;
             }
             else {
                 status = SYS_OPEN_REI_FILE_ERR - errno;
-                rodsLog( LOG_ERROR,
-                         "rsRuleExecSubmit: create failed for %s, status = %d",
-                         ruleExecSubmitInp->reiFilePath, status );
+                rodsLog(LOG_ERROR,
+                        "rsRuleExecSubmit: create failed for %s, status = %d",
+                        ruleExecSubmitInp->reiFilePath,
+                        status);
                 return status;
             }
         }
@@ -112,55 +98,52 @@ _rsRuleExecSubmit( rsComm_t *rsComm, ruleExecSubmitInp_t *ruleExecSubmitInp ) {
         }
     }
 
-    status = write( reiFd, ruleExecSubmitInp->packedReiAndArgBBuf->buf,
-                    ruleExecSubmitInp->packedReiAndArgBBuf->len );
+    status = write(reiFd, ruleExecSubmitInp->packedReiAndArgBBuf->buf, ruleExecSubmitInp->packedReiAndArgBBuf->len);
 
-    close( reiFd );
+    close(reiFd);
 
-    if ( status != ruleExecSubmitInp->packedReiAndArgBBuf->len ) {
-        rodsLog( LOG_ERROR,
-                 "rsRuleExecSubmit: write rei error.toWrite %d, %d written",
-                 ruleExecSubmitInp->packedReiAndArgBBuf->len, status );
+    if (status != ruleExecSubmitInp->packedReiAndArgBBuf->len) {
+        rodsLog(LOG_ERROR,
+                "rsRuleExecSubmit: write rei error.toWrite %d, %d written",
+                ruleExecSubmitInp->packedReiAndArgBBuf->len,
+                status);
         return SYS_COPY_LEN_ERR - errno;
     }
 
     /* register the request */
     std::string svc_role;
     irods::error ret = get_catalog_service_role(svc_role);
-    if(!ret.ok()) {
+    if (!ret.ok()) {
         irods::log(PASS(ret));
         return ret.code();
     }
 
-    if( irods::CFG_SERVICE_ROLE_PROVIDER == svc_role ) {
-        status = chlRegRuleExec( rsComm, ruleExecSubmitInp );
-        if ( status < 0 ) {
-            rodsLog( LOG_ERROR,
-                     "_rsRuleExecSubmit: chlRegRuleExec error. status = %d", status );
+    if (irods::CFG_SERVICE_ROLE_PROVIDER == svc_role) {
+        status = chlRegRuleExec(rsComm, ruleExecSubmitInp);
+        if (status < 0) {
+            rodsLog(LOG_ERROR, "_rsRuleExecSubmit: chlRegRuleExec error. status = %d", status);
         }
         return status;
-    } else if( irods::CFG_SERVICE_ROLE_CONSUMER == svc_role ) {
-        rodsLog( LOG_ERROR,
-                 "_rsRuleExecSubmit error. ICAT is not configured on this host" );
+    }
+    else if (irods::CFG_SERVICE_ROLE_CONSUMER == svc_role) {
+        rodsLog(LOG_ERROR, "_rsRuleExecSubmit error. ICAT is not configured on this host");
         return SYS_NO_ICAT_SERVER_ERR;
-    } else {
-        rodsLog(
-            LOG_ERROR,
-            "role not supported [%s]",
-            svc_role.c_str() );
+    }
+    else {
+        rodsLog(LOG_ERROR, "role not supported [%s]", svc_role.c_str());
         return SYS_SERVICE_ROLE_NOT_SUPPORTED;
     }
 }
 
-int
-getReiFilePath( char *reiFilePath, char *userName ) {
-    char *myUserName;
+int getReiFilePath(char* reiFilePath, char* userName)
+{
+    char* myUserName;
 
-    if ( reiFilePath == NULL ) {
+    if (reiFilePath == NULL) {
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    if ( userName == NULL || strlen( userName ) == 0 ) {
+    if (userName == NULL || strlen(userName) == 0) {
         myUserName = DEF_REI_USER_NAME;
     }
     else {
@@ -168,22 +151,19 @@ getReiFilePath( char *reiFilePath, char *userName ) {
     }
 
     std::string rei_dir;
-    irods::error ret = irods::get_full_path_for_unmoved_configs(
-                           PACKED_REI_DIR,
-                           rei_dir );
-    if ( !ret.ok() ) {
-        irods::log( PASS( ret ) );
+    irods::error ret = irods::get_full_path_for_unmoved_configs(PACKED_REI_DIR, rei_dir);
+    if (!ret.ok()) {
+        irods::log(PASS(ret));
         return ret.code();
     }
 
-    snprintf(
-        reiFilePath,
-        MAX_NAME_LEN,
-        "%-s/%-s.%-s.%-u",
-        rei_dir.c_str(),
-        REI_FILE_NAME,
-        myUserName,
-        irods::getRandom<unsigned int>() );
+    snprintf(reiFilePath,
+             MAX_NAME_LEN,
+             "%-s/%-s.%-s.%-u",
+             rei_dir.c_str(),
+             REI_FILE_NAME,
+             myUserName,
+             irods::getRandom<unsigned int>());
 
     return 0;
 }

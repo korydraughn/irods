@@ -4,69 +4,65 @@
 //#include "reFuncDefs.hpp"
 #include "icatHighLevelRoutines.hpp"
 
-int
-print_hello( ruleExecInfo_t *rei ) {
+int print_hello(ruleExecInfo_t* rei)
+{
     /***
     rodsLog(LOG_NOTICE, "TTTTT Hello\n");
     rodsLogAndErrorMsg(LOG_NOTICE, &(rei->rsComm->rError),-1, "VVVVV Hello\n");
     ***/
-    RE_TEST_MACRO( "Test for print_hello\n" );
-    fprintf( stdout, "Hello\n" );
-    _writeString( "stdout", "Hello\n", rei );
+    RE_TEST_MACRO("Test for print_hello\n");
+    fprintf(stdout, "Hello\n");
+    _writeString("stdout", "Hello\n", rei);
     return 0;
 }
-int
-recover_print_hello( ruleExecInfo_t *rei ) {
-    RE_TEST_MACRO( "\b\b\b\b\b     \b\b\b\b\b" );
-    fprintf( stdout, "\b\b\b\b\b     \b\b\b\b\b" );
-    return 0;
-}
-
-int
-print_doi( dataObjInfo_t *doi ) {
-    rodsLog( LOG_NOTICE, "     objPath = %s\n", doi->objPath );
-    rodsLog( LOG_NOTICE, "     rescName= %s\n", doi->rescName );
-    rodsLog( LOG_NOTICE, "     dataType= %s\n", doi->dataType );
-    rodsLog( LOG_NOTICE, "     dataSize= %lld\n", doi->dataSize );
+int recover_print_hello(ruleExecInfo_t* rei)
+{
+    RE_TEST_MACRO("\b\b\b\b\b     \b\b\b\b\b");
+    fprintf(stdout, "\b\b\b\b\b     \b\b\b\b\b");
     return 0;
 }
 
+int print_doi(dataObjInfo_t* doi)
+{
+    rodsLog(LOG_NOTICE, "     objPath = %s\n", doi->objPath);
+    rodsLog(LOG_NOTICE, "     rescName= %s\n", doi->rescName);
+    rodsLog(LOG_NOTICE, "     dataType= %s\n", doi->dataType);
+    rodsLog(LOG_NOTICE, "     dataSize= %lld\n", doi->dataSize);
+    return 0;
+}
 
-int
-print_uoi( userInfo_t *uoi ) {
-    rodsLog( LOG_NOTICE, "     userName= %s\n", uoi->userName );
-    rodsLog( LOG_NOTICE, "     rodsZone= %s\n", uoi->rodsZone );
-    rodsLog( LOG_NOTICE, "     userType= %s\n", uoi->userType );
+int print_uoi(userInfo_t* uoi)
+{
+    rodsLog(LOG_NOTICE, "     userName= %s\n", uoi->userName);
+    rodsLog(LOG_NOTICE, "     rodsZone= %s\n", uoi->rodsZone);
+    rodsLog(LOG_NOTICE, "     userType= %s\n", uoi->userType);
 
     return 0;
 }
 
-int msiAW1( msParam_t* mPIn, msParam_t* mPOut2, ruleExecInfo_t* ) {
-    char *In;
+int msiAW1(msParam_t* mPIn, msParam_t* mPOut2, ruleExecInfo_t*)
+{
+    char* In;
 
-    In  = ( char * ) mPIn->inOutStruct;
+    In = (char*) mPIn->inOutStruct;
 
-    rodsLog( LOG_NOTICE, "ALPHA: ------>  In:%s\n", In );
-    mPOut2->type = strdup( STR_MS_T );
-    mPOut2->inOutStruct = strdup( "Microservice_1" );
+    rodsLog(LOG_NOTICE, "ALPHA: ------>  In:%s\n", In);
+    mPOut2->type = strdup(STR_MS_T);
+    mPOut2->inOutStruct = strdup("Microservice_1");
     return 0;
-
 }
 
+int msiCutBufferInHalf(msParam_t* mPIn, ruleExecInfo_t* rei)
+{
+    RE_TEST_MACRO("Test for msiCutBufferInHalf\n");
 
-int msiCutBufferInHalf( msParam_t* mPIn, ruleExecInfo_t *rei ) {
-
-    RE_TEST_MACRO( "Test for msiCutBufferInHalf\n" );
-
-    if ( mPIn == NULL || mPIn->inpOutBuf == NULL ) {
-        rodsLog( LOG_ERROR, "msiCutBufferInHalf: input is NULL." );
+    if (mPIn == NULL || mPIn->inpOutBuf == NULL) {
+        rodsLog(LOG_ERROR, "msiCutBufferInHalf: input is NULL.");
         return USER__NULL_INPUT_ERR;
     }
-    mPIn->inpOutBuf->len = ( mPIn->inpOutBuf->len ) / 2;
+    mPIn->inpOutBuf->len = (mPIn->inpOutBuf->len) / 2;
     return 0;
-
 }
-
 
 /**
  * \fn msiDoSomething(msParam_t *inParam, msParam_t *outParam, ruleExecInfo_t *rei)
@@ -111,43 +107,36 @@ int msiCutBufferInHalf( msParam_t* mPIn, ruleExecInfo_t *rei ) {
  * \pre None
  * \post None
  * \sa None
-**/
-int
-msiDoSomething( msParam_t *, msParam_t *outParam, ruleExecInfo_t * rei ) {
-    keyValPair_t *myKeyVal;						/* will contain results */
+ **/
+int msiDoSomething(msParam_t*, msParam_t* outParam, ruleExecInfo_t* rei)
+{
+    keyValPair_t* myKeyVal; /* will contain results */
 
     /* For testing mode when used with irule --test */
-    RE_TEST_MACRO( "    Calling msiDoSomething" )
+    RE_TEST_MACRO("    Calling msiDoSomething")
 
     /* Sanity checks */
-    if ( rei == NULL || rei->rsComm == NULL ) {
-        rodsLog( LOG_ERROR, "msiDoSomething: input rei or rsComm is NULL." );
+    if (rei == NULL || rei->rsComm == NULL) {
+        rodsLog(LOG_ERROR, "msiDoSomething: input rei or rsComm is NULL.");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
     /* myKeyVal init */
-    myKeyVal = ( keyValPair_t* ) malloc( sizeof( keyValPair_t ) );
-    memset( myKeyVal, 0, sizeof( keyValPair_t ) );
-
+    myKeyVal = (keyValPair_t*) malloc(sizeof(keyValPair_t));
+    memset(myKeyVal, 0, sizeof(keyValPair_t));
 
     /***************************/
     /******** YOUR CODE ********/
     /***************************/
 
     /* Return myKeyVal through outParam */
-    outParam->type = strdup( KeyValPair_MS_T );
-    outParam->inOutStruct = ( void* ) myKeyVal;
+    outParam->type = strdup(KeyValPair_MS_T);
+    outParam->inOutStruct = (void*) myKeyVal;
 
     return 0;
 }
 
-int
-msiTakeThreeArgumentsAndDoNothing(
-    msParam_t* arg1,
-    msParam_t* arg2,
-    msParam_t* arg3,
-    ruleExecInfo_t* rei) {
-
+int msiTakeThreeArgumentsAndDoNothing(msParam_t* arg1, msParam_t* arg2, msParam_t* arg3, ruleExecInfo_t* rei)
+{
     return 0;
 }
-

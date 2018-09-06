@@ -16,7 +16,6 @@
 #include <sys/types.h>
 #include <pwd.h>
 
-
 /**
  * \fn msiSendMail(msParam_t* xtoAddr, msParam_t* xsubjectLine, msParam_t* xbody, ruleExecInfo_t *)
  *
@@ -27,7 +26,8 @@
  * \since pre-2.1
  *
  *
- * \note   This microservice sends e-mail using the mail command in the unix system. No attachments are supported. The sender of the e-mail is the unix user-id running the irodsServer.
+ * \note   This microservice sends e-mail using the mail command in the unix system. No attachments are supported. The
+ *sender of the e-mail is the unix user-id running the irodsServer.
  *
  * \usage See clients/icommands/test/rules/
  *
@@ -49,72 +49,72 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int msiSendMail( msParam_t* xtoAddr, msParam_t* xsubjectLine, msParam_t* xbody, ruleExecInfo_t* ) {
+ **/
+int msiSendMail(msParam_t* xtoAddr, msParam_t* xsubjectLine, msParam_t* xbody, ruleExecInfo_t*)
+{
+    const char* toAddr = (char*) xtoAddr->inOutStruct;
+    const char* subjectLine = xsubjectLine->inOutStruct ? (char*) xsubjectLine->inOutStruct : "";
+    const char* body = xbody->inOutStruct ? (char*) xbody->inOutStruct : "";
 
-    const char * toAddr = ( char * ) xtoAddr->inOutStruct;
-    const char * subjectLine = xsubjectLine->inOutStruct ? ( char * ) xsubjectLine->inOutStruct : "";
-    const char * body = xbody->inOutStruct ? ( char * ) xbody->inOutStruct : "";
-
-    if ( int status = checkStringForEmailAddress( toAddr ) ) {
-        rodsLog( LOG_NOTICE, "checkStringForEmailAddress failed for [%s]", toAddr );
+    if (int status = checkStringForEmailAddress(toAddr)) {
+        rodsLog(LOG_NOTICE, "checkStringForEmailAddress failed for [%s]", toAddr);
         return status;
     }
-    if ( int status = checkStringForSystem( subjectLine ) ) {
-        rodsLog( LOG_NOTICE, "checkStringForSystem failed for [%s]", subjectLine );
+    if (int status = checkStringForSystem(subjectLine)) {
+        rodsLog(LOG_NOTICE, "checkStringForSystem failed for [%s]", subjectLine);
         return status;
     }
 
     char fName[] = "/tmp/irods_mailFileXXXXXXXXXX";
-    int fd = mkstemp( fName );
+    int fd = mkstemp(fName);
     if (fd < 0) {
         rodsLog(LOG_ERROR, "msiSendMail: mkstemp() failed [%s] %d - %d", fName, fd, errno);
         return FILE_OPEN_ERR;
     }
 
     FILE* file = fdopen(fd, "w");
-    if ( file == NULL ) {
-        rodsLog( LOG_ERROR, "failed to create file [%s] errno %d", fName, errno );
+    if (file == NULL) {
+        rodsLog(LOG_ERROR, "failed to create file [%s] errno %d", fName, errno);
         return FILE_CREATE_ERROR;
     }
 #ifdef solaris_platform
-    if ( strlen( subjectLine ) > 0 ) {
-        fprintf( file, "Subject:%s\n\n", subjectLine );
+    if (strlen(subjectLine) > 0) {
+        fprintf(file, "Subject:%s\n\n", subjectLine);
     }
 #endif
-    const char * t1 = body;
-    while ( const char * t2 = strstr( t1, "\\n" ) ) {
-        fwrite( t1, sizeof( *t1 ), t2 - t1, file );
-        fprintf( file, "\n" );
+    const char* t1 = body;
+    while (const char* t2 = strstr(t1, "\\n")) {
+        fwrite(t1, sizeof(*t1), t2 - t1, file);
+        fprintf(file, "\n");
         t1 = t2 + 2;
     }
-    fprintf( file, "%s\n", t1 );
-    fclose( file );
-    char * mailStr = ( char* )malloc( strlen( toAddr ) + strlen( subjectLine ) + 100 );
-    if ( mailStr == NULL ) {
+    fprintf(file, "%s\n", t1);
+    fclose(file);
+    char* mailStr = (char*) malloc(strlen(toAddr) + strlen(subjectLine) + 100);
+    if (mailStr == NULL) {
         return SYS_MALLOC_ERR;
     }
 
 #ifdef solaris_platform
-    sprintf( mailStr, "cat %s| mail  '%s'", fName, toAddr );
+    sprintf(mailStr, "cat %s| mail  '%s'", fName, toAddr);
 #else /* tested for linux - not sure how other platforms operate for subject */
-    if ( strlen( subjectLine ) > 0 ) {
-        sprintf( mailStr, "cat %s| mail -s '%s'  '%s'", fName, subjectLine, toAddr );
+    if (strlen(subjectLine) > 0) {
+        sprintf(mailStr, "cat %s| mail -s '%s'  '%s'", fName, subjectLine, toAddr);
     }
     else {
-        sprintf( mailStr, "cat %s| mail  '%s'", fName, toAddr );
+        sprintf(mailStr, "cat %s| mail  '%s'", fName, toAddr);
     }
 #endif
     int ret = 0;
-    ret = system( mailStr );
-    if ( ret ) {
-        irods::log( ERROR( ret, "mailStr command returned non-zero status" ) );
+    ret = system(mailStr);
+    if (ret) {
+        irods::log(ERROR(ret, "mailStr command returned non-zero status"));
     }
-    sprintf( mailStr, "rm %s", fName );
-    ret = system( mailStr );
-    if ( ret ) {
-        irods::log( ERROR( ret, "mailStr command returned non-zero status" ) );
+    sprintf(mailStr, "rm %s", fName);
+    ret = system(mailStr);
+    if (ret) {
+        irods::log(ERROR(ret, "mailStr command returned non-zero status"));
     }
-    free( mailStr );
+    free(mailStr);
     return 0;
 }

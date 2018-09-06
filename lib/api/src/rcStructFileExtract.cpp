@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcStructFileExtract( rcComm_t *conn, structFileOprInp_t *structFileOprInp ) {
+ **/
+int rcStructFileExtract(rcComm_t* conn, structFileOprInp_t* structFileOprInp)
+{
     int status;
-    status = procApiRequest( conn, STRUCT_FILE_EXTRACT_AN,
-                             structFileOprInp, NULL, ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, STRUCT_FILE_EXTRACT_AN, structFileOprInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

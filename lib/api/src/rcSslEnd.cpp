@@ -5,11 +5,10 @@
 #include "procApiRequest.h"
 #include "apiNumber.h"
 
-int
-rcSslEnd( rcComm_t *conn, sslEndInp_t *sslEndInp ) {
+int rcSslEnd(rcComm_t* conn, sslEndInp_t* sslEndInp)
+{
     int status;
-    status = procApiRequest( conn, SSL_END_AN,  sslEndInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, SSL_END_AN, sslEndInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

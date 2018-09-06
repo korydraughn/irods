@@ -33,15 +33,14 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcGetMiscSvrInfo( rcComm_t *conn, miscSvrInfo_t **outSvrInfo ) {
+ **/
+int rcGetMiscSvrInfo(rcComm_t* conn, miscSvrInfo_t** outSvrInfo)
+{
     int status;
 
     *outSvrInfo = NULL;
 
-    status = procApiRequest( conn, GET_MISC_SVR_INFO_AN, NULL, NULL,
-                             ( void ** ) outSvrInfo, NULL );
+    status = procApiRequest(conn, GET_MISC_SVR_INFO_AN, NULL, NULL, (void**) outSvrInfo, NULL);
 
     return status;
 }

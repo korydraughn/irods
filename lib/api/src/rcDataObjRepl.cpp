@@ -77,34 +77,31 @@
  * \sa none
  **/
 
-int
-rcDataObjRepl( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
+int rcDataObjRepl(rcComm_t* conn, dataObjInp_t* dataObjInp)
+{
     int status;
-    transferStat_t *transferStat = NULL;
+    transferStat_t* transferStat = NULL;
 
-    memset( &conn->transStat, 0, sizeof( transferStat_t ) );
+    memset(&conn->transStat, 0, sizeof(transferStat_t));
 
     dataObjInp->oprType = REPLICATE_OPR;
 
-    status = _rcDataObjRepl( conn, dataObjInp, &transferStat );
+    status = _rcDataObjRepl(conn, dataObjInp, &transferStat);
 
-    if ( status >= 0 && transferStat != NULL ) {
-        conn->transStat = *( transferStat );
+    if (status >= 0 && transferStat != NULL) {
+        conn->transStat = *(transferStat);
     }
-    if ( transferStat != NULL ) {
-        free( transferStat );
+    if (transferStat != NULL) {
+        free(transferStat);
     }
     return status;
 }
 
-int
-_rcDataObjRepl( rcComm_t *conn, dataObjInp_t *dataObjInp,
-                transferStat_t **transferStat ) {
+int _rcDataObjRepl(rcComm_t* conn, dataObjInp_t* dataObjInp, transferStat_t** transferStat)
+{
     int status;
 
-    status = procApiRequest( conn, DATA_OBJ_REPL_AN,  dataObjInp, NULL,
-                             ( void ** ) transferStat, NULL );
+    status = procApiRequest(conn, DATA_OBJ_REPL_AN, dataObjInp, NULL, (void**) transferStat, NULL);
 
     return status;
 }
-

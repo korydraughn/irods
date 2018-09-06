@@ -28,12 +28,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcAuthRequest( rcComm_t *conn, authRequestOut_t **authRequestOut ) {
+ **/
+int rcAuthRequest(rcComm_t* conn, authRequestOut_t** authRequestOut)
+{
     int status;
-    status = procApiRequest( conn, AUTH_REQUEST_AN, NULL, NULL,
-                             ( void ** ) authRequestOut, NULL );
+    status = procApiRequest(conn, AUTH_REQUEST_AN, NULL, NULL, (void**) authRequestOut, NULL);
 
     return status;
 }

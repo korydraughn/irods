@@ -4,58 +4,50 @@
 /* rsIcatOpr.c - misc Icat operation
  */
 
-
-
 #include "rsIcatOpr.hpp"
 #include "rodsConnect.h"
 #include "rsGlobalExtern.hpp"
 #include "icatHighLevelRoutines.hpp"
 #include "miscServerFunct.hpp"
 
-int
-connectRcat() {
+int connectRcat()
+{
     int status = 0;
-    rodsServerHost_t *tmpRodsServerHost;
+    rodsServerHost_t* tmpRodsServerHost;
     int gotRcatHost = 0;
 
-
-    if ( IcatConnState == INITIAL_DONE ) {
+    if (IcatConnState == INITIAL_DONE) {
         return 0;
     }
 
     /* zone has not been initialized yet. can't use getRcatHost */
     tmpRodsServerHost = ServerHostHead;
 
-    while ( tmpRodsServerHost != NULL ) {
-        if ( tmpRodsServerHost->rcatEnabled == LOCAL_ICAT ||
-                tmpRodsServerHost->rcatEnabled == LOCAL_SLAVE_ICAT ) {
-            if ( tmpRodsServerHost->localFlag == LOCAL_HOST ) {
-
+    while (tmpRodsServerHost != NULL) {
+        if (tmpRodsServerHost->rcatEnabled == LOCAL_ICAT || tmpRodsServerHost->rcatEnabled == LOCAL_SLAVE_ICAT) {
+            if (tmpRodsServerHost->localFlag == LOCAL_HOST) {
                 status = chlOpen();
 
-                if ( status < 0 ) {
-                    rodsLog( LOG_NOTICE,
-                             "connectRcat: chlOpen Error. Status = %d", status );
+                if (status < 0) {
+                    rodsLog(LOG_NOTICE, "connectRcat: chlOpen Error. Status = %d", status);
                 }
                 else {
                     IcatConnState = INITIAL_DONE;
-                    gotRcatHost ++;
+                    gotRcatHost++;
                 }
             }
             else {
-                gotRcatHost ++;
+                gotRcatHost++;
             }
         }
         tmpRodsServerHost = tmpRodsServerHost->next;
     }
 
-    if ( gotRcatHost == 0 ) {
-        if ( status >= 0 ) {
+    if (gotRcatHost == 0) {
+        if (status >= 0) {
             status = SYS_NO_ICAT_SERVER_ERR;
         }
-        rodsLog( LOG_SYS_FATAL,
-                 "initServerInfo: no rcatHost error, status = %d",
-                 status );
+        rodsLog(LOG_SYS_FATAL, "initServerInfo: no rcatHost error, status = %d", status);
     }
     else {
         status = 0;
@@ -64,15 +56,13 @@ connectRcat() {
     return status;
 }
 
-int
-disconnectRcat() {
+int disconnectRcat()
+{
     int status;
 
-    if ( IcatConnState == INITIAL_DONE ) {
-        if ( ( status = chlClose() ) != 0 ) {
-            rodsLog( LOG_NOTICE,
-                     "initInfoWithRcat: chlClose Error. Status = %d",
-                     status );
+    if (IcatConnState == INITIAL_DONE) {
+        if ((status = chlClose()) != 0) {
+            rodsLog(LOG_NOTICE, "initInfoWithRcat: chlClose Error. Status = %d", status);
         }
         IcatConnState = INITIAL_NOT_DONE;
     }
@@ -82,8 +72,8 @@ disconnectRcat() {
     return status;
 }
 
-int
-resetRcat() {
+int resetRcat()
+{
     IcatConnState = INITIAL_NOT_DONE;
     return 0;
 }

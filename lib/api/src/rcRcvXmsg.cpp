@@ -29,13 +29,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcRcvXmsg( rcComm_t *conn, rcvXmsgInp_t *rcvXmsgInp,
-           rcvXmsgOut_t **rcvXmsgOut ) {
+ **/
+int rcRcvXmsg(rcComm_t* conn, rcvXmsgInp_t* rcvXmsgInp, rcvXmsgOut_t** rcvXmsgOut)
+{
     int status;
-    status = procApiRequest( conn, RCV_XMSG_AN, rcvXmsgInp, NULL,
-                             ( void ** ) rcvXmsgOut, NULL );
+    status = procApiRequest(conn, RCV_XMSG_AN, rcvXmsgInp, NULL, (void**) rcvXmsgOut, NULL);
 
     return status;
 }

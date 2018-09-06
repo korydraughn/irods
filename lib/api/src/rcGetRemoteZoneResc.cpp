@@ -33,16 +33,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcGetRemoteZoneResc( rcComm_t *conn, dataObjInp_t *dataObjInp,
-                     rodsHostAddr_t **rescAddr ) {
+int rcGetRemoteZoneResc(rcComm_t* conn, dataObjInp_t* dataObjInp, rodsHostAddr_t** rescAddr)
+{
     int status;
-    status = procApiRequest( conn, GET_REMOTE_ZONE_RESC_AN, dataObjInp, NULL,
-                             ( void ** ) rescAddr, NULL );
+    status = procApiRequest(conn, GET_REMOTE_ZONE_RESC_AN, dataObjInp, NULL, (void**) rescAddr, NULL);
 
     return status;
 }
-
-

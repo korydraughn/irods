@@ -15,35 +15,38 @@
 #include "dataObjClose.h"
 
 #if IRODS_VERSION_INTEGER != 4003000
-    #error "IRODS_VERSION_INTEGER needs attention"
+#    error "IRODS_VERSION_INTEGER needs attention"
 #endif
 
-int main () {
+int main()
+{
     rodsEnv myEnv;
-    int status = getRodsEnv( &myEnv );
-    if ( status != 0 ) {
-        printf( "getRodsEnv failed.\n" );
+    int status = getRodsEnv(&myEnv);
+    if (status != 0) {
+        printf("getRodsEnv failed.\n");
         return -1;
     }
     rErrMsg_t errMsg;
 
     init_client_api_table();
 
-    rcComm_t* conn = rcConnect( myEnv.rodsHost, myEnv.rodsPort, myEnv.rodsUserName, myEnv.rodsZone, 1, &errMsg );
+    rcComm_t* conn = rcConnect(myEnv.rodsHost, myEnv.rodsPort, myEnv.rodsUserName, myEnv.rodsZone, 1, &errMsg);
 
     /* Test that irods errors are compile time constants in c */
     switch (0) {
-    case SYS_NO_HANDLER_REPLY_MSG: break;
-    default: break;
+        case SYS_NO_HANDLER_REPLY_MSG:
+            break;
+        default:
+            break;
     }
 
-    if ( ! conn ) {
-        printf( "rcConnect failed\n");
+    if (!conn) {
+        printf("rcConnect failed\n");
         return -1;
     }
     else {
-        printf( "Success!\n");
-        rcDisconnect( conn );
+        printf("Success!\n");
+        rcDisconnect(conn);
     }
     return 0;
 }

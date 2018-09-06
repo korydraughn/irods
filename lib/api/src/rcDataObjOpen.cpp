@@ -12,7 +12,6 @@
 #include "procApiRequest.h"
 #include "apiNumber.h"
 
-
 /**
  * \fn rcDataObjOpen (rcComm_t *conn, dataObjInp_t *dataObjInp)
  *
@@ -63,12 +62,10 @@
  * \sa none
 **/
 
-int
-rcDataObjOpen( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
+int rcDataObjOpen(rcComm_t* conn, dataObjInp_t* dataObjInp)
+{
     int status;
-    status = procApiRequest( conn, DATA_OBJ_OPEN_AN,  dataObjInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, DATA_OBJ_OPEN_AN, dataObjInp, NULL, (void**) NULL, NULL);
 
     return status;
 }
-

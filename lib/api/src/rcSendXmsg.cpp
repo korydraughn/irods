@@ -28,12 +28,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcSendXmsg( rcComm_t *conn, sendXmsgInp_t *sendXmsgInp ) {
+ **/
+int rcSendXmsg(rcComm_t* conn, sendXmsgInp_t* sendXmsgInp)
+{
     int status;
-    status = procApiRequest( conn, SEND_XMSG_AN, sendXmsgInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, SEND_XMSG_AN, sendXmsgInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

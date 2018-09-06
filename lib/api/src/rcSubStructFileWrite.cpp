@@ -3,7 +3,8 @@
 #include "apiNumber.h"
 
 /**
- * \fn rcSubStructFileWrite( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileWriteInp, bytesBuf_t *subStructFileWriteOutBBuf )
+ * \fn rcSubStructFileWrite( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileWriteInp, bytesBuf_t
+ **subStructFileWriteOutBBuf )
  *
  * \brief Write to a subfile within a structured file object.
  *
@@ -19,13 +20,14 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcSubStructFileWrite( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileWriteInp,
-                      bytesBuf_t *subStructFileWriteOutBBuf ) {
+ **/
+int rcSubStructFileWrite(rcComm_t* conn,
+                         subStructFileFdOprInp_t* subStructFileWriteInp,
+                         bytesBuf_t* subStructFileWriteOutBBuf)
+{
     int status;
-    status = procApiRequest( conn, SUB_STRUCT_FILE_WRITE_AN, subStructFileWriteInp,
-                             subStructFileWriteOutBBuf, ( void ** ) NULL, NULL );
+    status = procApiRequest(
+        conn, SUB_STRUCT_FILE_WRITE_AN, subStructFileWriteInp, subStructFileWriteOutBBuf, (void**) NULL, NULL);
 
     return status;
 }

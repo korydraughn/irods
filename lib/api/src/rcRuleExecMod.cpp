@@ -17,7 +17,7 @@
  * \remark none
  *
  * \note none
-*
+ *
  * \param[in] conn - A rcComm_t connection handle to the server.
  * \param[in] ruleExecModInp
  *
@@ -27,12 +27,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcRuleExecMod( rcComm_t *conn, ruleExecModInp_t *ruleExecModInp ) {
+ **/
+int rcRuleExecMod(rcComm_t* conn, ruleExecModInp_t* ruleExecModInp)
+{
     int status;
-    status = procApiRequest( conn, RULE_EXEC_MOD_AN, ruleExecModInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, RULE_EXEC_MOD_AN, ruleExecModInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

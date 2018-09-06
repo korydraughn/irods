@@ -17,7 +17,7 @@
  * \remark none
  *
  * \note none
-*
+ *
  * \param[in] conn - A rcComm_t connection handle to the server.
  * \param[in] fileCloseInp
  *
@@ -27,12 +27,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcStreamClose( rcComm_t *conn, fileCloseInp_t *fileCloseInp ) {
+ **/
+int rcStreamClose(rcComm_t* conn, fileCloseInp_t* fileCloseInp)
+{
     int status;
-    status = procApiRequest( conn, STREAM_CLOSE_AN, fileCloseInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, STREAM_CLOSE_AN, fileCloseInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

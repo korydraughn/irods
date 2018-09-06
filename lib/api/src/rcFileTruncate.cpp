@@ -18,13 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileTruncate( rcComm_t *conn, fileOpenInp_t *fileTruncateInp ) {
+ **/
+int rcFileTruncate(rcComm_t* conn, fileOpenInp_t* fileTruncateInp)
+{
     int status;
-    status = procApiRequest( conn, FILE_TRUNCATE_AN, fileTruncateInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, FILE_TRUNCATE_AN, fileTruncateInp, NULL, (void**) NULL, NULL);
 
     return status;
 }
-

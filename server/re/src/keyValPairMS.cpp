@@ -42,24 +42,25 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int msiGetValByKey( msParam_t* inKVPair, msParam_t* inKey, msParam_t* outVal, ruleExecInfo_t *rei ) {
-    keyValPair_t *kvp;
+ **/
+int msiGetValByKey(msParam_t* inKVPair, msParam_t* inKey, msParam_t* outVal, ruleExecInfo_t* rei)
+{
+    keyValPair_t* kvp;
     char *s, *k;
 
-    RE_TEST_MACRO( "msiGetValByKey" );
+    RE_TEST_MACRO("msiGetValByKey");
 
-    kvp = ( keyValPair_t* )inKVPair->inOutStruct;
-    k = ( char* )inKey->inOutStruct;
-    if ( k == NULL ) {
+    kvp = (keyValPair_t*) inKVPair->inOutStruct;
+    k = (char*) inKey->inOutStruct;
+    if (k == NULL) {
         k = inKey->label;
     }
 
-    s = getValByKey( kvp, k );
-    if ( s == NULL ) {
+    s = getValByKey(kvp, k);
+    if (s == NULL) {
         return UNMATCHED_KEY_OR_INDEX;
     }
-    fillStrInMsParam( outVal, s );
+    fillStrInMsParam(outVal, s);
     return 0;
 }
 
@@ -96,38 +97,39 @@ int msiGetValByKey( msParam_t* inKVPair, msParam_t* inKey, msParam_t* outVal, ru
  * \pre none
  * \post none
  * \sa none
-**/
-int msiPrintKeyValPair( msParam_t* where, msParam_t* inkvpair, ruleExecInfo_t *rei ) {
+ **/
+int msiPrintKeyValPair(msParam_t* where, msParam_t* inkvpair, ruleExecInfo_t* rei)
+{
     int i, l, m, j;
-    keyValPair_t *k;
-    char *s;
+    keyValPair_t* k;
+    char* s;
     msParam_t tms;
 
-    RE_TEST_MACRO( "msiPrintKeyValPair" );
+    RE_TEST_MACRO("msiPrintKeyValPair");
 
     m = 0;
     s = NULL;
-    k = ( keyValPair_t* )inkvpair->inOutStruct;
+    k = (keyValPair_t*) inkvpair->inOutStruct;
 
-    for ( i = 0; i < k->len; i++ ) {
-        l  =  strlen( k->keyWord[i] ) + strlen( k->value[i] ) + 10;
-        if ( l > m ) {
-            if ( m > 0 ) {
-                free( s );
+    for (i = 0; i < k->len; i++) {
+        l = strlen(k->keyWord[i]) + strlen(k->value[i]) + 10;
+        if (l > m) {
+            if (m > 0) {
+                free(s);
             }
-            s = ( char* )malloc( l );
+            s = (char*) malloc(l);
             m = l;
         }
-        sprintf( s, "%s = %s\n", k->keyWord[i], k->value[i] );
-        tms.inOutStruct =  s;
-        j = writeString( where, &tms, rei );
-        if ( j < 0 ) {
-            free( s );
+        sprintf(s, "%s = %s\n", k->keyWord[i], k->value[i]);
+        tms.inOutStruct = s;
+        j = writeString(where, &tms, rei);
+        if (j < 0) {
+            free(s);
             return j;
         }
     }
-    if ( m > 0 ) {
-        free( s );
+    if (m > 0) {
+        free(s);
     }
     return 0;
 }
@@ -161,43 +163,44 @@ int msiPrintKeyValPair( msParam_t* where, msParam_t* inkvpair, ruleExecInfo_t *r
  * \pre none
  * \post none
  * \sa msiStrArray2String
-**/
-int msiString2KeyValPair( msParam_t *inBufferP, msParam_t* outKeyValPairP, ruleExecInfo_t *rei ) {
-    keyValPair_t *kvp;
+ **/
+int msiString2KeyValPair(msParam_t* inBufferP, msParam_t* outKeyValPairP, ruleExecInfo_t* rei)
+{
+    keyValPair_t* kvp;
     strArray_t strArray;
-    char *buf;
-    char *value;
+    char* buf;
+    char* value;
     int i, j;
-    char *valPtr;
-    char *tmpPtr;
+    char* valPtr;
+    char* tmpPtr;
 
-    RE_TEST_MACRO( "msiString2KeyValPair" );
+    RE_TEST_MACRO("msiString2KeyValPair");
 
-    buf = strdup( ( char * )  inBufferP->inOutStruct );
-    memset( &strArray, 0, sizeof( strArray_t ) );
-    i =  parseMultiStr( buf, &strArray );
-    free( buf );
-    if ( i < 0 ) {
+    buf = strdup((char*) inBufferP->inOutStruct);
+    memset(&strArray, 0, sizeof(strArray_t));
+    i = parseMultiStr(buf, &strArray);
+    free(buf);
+    if (i < 0) {
         return i;
     }
     value = strArray.value;
 
-    kvp = ( keyValPair_t* )malloc( sizeof( keyValPair_t ) );
+    kvp = (keyValPair_t*) malloc(sizeof(keyValPair_t));
     memset(kvp, 0, sizeof(keyValPair_t));
-    for ( i = 0; i < strArray.len; i++ ) {
+    for (i = 0; i < strArray.len; i++) {
         valPtr = &value[i * strArray.size];
-        if ( ( tmpPtr = strstr( valPtr, "=" ) ) != NULL ) {
+        if ((tmpPtr = strstr(valPtr, "=")) != NULL) {
             *tmpPtr = '\0';
             tmpPtr++;
-            j = addKeyVal( kvp, valPtr, tmpPtr );
-            if ( j < 0 ) {
+            j = addKeyVal(kvp, valPtr, tmpPtr);
+            if (j < 0) {
                 return j;
             }
             *tmpPtr = '=';
         }
     }
-    outKeyValPairP->inOutStruct = ( void * ) kvp;
-    outKeyValPairP->type = strdup( KeyValPair_MS_T );
+    outKeyValPairP->inOutStruct = (void*) kvp;
+    outKeyValPairP->type = strdup(KeyValPair_MS_T);
 
     return 0;
 }
@@ -231,34 +234,34 @@ int msiString2KeyValPair( msParam_t *inBufferP, msParam_t* outKeyValPairP, ruleE
  * \pre none
  * \post none
  * \sa msiStrArray2String
-**/
-int msiString2StrArray( msParam_t *inBufferP, msParam_t* outStrArrayP, ruleExecInfo_t *rei ) {
-    strArray_t *strArray;
-    char *buf;
+ **/
+int msiString2StrArray(msParam_t* inBufferP, msParam_t* outStrArrayP, ruleExecInfo_t* rei)
+{
+    strArray_t* strArray;
+    char* buf;
     int i;
 
-    RE_TEST_MACRO( "msiString2StrArray" );
+    RE_TEST_MACRO("msiString2StrArray");
 
-    if ( inBufferP == NULL || inBufferP->inOutStruct == NULL ||
-            inBufferP->type == NULL || strcmp( inBufferP->type, STR_MS_T ) != 0 ) {
+    if (inBufferP == NULL || inBufferP->inOutStruct == NULL || inBufferP->type == NULL ||
+        strcmp(inBufferP->type, STR_MS_T) != 0) {
         return USER_PARAM_TYPE_ERR;
     }
 
-    buf = strdup( ( char * )  inBufferP->inOutStruct );
-    strArray = ( strArray_t * ) malloc( sizeof( strArray_t ) );
+    buf = strdup((char*) inBufferP->inOutStruct);
+    strArray = (strArray_t*) malloc(sizeof(strArray_t));
     memset(strArray, 0, sizeof(strArray_t));
-    i =  parseMultiStr( buf, strArray );
-    free( buf );
-    if ( i < 0 ) {
-        free( strArray );
+    i = parseMultiStr(buf, strArray);
+    free(buf);
+    if (i < 0) {
+        free(strArray);
         return i;
     }
-    outStrArrayP->inOutStruct = ( void * ) strArray;
-    outStrArrayP->type = strdup( StrArray_MS_T );
+    outStrArrayP->inOutStruct = (void*) strArray;
+    outStrArrayP->type = strdup(StrArray_MS_T);
 
     return 0;
 }
-
 
 /**
  * \fn msiStrArray2String(msParam_t* inSAParam, msParam_t* outStr, ruleExecInfo_t *rei)
@@ -289,32 +292,31 @@ int msiString2StrArray( msParam_t *inBufferP, msParam_t* outStrArrayP, ruleExecI
  * \pre none
  * \post none
  * \sa msiString2KeyValPair
-**/
-int msiStrArray2String( msParam_t* inSAParam, msParam_t* outStr, ruleExecInfo_t *rei ) {
+ **/
+int msiStrArray2String(msParam_t* inSAParam, msParam_t* outStr, ruleExecInfo_t* rei)
+{
     int i;
-    strArray_t *strArr;
-    char *s;
-    char *val;
+    strArray_t* strArr;
+    char* s;
+    char* val;
 
-    RE_TEST_MACRO( "msiStrArray2String" );
+    RE_TEST_MACRO("msiStrArray2String");
 
-    strArr = ( strArray_t * ) inSAParam->inOutStruct;
+    strArr = (strArray_t*) inSAParam->inOutStruct;
     val = strArr->value;
-    s = ( char * ) malloc( strArr->len * strArr->size );
+    s = (char*) malloc(strArr->len * strArr->size);
     s[0] = '\0';
 
-    strcat( s, val );
-    for ( i = 1; i < strArr->len; i++ ) {
-        strcat( s, "%" );
-        strcat( s, &val[i * strArr->size] );
+    strcat(s, val);
+    for (i = 1; i < strArr->len; i++) {
+        strcat(s, "%");
+        strcat(s, &val[i * strArr->size]);
     }
-    outStr->inOutStruct = ( void * ) strdup( s );
-    outStr->type = strdup( STR_MS_T );
-    free( s );
+    outStr->inOutStruct = (void*) strdup(s);
+    outStr->type = strdup(STR_MS_T);
+    free(s);
     return 0;
 }
-
-
 
 /**
  * \fn msiAddKeyVal(msParam_t *inKeyValPair, msParam_t *key, msParam_t *value, ruleExecInfo_t *rei)
@@ -346,60 +348,57 @@ int msiStrArray2String( msParam_t* inSAParam, msParam_t* outStr, ruleExecInfo_t 
  * \pre none
  * \post none
  * \sa none
-**/
-int msiAddKeyVal( msParam_t *inKeyValPair, msParam_t *key, msParam_t *value, ruleExecInfo_t *rei ) {
+ **/
+int msiAddKeyVal(msParam_t* inKeyValPair, msParam_t* key, msParam_t* value, ruleExecInfo_t* rei)
+{
     char *key_str, *value_str;
-    keyValPair_t *newKVP;
+    keyValPair_t* newKVP;
 
     /*************************************  INIT **********************************/
 
     /* For testing mode when used with irule --test */
-    RE_TEST_MACRO( "    Calling msiAddKeyVal" )
+    RE_TEST_MACRO("    Calling msiAddKeyVal")
 
     /* Sanity checks */
-    if ( rei == NULL || rei->rsComm == NULL ) {
-        rodsLog( LOG_ERROR, "msiAddKeyVal: input rei or rsComm is NULL." );
+    if (rei == NULL || rei->rsComm == NULL) {
+        rodsLog(LOG_ERROR, "msiAddKeyVal: input rei or rsComm is NULL.");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
-
 
     /********************************** PARAM PARSING  *********************************/
 
     /* Parse key */
-    if ( ( key_str = parseMspForStr( key ) ) == NULL ) {
-        rodsLog( LOG_ERROR, "msiAddKeyVal: input key is NULL." );
+    if ((key_str = parseMspForStr(key)) == NULL) {
+        rodsLog(LOG_ERROR, "msiAddKeyVal: input key is NULL.");
         return USER__NULL_INPUT_ERR;
     }
 
     /* Parse value */
-    value_str = parseMspForStr( value );
+    value_str = parseMspForStr(value);
 
     /* Check for wrong parameter type */
-    if ( inKeyValPair->type && strcmp( inKeyValPair->type, KeyValPair_MS_T ) ) {
-        rodsLog( LOG_ERROR, "msiAddKeyVal: inKeyValPair is not of type KeyValPair_MS_T." );
+    if (inKeyValPair->type && strcmp(inKeyValPair->type, KeyValPair_MS_T)) {
+        rodsLog(LOG_ERROR, "msiAddKeyVal: inKeyValPair is not of type KeyValPair_MS_T.");
         return USER_PARAM_TYPE_ERR;
     }
 
     /* Parse inKeyValPair. Create new one if empty. */
-    if ( !inKeyValPair->inOutStruct ) {
+    if (!inKeyValPair->inOutStruct) {
         /* Set content */
-        newKVP = ( keyValPair_t* )malloc( sizeof( keyValPair_t ) );
-        memset( newKVP, 0, sizeof( keyValPair_t ) );
-        inKeyValPair->inOutStruct = ( void* )newKVP;
+        newKVP = (keyValPair_t*) malloc(sizeof(keyValPair_t));
+        memset(newKVP, 0, sizeof(keyValPair_t));
+        inKeyValPair->inOutStruct = (void*) newKVP;
 
         /* Set type */
-        if ( !inKeyValPair->type ) {
-            inKeyValPair->type = strdup( KeyValPair_MS_T );
+        if (!inKeyValPair->type) {
+            inKeyValPair->type = strdup(KeyValPair_MS_T);
         }
     }
 
-
     /******************************* ADD NEW PAIR AND DONE ******************************/
 
-    rei->status = addKeyVal( ( keyValPair_t* )inKeyValPair->inOutStruct, key_str, value_str );
+    rei->status = addKeyVal((keyValPair_t*) inKeyValPair->inOutStruct, key_str, value_str);
 
     /* Done */
     return rei->status;
 }
-
-

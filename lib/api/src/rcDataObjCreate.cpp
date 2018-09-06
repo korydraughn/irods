@@ -63,12 +63,10 @@
  * \sa none
 **/
 
-int
-rcDataObjCreate( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
+int rcDataObjCreate(rcComm_t* conn, dataObjInp_t* dataObjInp)
+{
     int status;
-    status = procApiRequest( conn, DATA_OBJ_CREATE_AN,  dataObjInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, DATA_OBJ_CREATE_AN, dataObjInp, NULL, (void**) NULL, NULL);
 
     return status;
 }
-

@@ -10,12 +10,10 @@
 #include "procApiRequest.h"
 #include "apiNumber.h"
 
-int
-_rcRmColl( rcComm_t *conn, collInp_t *rmCollInp,
-           collOprStat_t **collOprStat ) {
+int _rcRmColl(rcComm_t* conn, collInp_t* rmCollInp, collOprStat_t** collOprStat)
+{
     int status;
-    status = procApiRequest( conn, RM_COLL_AN, rmCollInp, NULL,
-                             ( void ** ) collOprStat, NULL );
+    status = procApiRequest(conn, RM_COLL_AN, rmCollInp, NULL, (void**) collOprStat, NULL);
 
     return status;
 }
@@ -73,17 +71,16 @@ _rcRmColl( rcComm_t *conn, collInp_t *rmCollInp,
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcRmColl( rcComm_t *conn, collInp_t *rmCollInp, int vFlag ) {
+int rcRmColl(rcComm_t* conn, collInp_t* rmCollInp, int vFlag)
+{
     int status, retval;
-    collOprStat_t *collOprStat = NULL;
+    collOprStat_t* collOprStat = NULL;
 
-    retval = _rcRmColl( conn, rmCollInp, &collOprStat );
+    retval = _rcRmColl(conn, rmCollInp, &collOprStat);
 
-    status = cliGetCollOprStat( conn, collOprStat, vFlag, retval );
+    status = cliGetCollOprStat(conn, collOprStat, vFlag, retval);
 
     return status;
 }
-

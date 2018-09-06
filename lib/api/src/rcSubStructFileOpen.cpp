@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcSubStructFileOpen( rcComm_t *conn, subFile_t *subFile ) {
+ **/
+int rcSubStructFileOpen(rcComm_t* conn, subFile_t* subFile)
+{
     int status;
-    status = procApiRequest( conn, SUB_STRUCT_FILE_OPEN_AN, subFile, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, SUB_STRUCT_FILE_OPEN_AN, subFile, NULL, (void**) NULL, NULL);
 
     return status;
 }

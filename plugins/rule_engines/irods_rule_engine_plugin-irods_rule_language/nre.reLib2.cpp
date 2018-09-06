@@ -3,5 +3,3 @@
 
 #include "reGlobalsExtern.hpp"
 #include "reHelpers1.hpp"
-
-
