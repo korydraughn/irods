@@ -5,6 +5,6 @@
 #include "dataObjInpOut.h"
 #include "dataObjOpenAndStat.h"
 
-int rsDataObjOpenAndStat( rsComm_t *rsComm, dataObjInp_t *dataObjInp, openStat_t **openStat );
+int rsDataObjOpenAndStat(rsComm_t* rsComm, dataObjInp_t* dataObjInp, openStat_t** openStat);
 
 #endif

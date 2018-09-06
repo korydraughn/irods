@@ -39,7 +39,8 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp );
-int _rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp, msParamArray_t **outParamArray );
+    int
+    rcDataObjRsync(rcComm_t* conn, dataObjInp_t* dataObjInp);
+int _rcDataObjRsync(rcComm_t* conn, dataObjInp_t* dataObjInp, msParamArray_t** outParamArray);
 
 #endif

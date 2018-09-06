@@ -3,7 +3,6 @@
 
 #include "exec_rule_expression.h"
 
-int rsExecRuleExpression(rsComm_t*,exec_rule_expression_t*);
-
+int rsExecRuleExpression(rsComm_t*, exec_rule_expression_t*);
 
 #endif

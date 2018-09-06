@@ -7,32 +7,36 @@
 
 #include <boost/optional.hpp>
 
-namespace irods {
-    class stacktrace {
-        public:
-            stacktrace();
-            virtual ~stacktrace(void) = default;
-            const std::string& dump() const;
-        private:
-            static const int max_stack_size = 50;
+namespace irods
+{
+    class stacktrace
+    {
+    public:
+        stacktrace();
+        virtual ~stacktrace(void) = default;
+        const std::string& dump() const;
 
-            /// @brief function to demangle the c++ function names
-            void demangle_symbol( const std::string& _symbol, std::string& _rtn_name, std::string& _rtn_offset ) const;
+    private:
+        static const int max_stack_size = 50;
 
-            typedef struct stack_entry_s {
-                std::string function;
-                std::string offset;
-                void* address;
-            } stack_entry_t;
+        /// @brief function to demangle the c++ function names
+        void demangle_symbol(const std::string& _symbol, std::string& _rtn_name, std::string& _rtn_offset) const;
 
-            typedef std::vector<stack_entry_t> stacklist;
+        typedef struct stack_entry_s
+        {
+            std::string function;
+            std::string offset;
+            void* address;
+        } stack_entry_t;
 
-            /// @brief resolve the symbols and retrieve the stack
-            stacklist resolve_stack() const;
+        typedef std::vector<stack_entry_t> stacklist;
 
-            std::vector<void*> backtrace_;
-            int size_;
-            mutable boost::optional<std::string> dump_;
+        /// @brief resolve the symbols and retrieve the stack
+        stacklist resolve_stack() const;
+
+        std::vector<void*> backtrace_;
+        int size_;
+        mutable boost::optional<std::string> dump_;
     };
 }; // namespace irods
 

@@ -4,4 +4,4 @@
  */
 #ifndef RE_GLOBALS_HPP
 #define RE_GLOBALS_HPP
-#endif  /* RE_GLOBALS_H */
+#endif /* RE_GLOBALS_H */

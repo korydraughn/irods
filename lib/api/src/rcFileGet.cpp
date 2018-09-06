@@ -19,13 +19,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileGet( rcComm_t *conn, fileOpenInp_t *fileGetInp,
-           bytesBuf_t *fileGetOutBBuf ) {
+ **/
+int rcFileGet(rcComm_t* conn, fileOpenInp_t* fileGetInp, bytesBuf_t* fileGetOutBBuf)
+{
     int status;
-    status = procApiRequest( conn, FILE_GET_AN, fileGetInp, NULL,
-                             ( void ** ) NULL, fileGetOutBBuf );
+    status = procApiRequest(conn, FILE_GET_AN, fileGetInp, NULL, (void**) NULL, fileGetOutBBuf);
 
     return status;
 }

@@ -4,6 +4,6 @@
 #include "objInfo.h"
 #include "rcConnect.h"
 
-int rcSubStructFileOpendir( rcComm_t *conn, subFile_t *subFile );
+int rcSubStructFileOpendir(rcComm_t* conn, subFile_t* subFile);
 
 #endif

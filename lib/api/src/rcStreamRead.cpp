@@ -17,7 +17,7 @@
  * \remark none
  *
  * \note none
-*
+ *
  * \param[in] conn - A rcComm_t connection handle to the server.
  * \param[in] streamReadInp
  * \param[out] streamReadOutBBuf
@@ -28,13 +28,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcStreamRead( rcComm_t *conn, fileReadInp_t *streamReadInp,
-              bytesBuf_t *streamReadOutBBuf ) {
+ **/
+int rcStreamRead(rcComm_t* conn, fileReadInp_t* streamReadInp, bytesBuf_t* streamReadOutBBuf)
+{
     int status;
-    status = procApiRequest( conn, STREAM_READ_AN, streamReadInp, NULL,
-                             ( void ** ) NULL, streamReadOutBBuf );
+    status = procApiRequest(conn, STREAM_READ_AN, streamReadInp, NULL, (void**) NULL, streamReadOutBBuf);
 
     return status;
 }

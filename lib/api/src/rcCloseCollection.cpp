@@ -62,13 +62,12 @@
  * \sa rclOpenCollection/rclReadCollection/rclCloseCollection. The query
  * for these functions is done by the client and the query results are
  * cached locally making it more efficient.
-**/
+ **/
 
-int
-rcCloseCollection( rcComm_t *conn, int handleInxInp ) {
+int rcCloseCollection(rcComm_t* conn, int handleInxInp)
+{
     int status;
-    status = procApiRequest( conn, CLOSE_COLLECTION_AN, &handleInxInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, CLOSE_COLLECTION_AN, &handleInxInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

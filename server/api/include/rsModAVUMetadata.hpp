@@ -3,7 +3,7 @@
 
 #include "modAVUMetadata.h"
 
-int rsModAVUMetadata( rsComm_t *rsComm, modAVUMetadataInp_t *modAVUMetadataInp );
-int _rsModAVUMetadata( rsComm_t *rsComm, modAVUMetadataInp_t *modAVUMetadataInp );
+int rsModAVUMetadata(rsComm_t* rsComm, modAVUMetadataInp_t* modAVUMetadataInp);
+int _rsModAVUMetadata(rsComm_t* rsComm, modAVUMetadataInp_t* modAVUMetadataInp);
 
 #endif

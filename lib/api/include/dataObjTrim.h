@@ -21,6 +21,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjTrim( rcComm_t *conn, dataObjInp_t *dataObjInp );
+    int
+    rcDataObjTrim(rcComm_t* conn, dataObjInp_t* dataObjInp);
 
 #endif

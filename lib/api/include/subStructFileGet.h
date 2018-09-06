@@ -5,6 +5,6 @@
 #include "objInfo.h"
 #include "rodsDef.h"
 
-int rcSubStructFileGet( rcComm_t *conn, subFile_t *subFile, bytesBuf_t *subFileGetOutBBuf );
+int rcSubStructFileGet(rcComm_t* conn, subFile_t* subFile, bytesBuf_t* subFileGetOutBBuf);
 
 #endif

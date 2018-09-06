@@ -10,17 +10,14 @@
 #include "rodsPath.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-int
-mcollUtil( rcComm_t *conn, rodsEnv *myEnv, rodsArguments_t *myRodsArgs,
-           rodsPathInp_t *rodsPathInp );
-int
-initCondForMcoll( rodsEnv *myRodsEnv, rodsArguments_t *rodsArgs,
-                  dataObjInp_t *dataObjOprInp );
+    int mcollUtil(rcComm_t* conn, rodsEnv* myEnv, rodsArguments_t* myRodsArgs, rodsPathInp_t* rodsPathInp);
+    int initCondForMcoll(rodsEnv* myRodsEnv, rodsArguments_t* rodsArgs, dataObjInp_t* dataObjOprInp);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	// MCOLL_UTIL_H__
+#endif // MCOLL_UTIL_H__

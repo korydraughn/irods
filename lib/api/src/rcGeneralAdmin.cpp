@@ -45,11 +45,10 @@
  * \sa none
  **/
 
-int
-rcGeneralAdmin( rcComm_t *conn, generalAdminInp_t *generalAdminInp ) {
+int rcGeneralAdmin(rcComm_t* conn, generalAdminInp_t* generalAdminInp)
+{
     int status;
-    status = procApiRequest( conn, GENERAL_ADMIN_AN,  generalAdminInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, GENERAL_ADMIN_AN, generalAdminInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

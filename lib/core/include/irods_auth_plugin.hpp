@@ -9,38 +9,38 @@
 #include <utility>
 #include <boost/any.hpp>
 
-namespace irods {
-
+namespace irods
+{
     /**
      * @brief Base class for auth plugins
      */
-    class auth : public plugin_base {
-        public:
-            auth(
-                const std::string& _inst,
-                const std::string& _ctx ) :
-                plugin_base( _inst, _ctx ) {
+    class auth : public plugin_base
+    {
+    public:
+        auth(const std::string& _inst, const std::string& _ctx)
+            : plugin_base(_inst, _ctx)
+        {
+        }
 
-            }
+        virtual ~auth()
+        {
+        }
 
-            virtual ~auth() {
-            }
+        auth(const auth& _rhs)
+            : plugin_base(_rhs)
+        {
+        }
 
-            auth(
-                const auth& _rhs ) :
-                plugin_base( _rhs ) {
-            }
-
-            auth& operator=(
-                const auth& _rhs ) {
-                if ( &_rhs == this ) {
-                    return *this;
-                }
-
-                plugin_base::operator=( _rhs );
-
+        auth& operator=(const auth& _rhs)
+        {
+            if (&_rhs == this) {
                 return *this;
             }
+
+            plugin_base::operator=(_rhs);
+
+            return *this;
+        }
     };
 
 }; // namespace irods

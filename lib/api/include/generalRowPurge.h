@@ -3,15 +3,17 @@
 
 #include "rcConnect.h"
 
-typedef struct {
-    char *tableName;
-    char *secondsAgo;
+typedef struct
+{
+    char* tableName;
+    char* secondsAgo;
 } generalRowPurgeInp_t;
 #define generalRowPurgeInp_PI "str *tableName; str *secondsAgo;"
 
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGeneralRowPurge( rcComm_t *conn, generalRowPurgeInp_t *generalRowPurgeInp );
+    int
+    rcGeneralRowPurge(rcComm_t* conn, generalRowPurgeInp_t* generalRowPurgeInp);
 
 #endif

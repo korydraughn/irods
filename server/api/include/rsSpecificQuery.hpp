@@ -5,7 +5,7 @@
 #include "objInfo.h"
 #include "rodsGenQuery.h"
 
-int rsSpecificQuery( rsComm_t *rsComm, specificQueryInp_t *specificQueryInp, genQueryOut_t **genQueryOut );
-int _rsSpecificQuery( rsComm_t *rsComm, specificQueryInp_t *specificQueryInp, genQueryOut_t **genQueryOut );
+int rsSpecificQuery(rsComm_t* rsComm, specificQueryInp_t* specificQueryInp, genQueryOut_t** genQueryOut);
+int _rsSpecificQuery(rsComm_t* rsComm, specificQueryInp_t* specificQueryInp, genQueryOut_t** genQueryOut);
 
 #endif

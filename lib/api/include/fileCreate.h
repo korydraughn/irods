@@ -6,8 +6,9 @@
 
 typedef fileOpenInp_t fileCreateInp_t;
 
-typedef struct {
-    char file_name[ MAX_NAME_LEN ];
+typedef struct
+{
+    char file_name[MAX_NAME_LEN];
 } fileCreateOut_t;
 
 #define fileCreateOut_PI "str file_name[MAX_NAME_LEN];"
@@ -15,6 +16,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileCreate( rcComm_t *conn, fileCreateInp_t *fileCreateInp, fileCreateOut_t** );
+    int
+    rcFileCreate(rcComm_t* conn, fileCreateInp_t* fileCreateInp, fileCreateOut_t**);
 
 #endif

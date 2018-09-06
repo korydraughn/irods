@@ -8,7 +8,8 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjChksum( rcComm_t *conn, dataObjInp_t *dataObjChksumInp, char **outChksum );
+    int
+    rcDataObjChksum(rcComm_t* conn, dataObjInp_t* dataObjChksumInp, char** outChksum);
 
 /* rcDataObjChksum - Chksum a iRODS data object.
  * Input -

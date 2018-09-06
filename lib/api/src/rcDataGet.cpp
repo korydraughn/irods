@@ -20,7 +20,7 @@
  * \remark none
  *
  * \note none
-*
+ *
  * \param[in] conn - A rcComm_t connection handle to the server.
  * \param[in] dataGetInp
  * \param[out] portalOprOut
@@ -31,13 +31,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcDataGet( rcComm_t *conn, dataOprInp_t *dataGetInp,
-           portalOprOut_t **portalOprOut ) {
+ **/
+int rcDataGet(rcComm_t* conn, dataOprInp_t* dataGetInp, portalOprOut_t** portalOprOut)
+{
     int status;
-    status = procApiRequest( conn, DATA_GET_AN, dataGetInp, NULL,
-                             ( void ** ) portalOprOut, NULL );
+    status = procApiRequest(conn, DATA_GET_AN, dataGetInp, NULL, (void**) portalOprOut, NULL);
 
     return status;
 }

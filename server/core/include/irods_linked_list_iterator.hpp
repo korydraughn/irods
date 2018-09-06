@@ -13,15 +13,14 @@ namespace irods
     template <typename T>
     using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
-    template <typename T,
-              typename = has_next_pointer<remove_cvref_t<T>>>
+    template <typename T, typename = has_next_pointer<remove_cvref_t<T>>>
     class linked_list_iterator
     {
     public:
-        using difference_type   = long;
-        using value_type        = T;
-        using pointer           = value_type*;
-        using reference         = value_type&;
+        using difference_type = long;
+        using value_type = T;
+        using pointer = value_type*;
+        using reference = value_type&;
         using iterator_category = std::forward_iterator_tag;
 
         linked_list_iterator() = default;
@@ -33,8 +32,7 @@ namespace irods
 
         linked_list_iterator& operator++() noexcept
         {
-            if (node_)
-            {
+            if (node_) {
                 node_ = node_->next;
             }
 
@@ -74,4 +72,3 @@ namespace irods
 } // namespace irods
 
 #endif // IRODS_LINKED_LIST_ITERATOR_HPP
-

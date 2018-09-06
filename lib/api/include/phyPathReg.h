@@ -16,6 +16,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcPhyPathReg( rcComm_t *conn, dataObjInp_t *phyPathRegInp );
+    int
+    rcPhyPathReg(rcComm_t* conn, dataObjInp_t* phyPathRegInp);
 
 #endif

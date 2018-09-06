@@ -6,11 +6,10 @@
 #include "sslEnd.h"
 #include "rsSslEnd.hpp"
 
-int
-rsSslEnd( rsComm_t *rsComm, sslEndInp_t* ) {
-
+int rsSslEnd(rsComm_t* rsComm, sslEndInp_t*)
+{
     /* if SSL isn't on, just return success */
-    if ( !rsComm->ssl_on ) {
+    if (!rsComm->ssl_on) {
         return 0;
     }
 

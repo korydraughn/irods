@@ -13,9 +13,9 @@
 #include "irods_re_structs.hpp"
 
 #if defined(_LP64) || defined(__LP64__)
-#define CAST_PTR_INT (long int)
+#    define CAST_PTR_INT (long int)
 #else
-#define CAST_PTR_INT (uint)
+#    define CAST_PTR_INT (uint)
 #endif
 
 /**
@@ -55,29 +55,28 @@
  * \sa writeString
  * \endcond
  **/
-int writeLine( msParam_t* where, msParam_t* inString, ruleExecInfo_t *rei ) {
+int writeLine(msParam_t* where, msParam_t* inString, ruleExecInfo_t* rei)
+{
     int i;
     char tmp[3];
-    char *ptr;
-    char *writeId = ( char * ) where->inOutStruct;
+    char* ptr;
+    char* writeId = (char*) where->inOutStruct;
 
-    if ( writeId != NULL && strcmp( writeId, "serverLog" ) == 0 &&
-            inString->inOutStruct != NULL ) {
-        rodsLog( LOG_NOTICE, "writeLine: inString = %s\n", inString->inOutStruct );
+    if (writeId != NULL && strcmp(writeId, "serverLog") == 0 && inString->inOutStruct != NULL) {
+        rodsLog(LOG_NOTICE, "writeLine: inString = %s\n", inString->inOutStruct);
         return 0;
     }
 
-    i = writeString( where, inString, rei );
-    if ( i < 0 ) {
+    i = writeString(where, inString, rei);
+    if (i < 0) {
         return i;
     }
-    ptr = ( char* )inString->inOutStruct;
-    sprintf( tmp, "%s\n", "" );
-    inString->inOutStruct =  tmp;
-    i = writeString( where, inString, rei );
+    ptr = (char*) inString->inOutStruct;
+    sprintf(tmp, "%s\n", "");
+    inString->inOutStruct = tmp;
+    i = writeString(where, inString, rei);
     inString->inOutStruct = ptr;
     return i;
-
 }
 
 /**
@@ -110,30 +109,30 @@ int writeLine( msParam_t* where, msParam_t* inString, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int writePosInt( msParam_t* where, msParam_t* inInt, ruleExecInfo_t *rei ) {
-    char *writeId;
+int writePosInt(msParam_t* where, msParam_t* inInt, ruleExecInfo_t* rei)
+{
+    char* writeId;
     char writeStr[LONG_NAME_LEN];
     int status;
 
-    if ( where->inOutStruct != NULL ) {
-        writeId = ( char* )where->inOutStruct;
+    if (where->inOutStruct != NULL) {
+        writeId = (char*) where->inOutStruct;
     }
     else {
         writeId = where->label;
     }
 
-    if ( inInt->inOutStruct != NULL ) {
-        sprintf( writeStr, "%d", parseMspForPosInt( inInt ) );
+    if (inInt->inOutStruct != NULL) {
+        sprintf(writeStr, "%d", parseMspForPosInt(inInt));
     }
     else {
-        snprintf( writeStr, LONG_NAME_LEN, "%s", inInt->label );
+        snprintf(writeStr, LONG_NAME_LEN, "%s", inInt->label);
     }
 
-    status = _writeString( writeId, writeStr, rei );
+    status = _writeString(writeId, writeStr, rei);
 
     return status;
 }
-
 
 /**
  * \fn writeBytesBuf(msParam_t* where, msParam_t* inBuf, ruleExecInfo_t *rei)
@@ -165,32 +164,33 @@ int writePosInt( msParam_t* where, msParam_t* inInt, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int writeBytesBuf( msParam_t* where, msParam_t* inBuf, ruleExecInfo_t *rei ) {
-    char *writeId;
-    char *writeStr;
+int writeBytesBuf(msParam_t* where, msParam_t* inBuf, ruleExecInfo_t* rei)
+{
+    char* writeId;
+    char* writeStr;
     int status;
 
-    if ( where->inOutStruct != NULL ) {
-        writeId = ( char* )where->inOutStruct;
+    if (where->inOutStruct != NULL) {
+        writeId = (char*) where->inOutStruct;
     }
     else {
         writeId = where->label;
     }
 
-    if ( inBuf->inpOutBuf ) {
+    if (inBuf->inpOutBuf) {
         /* Buffer might no be null-terminated */
-        writeStr = ( char* )malloc( inBuf->inpOutBuf->len + 1 );
-        strncpy( writeStr, ( char* )inBuf->inpOutBuf->buf, inBuf->inpOutBuf->len );
+        writeStr = (char*) malloc(inBuf->inpOutBuf->len + 1);
+        strncpy(writeStr, (char*) inBuf->inpOutBuf->buf, inBuf->inpOutBuf->len);
         writeStr[inBuf->inpOutBuf->len] = '\0';
     }
     else {
-        writeStr = strdup( inBuf->label );
+        writeStr = strdup(inBuf->label);
     }
 
-    status = _writeString( writeId, writeStr, rei );
+    status = _writeString(writeId, writeStr, rei);
 
-    if ( writeStr != NULL ) {
-        free( writeStr );
+    if (writeStr != NULL) {
+        free(writeStr);
     }
 
     return status;
@@ -227,90 +227,81 @@ int writeBytesBuf( msParam_t* where, msParam_t* inBuf, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int writeKeyValPairs( msParam_t *where, msParam_t *inKVPair, msParam_t *separator, ruleExecInfo_t *rei ) {
-    keyValPair_t *KVPairs;
-    char *writeId;
-    char *writeStr;
-    char *sepStr;
+int writeKeyValPairs(msParam_t* where, msParam_t* inKVPair, msParam_t* separator, ruleExecInfo_t* rei)
+{
+    keyValPair_t* KVPairs;
+    char* writeId;
+    char* writeStr;
+    char* sepStr;
     int i;
     size_t size;
 
-
-    RE_TEST_MACRO( "    Calling writeKeyValPairs" )
-
+    RE_TEST_MACRO("    Calling writeKeyValPairs")
 
     /* sanity checks */
-    if ( !rei ) {
-        rodsLog( LOG_ERROR, "writeKeyValPairs: input rei is NULL." );
+    if (!rei) {
+        rodsLog(LOG_ERROR, "writeKeyValPairs: input rei is NULL.");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    if ( !where ) {
-        rodsLog( LOG_ERROR, "writeKeyValPairs: No destination provided for writing." );
+    if (!where) {
+        rodsLog(LOG_ERROR, "writeKeyValPairs: No destination provided for writing.");
         return USER__NULL_INPUT_ERR;
     }
 
     /* empty? */
-    if ( !inKVPair || !inKVPair->inOutStruct ) {
+    if (!inKVPair || !inKVPair->inOutStruct) {
         return 0;
     }
 
     /* check for proper input type and get keyValPair input */
-    if ( inKVPair->type && strcmp( inKVPair->type, KeyValPair_MS_T ) ) {
-        rodsLog( LOG_ERROR, "writeKeyValPairs: input parameter is not of KeyValPair_MS_T type." );
+    if (inKVPair->type && strcmp(inKVPair->type, KeyValPair_MS_T)) {
+        rodsLog(LOG_ERROR, "writeKeyValPairs: input parameter is not of KeyValPair_MS_T type.");
         return USER_PARAM_TYPE_ERR;
     }
-    KVPairs = ( keyValPair_t * )inKVPair->inOutStruct;
-
+    KVPairs = (keyValPair_t*) inKVPair->inOutStruct;
 
     /* where are we writing to? */
-    if ( where->inOutStruct != NULL ) {
-        writeId = ( char* )where->inOutStruct;
+    if (where->inOutStruct != NULL) {
+        writeId = (char*) where->inOutStruct;
     }
     else {
         writeId = where->label;
     }
 
-
     /* get separator string or use default */
-    if ( ( sepStr = parseMspForStr( separator ) ) == NULL )  {
+    if ((sepStr = parseMspForStr(separator)) == NULL) {
         sepStr = "\t|\t";
     }
 
-
     /* find out how much memory is needed for writeStr */
     size = 0;
-    for ( i = 0; i < KVPairs->len; i++ ) {
-        size += strlen( KVPairs->keyWord[i] ) + strlen( sepStr ) + strlen( KVPairs->value[i] ) + strlen( "\n" );
+    for (i = 0; i < KVPairs->len; i++) {
+        size += strlen(KVPairs->keyWord[i]) + strlen(sepStr) + strlen(KVPairs->value[i]) + strlen("\n");
     }
 
     /* allocate memory for writeStr and pad with null chars */
-    writeStr = ( char * )malloc( size + MAX_COND_LEN );
-    memset( writeStr, '\0', size + MAX_COND_LEN );
-
+    writeStr = (char*) malloc(size + MAX_COND_LEN);
+    memset(writeStr, '\0', size + MAX_COND_LEN);
 
     /* print each key-value pair to writeStr */
-    for ( i = 0; i < KVPairs->len; i++ )  {
-        strcat( writeStr, KVPairs->keyWord[i] );
-        strcat( writeStr, sepStr );
-        strcat( writeStr, KVPairs->value[i] );
-        strcat( writeStr, "\n" );
+    for (i = 0; i < KVPairs->len; i++) {
+        strcat(writeStr, KVPairs->keyWord[i]);
+        strcat(writeStr, sepStr);
+        strcat(writeStr, KVPairs->value[i]);
+        strcat(writeStr, "\n");
     }
 
-
     /* call _writeString() routine */
-    rei->status = _writeString( writeId, writeStr, rei );
-
+    rei->status = _writeString(writeId, writeStr, rei);
 
     /* free writeStr since its content has been copied somewhere else */
-    if ( writeStr != NULL ) {
-        free( writeStr );
+    if (writeStr != NULL) {
+        free(writeStr);
     }
 
     return rei->status;
 }
-
-
 
 /**
  * \fn writeXMsg(msParam_t* inStreamId, msParam_t *inHdr, msParam_t *inMsg, ruleExecInfo_t *rei)
@@ -346,28 +337,28 @@ int writeKeyValPairs( msParam_t *where, msParam_t *inKVPair, msParam_t *separato
  * \post none
  * \sa msiXmsgCreateStream, readXMsg
  **/
-int _writeXMsg( int streamId, char *hdr, char *msg );
+int _writeXMsg(int streamId, char* hdr, char* msg);
 
-int
-writeXMsg( msParam_t* inStreamId, msParam_t *inHdr, msParam_t *inMsg, ruleExecInfo_t *rei ) {
+int writeXMsg(msParam_t* inStreamId, msParam_t* inHdr, msParam_t* inMsg, ruleExecInfo_t* rei)
+{
     int i;
     int streamId;
-    xmsgTicketInfo_t *xmsgTicketInfo;
+    xmsgTicketInfo_t* xmsgTicketInfo;
 
-    RE_TEST_MACRO( "    Calling writeXMsg" )
+    RE_TEST_MACRO("    Calling writeXMsg")
 
-    if ( !strcmp( inStreamId->type, XmsgTicketInfo_MS_T ) ) {
-        xmsgTicketInfo = ( xmsgTicketInfo_t * ) inStreamId->inOutStruct;
-        streamId = ( int ) xmsgTicketInfo->rcvTicket;
+    if (!strcmp(inStreamId->type, XmsgTicketInfo_MS_T)) {
+        xmsgTicketInfo = (xmsgTicketInfo_t*) inStreamId->inOutStruct;
+        streamId = (int) xmsgTicketInfo->rcvTicket;
     }
-    else if ( !strcmp( inStreamId->type, STR_MS_T ) ) {
-        streamId = ( int ) atoi( ( char* )inStreamId->inOutStruct );
+    else if (!strcmp(inStreamId->type, STR_MS_T)) {
+        streamId = (int) atoi((char*) inStreamId->inOutStruct);
     }
     else {
-        streamId = CAST_PTR_INT  inStreamId->inOutStruct;
+        streamId = CAST_PTR_INT inStreamId->inOutStruct;
     }
 
-    i = _writeXMsg( streamId, ( char* )inHdr->inOutStruct, ( char* )inMsg->inOutStruct );
+    i = _writeXMsg(streamId, (char*) inHdr->inOutStruct, (char*) inMsg->inOutStruct);
     return i;
 }
 
@@ -390,17 +381,15 @@ writeXMsg( msParam_t* inStreamId, msParam_t *inHdr, msParam_t *inMsg, ruleExecIn
  *
  * \param[in] inStreamId - of type STR_MS_T or INT_MAS_T - the XMsg streamId number
  *    possibly generated by a msiXmsgCreateStream microservice or a supported standard stream with ids 1 thru 5
- * \param[in] inCondRead - of type STR_MS_T - boolean condition for a packet to satisfy and the first packet that satisfies
- *      the condition is read from the XMsg Stream
- * \param[out] outMsgNum - of type INT_MS_T - message number of the incoming packet (as given by message source)
- * \param[out] outSeqNum - of type INT_MS_T - sequence number of the incoming packet (as given by Xmsg Server)
- * \param[out] outHdr - of type STR_MS_T - header string of the incoming message packet
- * \param[out] outMsg - of type STR_MS_T - message string of the incoming message packet
- * \param[out] outUser - of type STR_MS_T - userName\@Zone of the sender of the packet
- * \param[out] outAddr - of type STR_MS_T - address of the sending site of the packet (host address and process-id)
- * \param[in,out] rei - The RuleExecInfo structure that is automatically
- *    handled by the rule engine. The user does not include rei as a
- *    parameter in the rule invocation.
+ * \param[in] inCondRead - of type STR_MS_T - boolean condition for a packet to satisfy and the first packet that
+ *satisfies the condition is read from the XMsg Stream \param[out] outMsgNum - of type INT_MS_T - message number of the
+ *incoming packet (as given by message source) \param[out] outSeqNum - of type INT_MS_T - sequence number of the
+ *incoming packet (as given by Xmsg Server) \param[out] outHdr - of type STR_MS_T - header string of the incoming
+ *message packet \param[out] outMsg - of type STR_MS_T - message string of the incoming message packet \param[out]
+ *outUser - of type STR_MS_T - userName\@Zone of the sender of the packet \param[out] outAddr - of type STR_MS_T -
+ *address of the sending site of the packet (host address and process-id) \param[in,out] rei - The RuleExecInfo
+ *structure that is automatically handled by the rule engine. The user does not include rei as a parameter in the rule
+ *invocation.
  *
  * \DolVarDependence none
  * \DolVarModified none
@@ -414,49 +403,52 @@ writeXMsg( msParam_t* inStreamId, msParam_t *inHdr, msParam_t *inMsg, ruleExecIn
  * \post none
  * \sa msiXmsgCreateStream, writeXMsg
  **/
-int _readXMsg( int streamId, char *condRead, int *msgNum, int *seqNum, char **hdr, char **msg, char **user, char **addr );
-int
-readXMsg( msParam_t* inStreamId, msParam_t *inCondRead,
-          msParam_t *outMsgNum, msParam_t *outSeqNum,
-          msParam_t *outHdr, msParam_t *outMsg,
-          msParam_t *outUser, msParam_t *outAddr, ruleExecInfo_t *rei ) {
+int _readXMsg(int streamId, char* condRead, int* msgNum, int* seqNum, char** hdr, char** msg, char** user, char** addr);
+int readXMsg(msParam_t* inStreamId,
+             msParam_t* inCondRead,
+             msParam_t* outMsgNum,
+             msParam_t* outSeqNum,
+             msParam_t* outHdr,
+             msParam_t* outMsg,
+             msParam_t* outUser,
+             msParam_t* outAddr,
+             ruleExecInfo_t* rei)
+{
     int i;
     int sNum = 0;
     int mNum = 0;
-    char *hdr = NULL;
-    char *msg = NULL;
-    char *user = NULL;
-    char *addr = NULL;
+    char* hdr = NULL;
+    char* msg = NULL;
+    char* user = NULL;
+    char* addr = NULL;
     int streamId;
-    xmsgTicketInfo_t *xmsgTicketInfo;
-    char *condRead = NULL;
-    RE_TEST_MACRO( "    Calling readXMsg" );
+    xmsgTicketInfo_t* xmsgTicketInfo;
+    char* condRead = NULL;
+    RE_TEST_MACRO("    Calling readXMsg");
 
-    if ( !strcmp( inStreamId->type, XmsgTicketInfo_MS_T ) ) {
-        xmsgTicketInfo = ( xmsgTicketInfo_t * ) inStreamId->inOutStruct;
+    if (!strcmp(inStreamId->type, XmsgTicketInfo_MS_T)) {
+        xmsgTicketInfo = (xmsgTicketInfo_t*) inStreamId->inOutStruct;
         streamId = xmsgTicketInfo->rcvTicket;
     }
-    else if ( !strcmp( inStreamId->type, STR_MS_T ) ) {
-        streamId = ( int ) atoi( ( char* )inStreamId->inOutStruct );
+    else if (!strcmp(inStreamId->type, STR_MS_T)) {
+        streamId = (int) atoi((char*) inStreamId->inOutStruct);
     }
     else {
-        streamId = CAST_PTR_INT  inStreamId->inOutStruct;
+        streamId = CAST_PTR_INT inStreamId->inOutStruct;
     }
-    condRead = ( char * ) inCondRead->inOutStruct;
-    i = _readXMsg( streamId, condRead, &mNum, &sNum, &hdr, &msg, &user, &addr );
-    if ( i >= 0 ) {
-        outHdr->inOutStruct = ( void * ) hdr;
-        outHdr->type = strdup( STR_MS_T );
-        outMsg->inOutStruct = ( void * ) msg;
-        outMsg->type = strdup( STR_MS_T );
-        fillIntInMsParam( outMsgNum, mNum );
-        fillIntInMsParam( outSeqNum, sNum );
-        outUser->inOutStruct = ( void * ) user;
-        outUser->type = strdup( STR_MS_T );
-        outAddr->inOutStruct = ( void * ) addr;
-        outAddr->type = strdup( STR_MS_T );
-
+    condRead = (char*) inCondRead->inOutStruct;
+    i = _readXMsg(streamId, condRead, &mNum, &sNum, &hdr, &msg, &user, &addr);
+    if (i >= 0) {
+        outHdr->inOutStruct = (void*) hdr;
+        outHdr->type = strdup(STR_MS_T);
+        outMsg->inOutStruct = (void*) msg;
+        outMsg->type = strdup(STR_MS_T);
+        fillIntInMsParam(outMsgNum, mNum);
+        fillIntInMsParam(outSeqNum, sNum);
+        outUser->inOutStruct = (void*) user;
+        outUser->type = strdup(STR_MS_T);
+        outAddr->inOutStruct = (void*) addr;
+        outAddr->type = strdup(STR_MS_T);
     }
     return i;
 }
-

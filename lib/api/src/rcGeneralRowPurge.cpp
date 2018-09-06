@@ -32,11 +32,10 @@
  * \post none
  * \sa none
  **/
-int
-rcGeneralRowPurge( rcComm_t *conn, generalRowPurgeInp_t *generalRowPurgeInp ) {
+int rcGeneralRowPurge(rcComm_t* conn, generalRowPurgeInp_t* generalRowPurgeInp)
+{
     int status;
-    status = procApiRequest( conn, GENERAL_ROW_PURGE_AN,  generalRowPurgeInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, GENERAL_ROW_PURGE_AN, generalRowPurgeInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

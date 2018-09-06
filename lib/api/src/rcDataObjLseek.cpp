@@ -73,12 +73,10 @@ fileLseekOut_t **dataObjLseekOut)
  * \sa none
 **/
 
-int
-rcDataObjLseek( rcComm_t *conn, openedDataObjInp_t *dataObjLseekInp,
-                fileLseekOut_t **dataObjLseekOut ) {
+int rcDataObjLseek(rcComm_t* conn, openedDataObjInp_t* dataObjLseekInp, fileLseekOut_t** dataObjLseekOut)
+{
     int status;
-    status = procApiRequest( conn, DATA_OBJ_LSEEK_AN,  dataObjLseekInp, NULL,
-                             ( void ** ) dataObjLseekOut, NULL );
+    status = procApiRequest(conn, DATA_OBJ_LSEEK_AN, dataObjLseekInp, NULL, (void**) dataObjLseekOut, NULL);
 
     return status;
 }

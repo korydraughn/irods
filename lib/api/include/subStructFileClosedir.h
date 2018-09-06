@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "subStructFileRead.h"
 
-int rcSubStructFileClosedir( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileClosedirInp );
+int rcSubStructFileClosedir(rcComm_t* conn, subStructFileFdOprInp_t* subStructFileClosedirInp);
 
 #endif

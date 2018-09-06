@@ -19,13 +19,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcSubStructFileGet( rcComm_t *conn, subFile_t *subFile,
-                    bytesBuf_t *subFileGetOutBBuf ) {
+ **/
+int rcSubStructFileGet(rcComm_t* conn, subFile_t* subFile, bytesBuf_t* subFileGetOutBBuf)
+{
     int status;
-    status = procApiRequest( conn, SUB_STRUCT_FILE_GET_AN, subFile, NULL,
-                             ( void ** ) NULL, subFileGetOutBBuf );
+    status = procApiRequest(conn, SUB_STRUCT_FILE_GET_AN, subFile, NULL, (void**) NULL, subFileGetOutBBuf);
 
     return status;
 }

@@ -22,55 +22,47 @@
 
 #include "sockCommNetworkInterface.hpp"
 
-static boost::mutex			     ReqQueCondMutex;
-static boost::mutex			     MessQueCondMutex;
-static boost::thread*			 ProcReqThread[ NUM_XMSG_THR ];
+static boost::mutex ReqQueCondMutex;
+static boost::mutex MessQueCondMutex;
+static boost::thread* ProcReqThread[NUM_XMSG_THR];
 static boost::condition_variable ReqQueCond;
 
-static xmsgQue_t      XmsgQue;
-static xmsgReq_t*     XmsgReqHead = NULL;
-static xmsgReq_t*     XmsgReqTail = NULL; /* points to last item in queue */
+static xmsgQue_t XmsgQue;
+static xmsgReq_t* XmsgReqHead = NULL;
+static xmsgReq_t* XmsgReqTail = NULL; /* points to last item in queue */
 static msParamArray_t XMsgMsParamArray;
 
 // =-=-=-=-=-=-=-
 // globally referenced variable
 ticketHashQue_t XmsgHashQue[NUM_HASH_SLOT];
 
-
-
-int
-initThreadEnv() {
+int initThreadEnv()
+{
     return 0;
 }
 
-
-int
-addXmsgToQues( irodsXmsg_t *irodsXmsg,  ticketMsgStruct_t *ticketMsgStruct ) {
-
-
+int addXmsgToQues(irodsXmsg_t* irodsXmsg, ticketMsgStruct_t* ticketMsgStruct)
+{
     MessQueCondMutex.lock();
 
-    addXmsgToXmsgQue( irodsXmsg, &XmsgQue );
-    int status = addXmsgToTicketMsgStruct( irodsXmsg, ticketMsgStruct );
+    addXmsgToXmsgQue(irodsXmsg, &XmsgQue);
+    int status = addXmsgToTicketMsgStruct(irodsXmsg, ticketMsgStruct);
 
     MessQueCondMutex.unlock();
 
     return status;
-
 }
 
-int
-addXmsgToXmsgQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
-
-    if ( xmsg == NULL || xmsgQue == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "addXmsgToQue: input xmsg or xmsgQue is NULL" );
+int addXmsgToXmsgQue(irodsXmsg_t* xmsg, xmsgQue_t* xmsgQue)
+{
+    if (xmsg == NULL || xmsgQue == NULL) {
+        rodsLog(LOG_ERROR, "addXmsgToQue: input xmsg or xmsgQue is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
     xmsg->next = xmsg->prev = NULL;
 
-    if ( xmsgQue->head == NULL ) {
+    if (xmsgQue->head == NULL) {
         xmsgQue->head = xmsgQue->tail = xmsg;
     }
     else {
@@ -83,15 +75,14 @@ addXmsgToXmsgQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
     return 0;
 }
 
-int
-rmXmsgFromXmsgQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
-    if ( xmsg == NULL || xmsgQue == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "addXmsgToQue: input xmsg or xmsgQue is NULL" );
+int rmXmsgFromXmsgQue(irodsXmsg_t* xmsg, xmsgQue_t* xmsgQue)
+{
+    if (xmsg == NULL || xmsgQue == NULL) {
+        rodsLog(LOG_ERROR, "addXmsgToQue: input xmsg or xmsgQue is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    if ( xmsg->prev == NULL ) {
+    if (xmsg->prev == NULL) {
         /* at head */
         xmsgQue->head = xmsg->next;
     }
@@ -99,7 +90,7 @@ rmXmsgFromXmsgQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
         xmsg->prev->next = xmsg->next;
     }
 
-    if ( xmsg->next == NULL ) {
+    if (xmsg->next == NULL) {
         /* at tail */
         xmsgQue->tail = xmsg->prev;
     }
@@ -112,15 +103,14 @@ rmXmsgFromXmsgQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
     return 0;
 }
 
-int
-rmXmsgFromXmsgTcketQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
-    if ( xmsg == NULL || xmsgQue == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "addXmsgToQue: input xmsg or xmsgQue is NULL" );
+int rmXmsgFromXmsgTcketQue(irodsXmsg_t* xmsg, xmsgQue_t* xmsgQue)
+{
+    if (xmsg == NULL || xmsgQue == NULL) {
+        rodsLog(LOG_ERROR, "addXmsgToQue: input xmsg or xmsgQue is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    if ( xmsg->tprev == NULL ) {
+    if (xmsg->tprev == NULL) {
         /* at head */
         xmsgQue->head = xmsg->tnext;
     }
@@ -128,7 +118,7 @@ rmXmsgFromXmsgTcketQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
         xmsg->tprev->tnext = xmsg->tnext;
     }
 
-    if ( xmsg->tnext == NULL ) {
+    if (xmsg->tnext == NULL) {
         /* at tail */
         xmsgQue->tail = xmsg->tprev;
     }
@@ -141,21 +131,19 @@ rmXmsgFromXmsgTcketQue( irodsXmsg_t *xmsg, xmsgQue_t *xmsgQue ) {
     return 0;
 }
 
-int
-addXmsgToTicketMsgStruct( irodsXmsg_t *xmsg,
-                          ticketMsgStruct_t *ticketMsgStruct ) {
-    if ( xmsg == NULL || ticketMsgStruct == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "addXmsgToTicketMsgStruct: input xmsg or ticketMsgStruct is NULL" );
+int addXmsgToTicketMsgStruct(irodsXmsg_t* xmsg, ticketMsgStruct_t* ticketMsgStruct)
+{
+    if (xmsg == NULL || ticketMsgStruct == NULL) {
+        rodsLog(LOG_ERROR, "addXmsgToTicketMsgStruct: input xmsg or ticketMsgStruct is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
     /* up the expire time */
-    if ( xmsg->sendTime + INC_EXPIRE_INT > ticketMsgStruct->ticket.expireTime ) {
+    if (xmsg->sendTime + INC_EXPIRE_INT > ticketMsgStruct->ticket.expireTime) {
         ticketMsgStruct->ticket.expireTime = xmsg->sendTime + INC_EXPIRE_INT;
     }
 
-    if ( ticketMsgStruct->xmsgQue.head == NULL ) {
+    if (ticketMsgStruct->xmsgQue.head == NULL) {
         ticketMsgStruct->xmsgQue.head = ticketMsgStruct->xmsgQue.tail = xmsg;
         xmsg->tnext = xmsg->tprev = NULL;
     }
@@ -168,98 +156,92 @@ addXmsgToTicketMsgStruct( irodsXmsg_t *xmsg,
     }
     xmsg->ticketMsgStruct = ticketMsgStruct;
     xmsg->seqNumber = ticketMsgStruct->nxtSeqNumber;
-    ticketMsgStruct->nxtSeqNumber =  ticketMsgStruct->nxtSeqNumber + 1;
+    ticketMsgStruct->nxtSeqNumber = ticketMsgStruct->nxtSeqNumber + 1;
 
     return xmsg->seqNumber;
 }
 
-int checkMsgCondition( irodsXmsg_t *irodsXmsg, char *msgCond ) {
-    char condStr[MAX_NAME_LEN * 2];//, res[MAX_NAME_LEN * 2];
+int checkMsgCondition(irodsXmsg_t* irodsXmsg, char* msgCond)
+{
+    char condStr[MAX_NAME_LEN * 2]; //, res[MAX_NAME_LEN * 2];
 
-    if ( msgCond == NULL || strlen( msgCond ) == 0 ) {
+    if (msgCond == NULL || strlen(msgCond) == 0) {
         return 0;
     }
 
-    strcpy( condStr, msgCond );
+    strcpy(condStr, msgCond);
 
-    XMsgMsParamArray.msParam[0]->inOutStruct = ( char * ) irodsXmsg->sendXmsgInfo->msgType; /* *XHDR*/
-    XMsgMsParamArray.msParam[1]->inOutStruct = ( char * ) irodsXmsg->sendUserName;        /* *XUSER*/
-    XMsgMsParamArray.msParam[2]->inOutStruct = ( char * ) irodsXmsg->sendAddr;            /* *XADDR*/
-    XMsgMsParamArray.msParam[3]->inOutStruct = ( char * ) irodsXmsg->sendXmsgInfo->miscInfo; /* *XMISC*/
-    * ( int * ) XMsgMsParamArray.msParam[4]->inOutStruct = ( int ) irodsXmsg->sendXmsgInfo->msgNumber; /* *XMSGNUM*/
-    * ( int * ) XMsgMsParamArray.msParam[5]->inOutStruct = ( int ) irodsXmsg->seqNumber;    /* *XSEQNUM*/
-    * ( int * ) XMsgMsParamArray.msParam[6]->inOutStruct = ( int ) irodsXmsg->sendTime;     /* *XTIME*/
+    XMsgMsParamArray.msParam[0]->inOutStruct = (char*) irodsXmsg->sendXmsgInfo->msgType;         /* *XHDR*/
+    XMsgMsParamArray.msParam[1]->inOutStruct = (char*) irodsXmsg->sendUserName;                  /* *XUSER*/
+    XMsgMsParamArray.msParam[2]->inOutStruct = (char*) irodsXmsg->sendAddr;                      /* *XADDR*/
+    XMsgMsParamArray.msParam[3]->inOutStruct = (char*) irodsXmsg->sendXmsgInfo->miscInfo;        /* *XMISC*/
+    *(int*) XMsgMsParamArray.msParam[4]->inOutStruct = (int) irodsXmsg->sendXmsgInfo->msgNumber; /* *XMSGNUM*/
+    *(int*) XMsgMsParamArray.msParam[5]->inOutStruct = (int) irodsXmsg->seqNumber;               /* *XSEQNUM*/
+    *(int*) XMsgMsParamArray.msParam[6]->inOutStruct = (int) irodsXmsg->sendTime;                /* *XTIME*/
 
-    if ( strcmp( condStr, "" ) == 0 ) {
+    if (strcmp(condStr, "") == 0) {
         return 0;
     }
-    //int ret = 1;
-    //int grdf[2];
+    // int ret = 1;
+    // int grdf[2];
     // disableReDebugger( grdf );
     // ret = !( computeExpression( condStr, &XMsgMsParamArray, NULL, 0, res ) == 0 );
     // enableReDebugger( grdf );
-    return 0;//ret;
-
+    return 0; // ret;
 }
 
-
-
-
-
-int getIrodsXmsg( rcvXmsgInp_t *rcvXmsgInp, irodsXmsg_t **outIrodsXmsg ) {
+int getIrodsXmsg(rcvXmsgInp_t* rcvXmsgInp, irodsXmsg_t** outIrodsXmsg)
+{
     int rcvTicket = rcvXmsgInp->rcvTicket;
-    char *msgCond = rcvXmsgInp->msgCondition;
+    char* msgCond = rcvXmsgInp->msgCondition;
 
-    if ( outIrodsXmsg == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "getIrodsXmsgByMsgNum: input outIrodsXmsg is NULL" );
+    if (outIrodsXmsg == NULL) {
+        rodsLog(LOG_ERROR, "getIrodsXmsgByMsgNum: input outIrodsXmsg is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
     /* locate the ticketMsgStruct_t */
 
-    ticketMsgStruct_t *ticketMsgStruct;
-    int status = getTicketMsgStructByTicket( rcvTicket, &ticketMsgStruct );
+    ticketMsgStruct_t* ticketMsgStruct;
+    int status = getTicketMsgStructByTicket(rcvTicket, &ticketMsgStruct);
 
-    if ( status < 0 ) {
+    if (status < 0) {
         return status;
     }
 
     /* now locate the irodsXmsg_t */
 
     MessQueCondMutex.lock();
-    irodsXmsg_t *tmpIrodsXmsg = ticketMsgStruct->xmsgQue.head;
+    irodsXmsg_t* tmpIrodsXmsg = ticketMsgStruct->xmsgQue.head;
 
-    while ( tmpIrodsXmsg != NULL && checkMsgCondition( tmpIrodsXmsg, msgCond ) != 0 ) {
+    while (tmpIrodsXmsg != NULL && checkMsgCondition(tmpIrodsXmsg, msgCond) != 0) {
         tmpIrodsXmsg = tmpIrodsXmsg->tnext;
     }
 
     *outIrodsXmsg = tmpIrodsXmsg;
     MessQueCondMutex.unlock();
-    if ( tmpIrodsXmsg == NULL ) {
+    if (tmpIrodsXmsg == NULL) {
         return SYS_NO_XMSG_FOR_MSG_NUMBER;
     }
     return 0;
 }
 
-int
-getIrodsXmsgByMsgNum( int rcvTicket, int msgNumber,
-                      irodsXmsg_t **outIrodsXmsg ) {
+int getIrodsXmsgByMsgNum(int rcvTicket, int msgNumber, irodsXmsg_t** outIrodsXmsg)
+{
     int status;
-    irodsXmsg_t *tmpIrodsXmsg;
-    ticketMsgStruct_t *ticketMsgStruct;
+    irodsXmsg_t* tmpIrodsXmsg;
+    ticketMsgStruct_t* ticketMsgStruct;
 
-    if ( outIrodsXmsg == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "getIrodsXmsgByMsgNum: input outIrodsXmsg is NULL" );
+    if (outIrodsXmsg == NULL) {
+        rodsLog(LOG_ERROR, "getIrodsXmsgByMsgNum: input outIrodsXmsg is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
     /* locate the ticketMsgStruct_t */
 
-    status = getTicketMsgStructByTicket( rcvTicket, &ticketMsgStruct );
+    status = getTicketMsgStructByTicket(rcvTicket, &ticketMsgStruct);
 
-    if ( status < 0 ) {
+    if (status < 0) {
         return status;
     }
 
@@ -267,16 +249,16 @@ getIrodsXmsgByMsgNum( int rcvTicket, int msgNumber,
 
     tmpIrodsXmsg = ticketMsgStruct->xmsgQue.head;
 
-    if ( msgNumber != ANY_MSG_NUMBER ) {
-        while ( tmpIrodsXmsg != NULL ) {
-            if ( ( int ) tmpIrodsXmsg->sendXmsgInfo->msgNumber == msgNumber ) {
+    if (msgNumber != ANY_MSG_NUMBER) {
+        while (tmpIrodsXmsg != NULL) {
+            if ((int) tmpIrodsXmsg->sendXmsgInfo->msgNumber == msgNumber) {
                 break;
             }
             tmpIrodsXmsg = tmpIrodsXmsg->tnext;
         }
     }
     *outIrodsXmsg = tmpIrodsXmsg;
-    if ( tmpIrodsXmsg == NULL ) {
+    if (tmpIrodsXmsg == NULL) {
         return SYS_NO_XMSG_FOR_MSG_NUMBER;
     }
     else {
@@ -284,40 +266,37 @@ getIrodsXmsgByMsgNum( int rcvTicket, int msgNumber,
     }
 }
 
-int
-addTicketToHQue( xmsgTicketInfo_t *ticket, ticketHashQue_t *ticketHQue ) {
+int addTicketToHQue(xmsgTicketInfo_t* ticket, ticketHashQue_t* ticketHQue)
+{
     int status;
 
-    ticketMsgStruct_t *tmpTicketMsgStruct;
+    ticketMsgStruct_t* tmpTicketMsgStruct;
 
-    if ( ticket == NULL || ticketHQue == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "addTicketToHQue: input ticket or ticketHQue is NULL" );
+    if (ticket == NULL || ticketHQue == NULL) {
+        rodsLog(LOG_ERROR, "addTicketToHQue: input ticket or ticketHQue is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    tmpTicketMsgStruct = ( ticketMsgStruct_t* )calloc( 1, sizeof( ticketMsgStruct_t ) );
+    tmpTicketMsgStruct = (ticketMsgStruct_t*) calloc(1, sizeof(ticketMsgStruct_t));
 
     /* copy the content of the ticket */
 
     tmpTicketMsgStruct->ticket = *ticket;
-    status = addTicketMsgStructToHQue( tmpTicketMsgStruct, ticketHQue );
+    status = addTicketMsgStructToHQue(tmpTicketMsgStruct, ticketHQue);
 
-    if ( status < 0 ) {
-        free( tmpTicketMsgStruct );
+    if (status < 0) {
+        free(tmpTicketMsgStruct);
     }
 
     return status;
 }
 
-int
-addTicketMsgStructToHQue( ticketMsgStruct_t *ticketMsgStruct,
-                          ticketHashQue_t *ticketHQue ) {
-    ticketMsgStruct_t *tmpTicketMsgStruct;
+int addTicketMsgStructToHQue(ticketMsgStruct_t* ticketMsgStruct, ticketHashQue_t* ticketHQue)
+{
+    ticketMsgStruct_t* tmpTicketMsgStruct;
 
-    if ( ticketMsgStruct == NULL || ticketHQue == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "addTicketMsgStructToHQue: ticketMsgStruct or ticketHQue is NULL" );
+    if (ticketMsgStruct == NULL || ticketHQue == NULL) {
+        rodsLog(LOG_ERROR, "addTicketMsgStructToHQue: ticketMsgStruct or ticketHQue is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
@@ -325,34 +304,31 @@ addTicketMsgStructToHQue( ticketMsgStruct_t *ticketMsgStruct,
     ticketMsgStruct->nxtSeqNumber = 0;
     ticketMsgStruct->ticketHashQue = ticketHQue;
 
-    if ( ticketHQue->head == NULL ) {
+    if (ticketHQue->head == NULL) {
         ticketHQue->head = ticketHQue->tail = ticketMsgStruct;
         return 0;
     }
 
-
     /* que in descending order of rcvTicket */
     tmpTicketMsgStruct = ticketHQue->head;
-    while ( tmpTicketMsgStruct != NULL ) {
-        if ( ticketMsgStruct->ticket.rcvTicket ==
-                tmpTicketMsgStruct->ticket.rcvTicket ) {
+    while (tmpTicketMsgStruct != NULL) {
+        if (ticketMsgStruct->ticket.rcvTicket == tmpTicketMsgStruct->ticket.rcvTicket) {
             return SYS_DUPLICATE_XMSG_TICKET;
         }
-        else if ( ticketMsgStruct->ticket.rcvTicket >
-                  tmpTicketMsgStruct->ticket.rcvTicket ) {
+        else if (ticketMsgStruct->ticket.rcvTicket > tmpTicketMsgStruct->ticket.rcvTicket) {
             break;
         }
         else {
             tmpTicketMsgStruct = tmpTicketMsgStruct->hnext;
         }
     }
-    if ( tmpTicketMsgStruct == NULL ) {
+    if (tmpTicketMsgStruct == NULL) {
         /* reached the end */
         ticketHQue->tail->hnext = ticketMsgStruct;
         ticketMsgStruct->hprev = ticketHQue->tail;
         ticketHQue->tail = ticketMsgStruct;
     }
-    else if ( tmpTicketMsgStruct == ticketHQue->head ) {
+    else if (tmpTicketMsgStruct == ticketHQue->head) {
         /* need to put ticketMsgStruct at the head */
         ticketHQue->head->hprev = ticketMsgStruct;
         ticketMsgStruct->hnext = ticketHQue->head;
@@ -369,16 +345,14 @@ addTicketMsgStructToHQue( ticketMsgStruct_t *ticketMsgStruct,
     return 0;
 }
 
-int
-rmTicketMsgStructFromHQue( ticketMsgStruct_t *ticketMsgStruct,
-                           ticketHashQue_t *ticketHQue ) {
-    if ( ticketMsgStruct == NULL || ticketHQue == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "rmTicketMsgStructFromHQue: ticketMsgStruct or ticketHQue is NULL" );
+int rmTicketMsgStructFromHQue(ticketMsgStruct_t* ticketMsgStruct, ticketHashQue_t* ticketHQue)
+{
+    if (ticketMsgStruct == NULL || ticketHQue == NULL) {
+        rodsLog(LOG_ERROR, "rmTicketMsgStructFromHQue: ticketMsgStruct or ticketHQue is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    if ( ticketMsgStruct->hprev == NULL ) {
+    if (ticketMsgStruct->hprev == NULL) {
         /* at head */
         ticketHQue->head = ticketMsgStruct->hnext;
     }
@@ -386,7 +360,7 @@ rmTicketMsgStructFromHQue( ticketMsgStruct_t *ticketMsgStruct,
         ticketMsgStruct->hprev->hnext = ticketMsgStruct->hnext;
     }
 
-    if ( ticketMsgStruct->hnext == NULL ) {
+    if (ticketMsgStruct->hnext == NULL) {
         /* at tail */
         ticketHQue->tail = ticketMsgStruct->hprev;
     }
@@ -401,22 +375,22 @@ rmTicketMsgStructFromHQue( ticketMsgStruct_t *ticketMsgStruct,
 
 /* add incoming request to the bottom of the link list */
 
-int
-addReqToQue( int sock ) {
-    xmsgReq_t *myXmsgReq;
+int addReqToQue(int sock)
+{
+    xmsgReq_t* myXmsgReq;
 
-    myXmsgReq = ( xmsgReq_t* )calloc( 1, sizeof( xmsgReq_t ) );
+    myXmsgReq = (xmsgReq_t*) calloc(1, sizeof(xmsgReq_t));
 
     myXmsgReq->sock = sock;
 
     ReqQueCondMutex.lock();
 
-    if ( XmsgReqHead == NULL ) {
+    if (XmsgReqHead == NULL) {
         XmsgReqHead = myXmsgReq;
         XmsgReqTail = myXmsgReq; /* points to last item in queue */
     }
     else {
-        XmsgReqTail->next  = myXmsgReq;
+        XmsgReqTail->next = myXmsgReq;
         XmsgReqTail = myXmsgReq;
     }
 
@@ -427,15 +401,14 @@ addReqToQue( int sock ) {
     return 0;
 }
 
-xmsgReq_t *
-getReqFromQue() {
-    xmsgReq_t *myXmsgReq = NULL;
+xmsgReq_t* getReqFromQue()
+{
+    xmsgReq_t* myXmsgReq = NULL;
 
-    while ( myXmsgReq == NULL ) {
-
+    while (myXmsgReq == NULL) {
         ReqQueCondMutex.lock();
 
-        if ( XmsgReqHead != NULL ) {
+        if (XmsgReqHead != NULL) {
             myXmsgReq = XmsgReqHead;
             XmsgReqHead = XmsgReqHead->next;
             ReqQueCondMutex.unlock();
@@ -445,9 +418,9 @@ getReqFromQue() {
 
         ReqQueCondMutex.unlock();
 
-        boost::unique_lock<boost::mutex> boost_lock( ReqQueCondMutex );
-        ReqQueCond.wait( boost_lock );
-        if ( XmsgReqHead == NULL ) {
+        boost::unique_lock<boost::mutex> boost_lock(ReqQueCondMutex);
+        ReqQueCond.wait(boost_lock);
+        if (XmsgReqHead == NULL) {
             boost_lock.unlock();
 
             continue;
@@ -464,13 +437,13 @@ getReqFromQue() {
     return myXmsgReq;
 }
 
-int
-startXmsgThreads() {
-    for ( int i = 0; i < NUM_XMSG_THR; i++ ) {
+int startXmsgThreads()
+{
+    for (int i = 0; i < NUM_XMSG_THR; i++) {
         try {
-            ProcReqThread[i] = new boost::thread( procReqRoutine );
+            ProcReqThread[i] = new boost::thread(procReqRoutine);
         }
-        catch ( const boost::thread_resource_error& ) {
+        catch (const boost::thread_resource_error&) {
             return SYS_THREAD_RESOURCE_ERR;
         }
     }
@@ -478,75 +451,72 @@ startXmsgThreads() {
     return 0;
 }
 
-void
-procReqRoutine() {
+void procReqRoutine()
+{
     struct timeval msgTimeout;
-    memset( &msgTimeout, 0, sizeof( msgTimeout ) );
+    memset(&msgTimeout, 0, sizeof(msgTimeout));
     msgTimeout.tv_sec = REQ_MSG_TIMEOUT_TIME;
 
-    while ( 1 ) {
-        xmsgReq_t * myXmsgReq = getReqFromQue();
-        if ( myXmsgReq == NULL ) {
+    while (1) {
+        xmsgReq_t* myXmsgReq = getReqFromQue();
+        if (myXmsgReq == NULL) {
             /* someone else took care of it */
             continue;
         }
 
         rsComm_t rsComm;
-        memset( &rsComm, 0, sizeof( rsComm ) );
+        memset(&rsComm, 0, sizeof(rsComm));
         rsComm.sock = myXmsgReq->sock;
 
         // =-=-=-=-=-=-=-
         // manufacture a network object
         irods::network_object_ptr net_obj;
-        irods::error ret = irods::network_factory( &rsComm, net_obj );
-        if ( !ret.ok() ) {
-            irods::log( PASS( ret ) );
+        irods::error ret = irods::network_factory(&rsComm, net_obj);
+        if (!ret.ok()) {
+            irods::log(PASS(ret));
         }
 
-        startupPack_t *startupPack;
-        ret = readStartupPack( net_obj, &startupPack, NULL );
-        if ( !ret.ok() ) {
-            rodsLog( LOG_ERROR,
-                     "procReqRoutine: readStartupPack error, status = %d", ret.code() );
-            free( myXmsgReq );
+        startupPack_t* startupPack;
+        ret = readStartupPack(net_obj, &startupPack, NULL);
+        if (!ret.ok()) {
+            rodsLog(LOG_ERROR, "procReqRoutine: readStartupPack error, status = %d", ret.code());
+            free(myXmsgReq);
             continue;
         }
-        initRsCommWithStartupPack( &rsComm, startupPack );
-        free( startupPack );
+        initRsCommWithStartupPack(&rsComm, startupPack);
+        free(startupPack);
 
-        ret = sendVersion( net_obj, 0, 0, NULL, 0 );
-        if ( !ret.ok() ) {
-            sendVersion( net_obj, SYS_AGENT_INIT_ERR, 0, NULL, 0 );
-            free( myXmsgReq );
+        ret = sendVersion(net_obj, 0, 0, NULL, 0);
+        if (!ret.ok()) {
+            sendVersion(net_obj, SYS_AGENT_INIT_ERR, 0, NULL, 0);
+            free(myXmsgReq);
             continue;
         }
         fd_set sockMask;
-        FD_ZERO( &sockMask );
-        while ( 1 ) {
+        FD_ZERO(&sockMask);
+        while (1) {
             int numSock;
 
-            FD_SET( rsComm.sock, &sockMask );
-            while ( ( numSock = select( rsComm.sock + 1, &sockMask,
-                                        ( fd_set * ) NULL, ( fd_set * ) NULL, &msgTimeout ) ) <= 0 ) {
-                if ( errno == EINTR ) {
-                    rodsLog( LOG_NOTICE,
-                             "procReqRoutine: select() interrupted" );
-                    FD_SET( rsComm.sock, &sockMask );
+            FD_SET(rsComm.sock, &sockMask);
+            while ((numSock = select(rsComm.sock + 1, &sockMask, (fd_set*) NULL, (fd_set*) NULL, &msgTimeout)) <= 0) {
+                if (errno == EINTR) {
+                    rodsLog(LOG_NOTICE, "procReqRoutine: select() interrupted");
+                    FD_SET(rsComm.sock, &sockMask);
                     continue;
                 }
                 else {
-                    break;	/* timedout or something */
+                    break; /* timedout or something */
                 }
             }
-            if ( numSock < 0 ) {
+            if (numSock < 0) {
                 break;
             }
-            if ( readAndProcClientMsg( &rsComm, 0 ) < 0 ) {
+            if (readAndProcClientMsg(&rsComm, 0) < 0) {
                 break;
             }
         }
-        close( rsComm.sock );
-        free( myXmsgReq );
+        close(rsComm.sock);
+        free(myXmsgReq);
     }
 }
 
@@ -554,99 +524,97 @@ procReqRoutine() {
  * rcvTicket/NUM_HASH_SLOT
  */
 
-int
-ticketHashFunc( uint rcvTicket ) {
+int ticketHashFunc(uint rcvTicket)
+{
     const int mySlot = rcvTicket % NUM_HASH_SLOT;
     return mySlot;
 }
 
-int
-initXmsgHashQue() {
-
-    xmsgTicketInfo_t *outXmsgTicketInfo;
+int initXmsgHashQue()
+{
+    xmsgTicketInfo_t* outXmsgTicketInfo;
     time_t thisTime;
     int hashSlotNum;
 
-    memset( XmsgHashQue, 0, NUM_HASH_SLOT * sizeof( ticketHashQue_t ) );
-    memset( &XmsgQue, 0, sizeof( XmsgQue ) );
+    memset(XmsgHashQue, 0, NUM_HASH_SLOT * sizeof(ticketHashQue_t));
+    memset(&XmsgQue, 0, sizeof(XmsgQue));
 
     /***  have a permanent message queue with ticket-id =1,2,3,4,5***/
 
-    thisTime = time( NULL );
+    thisTime = time(NULL);
 
-    outXmsgTicketInfo = ( xmsgTicketInfo_t* )calloc( 1, sizeof( xmsgTicketInfo_t ) );
-    outXmsgTicketInfo->expireTime = thisTime + ( MAX_EXPIRE_INT * 500 );
+    outXmsgTicketInfo = (xmsgTicketInfo_t*) calloc(1, sizeof(xmsgTicketInfo_t));
+    outXmsgTicketInfo->expireTime = thisTime + (MAX_EXPIRE_INT * 500);
     outXmsgTicketInfo->rcvTicket = 1;
     outXmsgTicketInfo->sendTicket = 1;
     outXmsgTicketInfo->flag = 1;
-    hashSlotNum = ticketHashFunc( outXmsgTicketInfo->rcvTicket );
-    addTicketToHQue( outXmsgTicketInfo, &XmsgHashQue[hashSlotNum] );
-    free( outXmsgTicketInfo ); // JMC cppcheck - leak
-    outXmsgTicketInfo = ( xmsgTicketInfo_t* )calloc( 1, sizeof( xmsgTicketInfo_t ) );
-    outXmsgTicketInfo->expireTime = thisTime + ( MAX_EXPIRE_INT * 500 );
+    hashSlotNum = ticketHashFunc(outXmsgTicketInfo->rcvTicket);
+    addTicketToHQue(outXmsgTicketInfo, &XmsgHashQue[hashSlotNum]);
+    free(outXmsgTicketInfo); // JMC cppcheck - leak
+    outXmsgTicketInfo = (xmsgTicketInfo_t*) calloc(1, sizeof(xmsgTicketInfo_t));
+    outXmsgTicketInfo->expireTime = thisTime + (MAX_EXPIRE_INT * 500);
     outXmsgTicketInfo->rcvTicket = 2;
     outXmsgTicketInfo->sendTicket = 2;
     outXmsgTicketInfo->flag = 1;
-    hashSlotNum = ticketHashFunc( outXmsgTicketInfo->rcvTicket );
-    addTicketToHQue( outXmsgTicketInfo, &XmsgHashQue[hashSlotNum] );
-    free( outXmsgTicketInfo ); // JMC cppcheck - leak
+    hashSlotNum = ticketHashFunc(outXmsgTicketInfo->rcvTicket);
+    addTicketToHQue(outXmsgTicketInfo, &XmsgHashQue[hashSlotNum]);
+    free(outXmsgTicketInfo); // JMC cppcheck - leak
 
-    outXmsgTicketInfo = ( xmsgTicketInfo_t* )calloc( 1, sizeof( xmsgTicketInfo_t ) );
-    outXmsgTicketInfo->expireTime = thisTime + ( MAX_EXPIRE_INT * 500 );
+    outXmsgTicketInfo = (xmsgTicketInfo_t*) calloc(1, sizeof(xmsgTicketInfo_t));
+    outXmsgTicketInfo->expireTime = thisTime + (MAX_EXPIRE_INT * 500);
     outXmsgTicketInfo->rcvTicket = 3;
     outXmsgTicketInfo->sendTicket = 3;
     outXmsgTicketInfo->flag = 1;
-    hashSlotNum = ticketHashFunc( outXmsgTicketInfo->rcvTicket );
-    addTicketToHQue( outXmsgTicketInfo, &XmsgHashQue[hashSlotNum] );
-    free( outXmsgTicketInfo ); // JMC cppcheck - leak
+    hashSlotNum = ticketHashFunc(outXmsgTicketInfo->rcvTicket);
+    addTicketToHQue(outXmsgTicketInfo, &XmsgHashQue[hashSlotNum]);
+    free(outXmsgTicketInfo); // JMC cppcheck - leak
 
-    outXmsgTicketInfo = ( xmsgTicketInfo_t* )calloc( 1, sizeof( xmsgTicketInfo_t ) );
-    outXmsgTicketInfo->expireTime = thisTime + ( MAX_EXPIRE_INT * 500 );
+    outXmsgTicketInfo = (xmsgTicketInfo_t*) calloc(1, sizeof(xmsgTicketInfo_t));
+    outXmsgTicketInfo->expireTime = thisTime + (MAX_EXPIRE_INT * 500);
     outXmsgTicketInfo->rcvTicket = 4;
     outXmsgTicketInfo->sendTicket = 4;
     outXmsgTicketInfo->flag = 1;
-    hashSlotNum = ticketHashFunc( outXmsgTicketInfo->rcvTicket );
-    addTicketToHQue( outXmsgTicketInfo, &XmsgHashQue[hashSlotNum] );
-    free( outXmsgTicketInfo ); // JMC cppcheck - leak
+    hashSlotNum = ticketHashFunc(outXmsgTicketInfo->rcvTicket);
+    addTicketToHQue(outXmsgTicketInfo, &XmsgHashQue[hashSlotNum]);
+    free(outXmsgTicketInfo); // JMC cppcheck - leak
 
-    outXmsgTicketInfo = ( xmsgTicketInfo_t* )calloc( 1, sizeof( xmsgTicketInfo_t ) );
-    outXmsgTicketInfo->expireTime = thisTime + ( MAX_EXPIRE_INT * 500 );
+    outXmsgTicketInfo = (xmsgTicketInfo_t*) calloc(1, sizeof(xmsgTicketInfo_t));
+    outXmsgTicketInfo->expireTime = thisTime + (MAX_EXPIRE_INT * 500);
     outXmsgTicketInfo->rcvTicket = 5;
     outXmsgTicketInfo->sendTicket = 5;
     outXmsgTicketInfo->flag = 1;
-    hashSlotNum = ticketHashFunc( outXmsgTicketInfo->rcvTicket );
-    addTicketToHQue( outXmsgTicketInfo, &XmsgHashQue[hashSlotNum] );
-    free( outXmsgTicketInfo ); // JMC cppcheck - leak
+    hashSlotNum = ticketHashFunc(outXmsgTicketInfo->rcvTicket);
+    addTicketToHQue(outXmsgTicketInfo, &XmsgHashQue[hashSlotNum]);
+    free(outXmsgTicketInfo); // JMC cppcheck - leak
 
-    addMsParam( &XMsgMsParamArray, "*XHDR", STR_MS_T, NULL, NULL );
-    addMsParam( &XMsgMsParamArray, "*XUSER", STR_MS_T, NULL, NULL );
-    addMsParam( &XMsgMsParamArray, "*XADDR", STR_MS_T, NULL, NULL );
-    addMsParam( &XMsgMsParamArray, "*XMISC", STR_MS_T, NULL, NULL );
-    addIntParamToArray( &XMsgMsParamArray, "*XMSGNUM", 0 );
-    addIntParamToArray( &XMsgMsParamArray, "*XSEQNUM", 0 );
-    addIntParamToArray( &XMsgMsParamArray, "*XTIME", 0 );
+    addMsParam(&XMsgMsParamArray, "*XHDR", STR_MS_T, NULL, NULL);
+    addMsParam(&XMsgMsParamArray, "*XUSER", STR_MS_T, NULL, NULL);
+    addMsParam(&XMsgMsParamArray, "*XADDR", STR_MS_T, NULL, NULL);
+    addMsParam(&XMsgMsParamArray, "*XMISC", STR_MS_T, NULL, NULL);
+    addIntParamToArray(&XMsgMsParamArray, "*XMSGNUM", 0);
+    addIntParamToArray(&XMsgMsParamArray, "*XSEQNUM", 0);
+    addIntParamToArray(&XMsgMsParamArray, "*XTIME", 0);
 
     /*** have a permanent message queue with ticket-id = 1,2,3,4,5***/
 
     return 0;
 }
 
-int
-getTicketMsgStructByTicket( uint rcvTicket,
-                            ticketMsgStruct_t **outTicketMsgStruct ) {
+int getTicketMsgStructByTicket(uint rcvTicket, ticketMsgStruct_t** outTicketMsgStruct)
+{
     int hashSlotNum;
-    ticketMsgStruct_t *tmpTicketMsgStruct;
+    ticketMsgStruct_t* tmpTicketMsgStruct;
 
-    hashSlotNum = ticketHashFunc( rcvTicket );
+    hashSlotNum = ticketHashFunc(rcvTicket);
 
     tmpTicketMsgStruct = XmsgHashQue[hashSlotNum].head;
 
-    while ( tmpTicketMsgStruct != NULL ) {
-        if ( rcvTicket == tmpTicketMsgStruct->ticket.rcvTicket ) {
+    while (tmpTicketMsgStruct != NULL) {
+        if (rcvTicket == tmpTicketMsgStruct->ticket.rcvTicket) {
             *outTicketMsgStruct = tmpTicketMsgStruct;
             return 0;
         }
-        else if ( rcvTicket > tmpTicketMsgStruct->ticket.rcvTicket ) {
+        else if (rcvTicket > tmpTicketMsgStruct->ticket.rcvTicket) {
             *outTicketMsgStruct = NULL;
             return SYS_UNMATCHED_XMSG_TICKET;
         }
@@ -660,20 +628,19 @@ getTicketMsgStructByTicket( uint rcvTicket,
     return SYS_UNMATCHED_XMSG_TICKET;
 }
 
-int
-_rsRcvXmsg( irodsXmsg_t *irodsXmsg, rcvXmsgOut_t *rcvXmsgOut ) {
-    sendXmsgInfo_t *sendXmsgInfo;
-    ticketMsgStruct_t *ticketMsgStruct;
+int _rsRcvXmsg(irodsXmsg_t* irodsXmsg, rcvXmsgOut_t* rcvXmsgOut)
+{
+    sendXmsgInfo_t* sendXmsgInfo;
+    ticketMsgStruct_t* ticketMsgStruct;
 
-    if ( irodsXmsg == NULL || rcvXmsgOut == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "_rsRcvXmsg: input irodsXmsg or rcvXmsgOut is NULL" );
+    if (irodsXmsg == NULL || rcvXmsgOut == NULL) {
+        rodsLog(LOG_ERROR, "_rsRcvXmsg: input irodsXmsg or rcvXmsgOut is NULL");
         MessQueCondMutex.unlock();
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
     sendXmsgInfo = irodsXmsg->sendXmsgInfo;
-    ticketMsgStruct = ( ticketMsgStruct_t* )irodsXmsg->ticketMsgStruct;
+    ticketMsgStruct = (ticketMsgStruct_t*) irodsXmsg->ticketMsgStruct;
 
     /* rodsLog (LOG_NOTICE,
          "_rsRcvXmsg: SEQNum=%d, numRcv=%d", irodsXmsg->seqNumber,
@@ -681,72 +648,64 @@ _rsRcvXmsg( irodsXmsg_t *irodsXmsg, rcvXmsgOut_t *rcvXmsgOut ) {
 
     sendXmsgInfo->numRcv--;
 
-    if ( sendXmsgInfo->numRcv <= 0 && sendXmsgInfo->numDeli <= 0 ) {
+    if (sendXmsgInfo->numRcv <= 0 && sendXmsgInfo->numDeli <= 0) {
         /* done with this msg */
         rcvXmsgOut->msg = sendXmsgInfo->msg;
-        rcvXmsgOut->seqNumber  = irodsXmsg->seqNumber;
-        rcvXmsgOut->msgNumber  = sendXmsgInfo->msgNumber;
+        rcvXmsgOut->seqNumber = irodsXmsg->seqNumber;
+        rcvXmsgOut->msgNumber = sendXmsgInfo->msgNumber;
         sendXmsgInfo->msg = NULL;
-        rstrcpy( rcvXmsgOut->msgType, sendXmsgInfo->msgType, HEADER_TYPE_LEN );
-        rstrcpy( rcvXmsgOut->sendUserName, irodsXmsg->sendUserName,
-                 NAME_LEN );
-        rstrcpy( rcvXmsgOut->sendAddr, irodsXmsg->sendAddr,
-                 NAME_LEN );
-        rmXmsgFromXmsgQue( irodsXmsg, &XmsgQue );
-        rmXmsgFromXmsgTcketQue( irodsXmsg, &ticketMsgStruct->xmsgQue );
-        clearSendXmsgInfo( sendXmsgInfo );
-        free( sendXmsgInfo );
-        free( irodsXmsg );
+        rstrcpy(rcvXmsgOut->msgType, sendXmsgInfo->msgType, HEADER_TYPE_LEN);
+        rstrcpy(rcvXmsgOut->sendUserName, irodsXmsg->sendUserName, NAME_LEN);
+        rstrcpy(rcvXmsgOut->sendAddr, irodsXmsg->sendAddr, NAME_LEN);
+        rmXmsgFromXmsgQue(irodsXmsg, &XmsgQue);
+        rmXmsgFromXmsgTcketQue(irodsXmsg, &ticketMsgStruct->xmsgQue);
+        clearSendXmsgInfo(sendXmsgInfo);
+        free(sendXmsgInfo);
+        free(irodsXmsg);
     }
     else {
-        rcvXmsgOut->msg = strdup( sendXmsgInfo->msg );
-        rcvXmsgOut->seqNumber  = irodsXmsg->seqNumber;
-        rcvXmsgOut->msgNumber  = sendXmsgInfo->msgNumber;
-        rstrcpy( rcvXmsgOut->msgType, sendXmsgInfo->msgType, HEADER_TYPE_LEN );
-        rstrcpy( rcvXmsgOut->sendUserName, irodsXmsg->sendUserName,
-                 NAME_LEN );
-        rstrcpy( rcvXmsgOut->sendAddr, irodsXmsg->sendAddr,
-                 NAME_LEN );
+        rcvXmsgOut->msg = strdup(sendXmsgInfo->msg);
+        rcvXmsgOut->seqNumber = irodsXmsg->seqNumber;
+        rcvXmsgOut->msgNumber = sendXmsgInfo->msgNumber;
+        rstrcpy(rcvXmsgOut->msgType, sendXmsgInfo->msgType, HEADER_TYPE_LEN);
+        rstrcpy(rcvXmsgOut->sendUserName, irodsXmsg->sendUserName, NAME_LEN);
+        rstrcpy(rcvXmsgOut->sendAddr, irodsXmsg->sendAddr, NAME_LEN);
     }
     MessQueCondMutex.unlock();
     return 0;
 }
 
-int
-clearOneXMessage( ticketMsgStruct_t *ticketMsgStruct, int seqNum ) {
-
-
-    irodsXmsg_t *tmpIrodsXmsg;
+int clearOneXMessage(ticketMsgStruct_t* ticketMsgStruct, int seqNum)
+{
+    irodsXmsg_t* tmpIrodsXmsg;
 
     tmpIrodsXmsg = ticketMsgStruct->xmsgQue.head;
-    while ( tmpIrodsXmsg != NULL ) {
-        if ( ( int ) tmpIrodsXmsg->seqNumber == seqNum ) {
-            rmXmsgFromXmsgQue( tmpIrodsXmsg, &XmsgQue );
-            rmXmsgFromXmsgTcketQue( tmpIrodsXmsg, &ticketMsgStruct->xmsgQue );
-            clearSendXmsgInfo( tmpIrodsXmsg->sendXmsgInfo );
-            free( tmpIrodsXmsg->sendXmsgInfo );
-            free( tmpIrodsXmsg );
+    while (tmpIrodsXmsg != NULL) {
+        if ((int) tmpIrodsXmsg->seqNumber == seqNum) {
+            rmXmsgFromXmsgQue(tmpIrodsXmsg, &XmsgQue);
+            rmXmsgFromXmsgTcketQue(tmpIrodsXmsg, &ticketMsgStruct->xmsgQue);
+            clearSendXmsgInfo(tmpIrodsXmsg->sendXmsgInfo);
+            free(tmpIrodsXmsg->sendXmsgInfo);
+            free(tmpIrodsXmsg);
             return 0;
         }
         tmpIrodsXmsg = tmpIrodsXmsg->tnext;
     }
 
-
     return 0;
 }
 
-int
-clearAllXMessages( ticketMsgStruct_t *ticketMsgStruct ) {
-
+int clearAllXMessages(ticketMsgStruct_t* ticketMsgStruct)
+{
     irodsXmsg_t *tmpIrodsXmsg, *tmpIrodsXmsg2;
 
     tmpIrodsXmsg = ticketMsgStruct->xmsgQue.head;
-    while ( tmpIrodsXmsg != NULL ) {
+    while (tmpIrodsXmsg != NULL) {
         tmpIrodsXmsg2 = tmpIrodsXmsg->tnext;
-        rmXmsgFromXmsgQue( tmpIrodsXmsg, &XmsgQue );
-        clearSendXmsgInfo( tmpIrodsXmsg->sendXmsgInfo );
-        free( tmpIrodsXmsg->sendXmsgInfo );
-        free( tmpIrodsXmsg );
+        rmXmsgFromXmsgQue(tmpIrodsXmsg, &XmsgQue);
+        clearSendXmsgInfo(tmpIrodsXmsg->sendXmsgInfo);
+        free(tmpIrodsXmsg->sendXmsgInfo);
+        free(tmpIrodsXmsg);
         tmpIrodsXmsg = tmpIrodsXmsg2;
     }
 

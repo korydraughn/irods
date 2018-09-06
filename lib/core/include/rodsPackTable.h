@@ -13,13 +13,13 @@
 #include "authenticate.h"
 #include "rcGlobalExtern.h"
 
-#define UNKNOWN_SIZE	-1
+#define UNKNOWN_SIZE -1
 
 packType_t packTypeTable[] = {
-    {"char", PACK_CHAR_TYPE, sizeof( char )},
-    {"bin", PACK_BIN_TYPE, sizeof( char )},
-    {"str", PACK_STR_TYPE, sizeof( char )},
-    {"piStr", PACK_PI_STR_TYPE, sizeof( char )},  /* str containing pi */
+    {"char", PACK_CHAR_TYPE, sizeof(char)},
+    {"bin", PACK_BIN_TYPE, sizeof(char)},
+    {"str", PACK_STR_TYPE, sizeof(char)},
+    {"piStr", PACK_PI_STR_TYPE, sizeof(char)}, /* str containing pi */
     {"int", PACK_INT_TYPE, 4},
     {"double", PACK_DOUBLE_TYPE, 8},
     {"struct", PACK_STRUCT_TYPE, UNKNOWN_SIZE},
@@ -28,7 +28,7 @@ packType_t packTypeTable[] = {
     {"int16", PACK_INT16_TYPE, 2},
 };
 
-int NumOfPackTypes = ( sizeof( packTypeTable ) / sizeof( packType_t ) );
+int NumOfPackTypes = (sizeof(packTypeTable) / sizeof(packType_t));
 
 packConstant_t PackConstantTable[] = {
     {"HEADER_TYPE_LEN", HEADER_TYPE_LEN},
@@ -57,7 +57,6 @@ packConstant_t PackConstantTable[] = {
     {PACK_TABLE_END_PI, 0},
 };
 
-
 const packInstruct_t RodsPackTable[] = {
     {"STR_PI", STR_PI, NULL},
     {"IRODS_STR_PI", IRODS_STR_PI, NULL},
@@ -65,8 +64,8 @@ const packInstruct_t RodsPackTable[] = {
     {"INT_PI", INT_PI, NULL},
     {"CHAR_PI", CHAR_PI, NULL},
     {"DOUBLE_PI", DOUBLE_PI, NULL},
-    {"FLOAT_PI", INT_PI, NULL},           /* pack as if it is INT_PI */
-    {"BOOL_PI", INT_PI, NULL},            /* pack as if it is INT_PI */
+    {"FLOAT_PI", INT_PI, NULL}, /* pack as if it is INT_PI */
+    {"BOOL_PI", INT_PI, NULL},  /* pack as if it is INT_PI */
     {"BUF_LEN_PI", BUF_LEN_PI, NULL},
     {"INT16_PI", INT16_PI, NULL},
     {"MsgHeader_PI", MsgHeader_PI, NULL},
@@ -136,7 +135,7 @@ const packInstruct_t RodsPackTable[] = {
     {"FileRestartInfo_PI", FileRestartInfo_PI, NULL},
     {"CS_NEG_PI", CS_NEG_PI, NULL},
     {"StrArray_PI", StrArray_PI, NULL},
-    {PACK_TABLE_END_PI, ( char * ) NULL, NULL},
+    {PACK_TABLE_END_PI, (char*) NULL, NULL},
 };
 
-#endif	// RODS_PACK_TABLE_H__
+#endif // RODS_PACK_TABLE_H__

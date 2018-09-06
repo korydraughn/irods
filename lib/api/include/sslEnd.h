@@ -3,14 +3,16 @@
 
 #include "rcConnect.h"
 
-typedef struct {
-    char *arg0;
+typedef struct
+{
+    char* arg0;
 } sslEndInp_t;
 #define sslEndInp_PI "str *arg0;"
 
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcSslEnd( rcComm_t *conn, sslEndInp_t *sslEndInp );
+    int
+    rcSslEnd(rcComm_t* conn, sslEndInp_t* sslEndInp);
 
 #endif

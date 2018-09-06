@@ -23,6 +23,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjUnlink( rcComm_t *conn, dataObjInp_t *dataObjUnlinkInp );
+    int
+    rcDataObjUnlink(rcComm_t* conn, dataObjInp_t* dataObjUnlinkInp);
 
 #endif

@@ -6,7 +6,6 @@
 /*** Copyright (c), The Regents of the University of California            ***
  *** For more information please refer to files in the COPYRIGHT directory ***/
 
-
 #ifndef DATA_OBJ_INP_OUT_H__
 #define DATA_OBJ_INP_OUT_H__
 
@@ -15,21 +14,22 @@
 #include "objInfo.h"
 
 #if defined(aix_platform)
-#ifndef _AIX_PTHREADS_D7
-#define pthread_mutexattr_default NULL
-#define pthread_condattr_default NULL
-#define pthread_attr_default NULL
-#endif  /* _AIX_PTHREADS_D7 */
-#else   /* aix_platform */
-#define pthread_mutexattr_default NULL
-#define pthread_condattr_default NULL
-#define pthread_attr_default NULL
-#endif  /* aix_platform */
+#    ifndef _AIX_PTHREADS_D7
+#        define pthread_mutexattr_default NULL
+#        define pthread_condattr_default NULL
+#        define pthread_attr_default NULL
+#    endif /* _AIX_PTHREADS_D7 */
+#else      /* aix_platform */
+#    define pthread_mutexattr_default NULL
+#    define pthread_condattr_default NULL
+#    define pthread_attr_default NULL
+#endif /* aix_platform */
 
-typedef struct {
-    int portNum;       /* the port number */
+typedef struct
+{
+    int portNum; /* the port number */
     int cookie;
-    int sock;           /* The server's sock number. no meaning for client */
+    int sock; /* The server's sock number. no meaning for client */
     int windowSize;
     char hostAddr[LONG_NAME_LEN];
 } portList_t;
@@ -62,16 +62,17 @@ typedef struct {
  * \sa none
  */
 
-typedef struct DataObjInp {
+typedef struct DataObjInp
+{
     char objPath[MAX_NAME_LEN];
     int createMode;
-    int openFlags;      /* used for specCollInx in rcQuerySpecColl */
+    int openFlags; /* used for specCollInx in rcQuerySpecColl */
     rodsLong_t offset;
     rodsLong_t dataSize;
     int numThreads;
     int oprType;
-    specColl_t *specColl;
-    keyValPair_t condInput;   /* include chksum flag and value */
+    specColl_t* specColl;
+    keyValPair_t condInput; /* include chksum flag and value */
 } dataObjInp_t;
 
 /**
@@ -101,17 +102,19 @@ typedef struct DataObjInp {
  * \sa none
  */
 
-typedef struct OpenedDataObjInp {
-    int l1descInx;              /* for read, write, close */
-    int len;                    /* length of operation for read, write */
-    int whence;                 /* used for lseek */
+typedef struct OpenedDataObjInp
+{
+    int l1descInx; /* for read, write, close */
+    int len;       /* length of operation for read, write */
+    int whence;    /* used for lseek */
     int oprType;
     rodsLong_t offset;
-    rodsLong_t bytesWritten;    /* for close */
-    keyValPair_t condInput;   /* include chksum flag and value */
+    rodsLong_t bytesWritten; /* for close */
+    keyValPair_t condInput;  /* include chksum flag and value */
 } openedDataObjInp_t;
 
-typedef struct portalOprOut {
+typedef struct portalOprOut
+{
     int status;
     int l1descInx;
     int numThreads;
@@ -119,7 +122,8 @@ typedef struct portalOprOut {
     portList_t portList;
 } portalOprOut_t;
 
-typedef struct DataOprInp {
+typedef struct DataOprInp
+{
     int oprType;
     int numThreads;
     int srcL3descInx;
@@ -154,7 +158,8 @@ typedef struct DataOprInp {
  * \sa none
  */
 
-typedef struct CollInp {
+typedef struct CollInp
+{
     char collName[MAX_NAME_LEN];
     int flags;
     int oprType;
@@ -163,53 +168,55 @@ typedef struct CollInp {
 
 /* definition for oprType in dataObjInp_t, portalOpr_t and l1desc_t */
 
-#define DONE_OPR                9999
-#define PUT_OPR                 1
-#define GET_OPR                 2
-#define SAME_HOST_COPY_OPR      3
-#define COPY_TO_LOCAL_OPR       4
-#define COPY_TO_REM_OPR         5
-#define REPLICATE_OPR           6
-#define REPLICATE_DEST          7
-#define REPLICATE_SRC           8
-#define COPY_DEST               9
-#define COPY_SRC                10
-#define RENAME_DATA_OBJ         11
-#define RENAME_COLL             12
-#define MOVE_OPR                13
-#define RSYNC_OPR               14
-#define PHYMV_OPR               15
-#define PHYMV_SRC               16
-#define PHYMV_DEST              17
-#define QUERY_DATA_OBJ          18
-#define QUERY_DATA_OBJ_RECUR    19
-#define QUERY_COLL_OBJ          20
-#define QUERY_COLL_OBJ_RECUR    21
-#define RENAME_UNKNOWN_TYPE     22
-#define REMOTE_ZONE_OPR         24
-#define UNREG_OPR               26
+#define DONE_OPR 9999
+#define PUT_OPR 1
+#define GET_OPR 2
+#define SAME_HOST_COPY_OPR 3
+#define COPY_TO_LOCAL_OPR 4
+#define COPY_TO_REM_OPR 5
+#define REPLICATE_OPR 6
+#define REPLICATE_DEST 7
+#define REPLICATE_SRC 8
+#define COPY_DEST 9
+#define COPY_SRC 10
+#define RENAME_DATA_OBJ 11
+#define RENAME_COLL 12
+#define MOVE_OPR 13
+#define RSYNC_OPR 14
+#define PHYMV_OPR 15
+#define PHYMV_SRC 16
+#define PHYMV_DEST 17
+#define QUERY_DATA_OBJ 18
+#define QUERY_DATA_OBJ_RECUR 19
+#define QUERY_COLL_OBJ 20
+#define QUERY_COLL_OBJ_RECUR 21
+#define RENAME_UNKNOWN_TYPE 22
+#define REMOTE_ZONE_OPR 24
+#define UNREG_OPR 26
 
 /* definition for openType in l1desc_t */
-#define CREATE_TYPE             1
-#define OPEN_FOR_READ_TYPE      2
-#define OPEN_FOR_WRITE_TYPE     3
+#define CREATE_TYPE 1
+#define OPEN_FOR_READ_TYPE 2
+#define OPEN_FOR_WRITE_TYPE 3
 
-typedef struct PortalOpr {
+typedef struct PortalOpr
+{
     int oprType;
     dataOprInp_t dataOprInp;
     portList_t portList;
-    char shared_secret[ NAME_LEN ]; // shared secret for encryption
+    char shared_secret[NAME_LEN]; // shared secret for encryption
 } portalOpr_t;
 
 /* definition for flags */
-#define STREAMING_FLAG          0x1
-#define NO_CHK_COPY_LEN_FLAG    0x2
+#define STREAMING_FLAG 0x1
+#define NO_CHK_COPY_LEN_FLAG 0x2
 
-typedef struct TransferHeader {
+typedef struct TransferHeader
+{
     int oprType;
     int flags;
     rodsLong_t offset;
     rodsLong_t length;
 } transferHeader_t;
 
-#endif  // DATA_OBJ_INP_OUT_H__
+#endif // DATA_OBJ_INP_OUT_H__

@@ -12,10 +12,10 @@
 #include <string>
 
 #define SHMMAX 30000000
-#define SHM_BASE_ADDR ((void *)0x80000000)
-unsigned char *prepareServerSharedMemory( const std::string& );
-void detachSharedMemory( const std::string& );
-int removeSharedMemory( const std::string& );
-unsigned char *prepareNonServerSharedMemory( const std::string& );
-irods::error getSharedMemoryName( const std::string&, std::string &shared_memory_name );
+#define SHM_BASE_ADDR ((void*) 0x80000000)
+unsigned char* prepareServerSharedMemory(const std::string&);
+void detachSharedMemory(const std::string&);
+int removeSharedMemory(const std::string&);
+unsigned char* prepareNonServerSharedMemory(const std::string&);
+irods::error getSharedMemoryName(const std::string&, std::string& shared_memory_name);
 #endif /* SHAREDMEMORY_H */

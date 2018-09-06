@@ -39,7 +39,8 @@
  * \since pre-2.1
  *
  *
- * \note This function is mandatory even no defaultResc is specified (null) and should be executed right after the screening function msiSetNoDirectRescInp.
+ * \note This function is mandatory even no defaultResc is specified (null) and should be executed right after the
+ *screening function msiSetNoDirectRescInp.
  *
  * \usage See clients/icommands/test/rules/
  *
@@ -65,27 +66,28 @@
  * \post none
  * \sa none
  **/
-int
-msiSetDefaultResc( msParam_t *xdefaultRescList, msParam_t *xoptionStr, ruleExecInfo_t *rei ) {
-    char *defaultRescList;
-    char *optionStr;
+int msiSetDefaultResc(msParam_t* xdefaultRescList, msParam_t* xoptionStr, ruleExecInfo_t* rei)
+{
+    char* defaultRescList;
+    char* optionStr;
     std::string default_resc;
 
-    defaultRescList = ( char * ) xdefaultRescList->inOutStruct;
+    defaultRescList = (char*) xdefaultRescList->inOutStruct;
 
-    optionStr = ( char * ) xoptionStr->inOutStruct;
+    optionStr = (char*) xoptionStr->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiSetDefaultResc" )
+    RE_TEST_MACRO("    Calling msiSetDefaultResc")
 
-    irods::error err = irods::set_default_resource( rei->rsComm, defaultRescList, optionStr, &rei->doinp->condInput, default_resc );
+    irods::error err =
+        irods::set_default_resource(rei->rsComm, defaultRescList, optionStr, &rei->doinp->condInput, default_resc);
     rei->status = err.code();
 
-    if ( rei->status >= 0 ) {
-        snprintf( rei->rescName, NAME_LEN, "%s", default_resc.c_str() );
+    if (rei->status >= 0) {
+        snprintf(rei->rescName, NAME_LEN, "%s", default_resc.c_str());
     }
     else {
-        irods::log( PASS( err ) );
-        memset( &rei->rescName, 0, NAME_LEN );
+        irods::log(PASS(err));
+        memset(&rei->rescName, 0, NAME_LEN);
     }
     return rei->status;
 }
@@ -98,12 +100,12 @@ msiSetDefaultResc( msParam_t *xdefaultRescList, msParam_t *xoptionStr, ruleExecI
  * \deprecated Since 4.0, use a resource composition of a similar type.
  *
  **/
-int
-msiSetRescSortScheme( msParam_t*, ruleExecInfo_t* ) {
-    rodsLog( LOG_ERROR, "msiSetRescSortScheme is no longer supported, please use a resource composition of a similar type" );
+int msiSetRescSortScheme(msParam_t*, ruleExecInfo_t*)
+{
+    rodsLog(LOG_ERROR,
+            "msiSetRescSortScheme is no longer supported, please use a resource composition of a similar type");
     return SYS_NOT_SUPPORTED;
 }
-
 
 /**
  * \fn msiSetNoDirectRescInp (msParam_t *xrescList, ruleExecInfo_t *rei)
@@ -117,14 +119,14 @@ msiSetRescSortScheme( msParam_t*, ruleExecInfo_t* ) {
  * \since pre-2.1
  *
  *
- * \note This microservice is optional, but if used, should be the first function to execute because it screens the resource input.
+ * \note This microservice is optional, but if used, should be the first function to execute because it screens the
+ *resource input.
  *
  * \usage See clients/icommands/test/rules/
  *
- * \param[in] xrescList - InpParam is a xrescList of type STR_MS_T which is a list of %-delimited resourceNames e.g., resc1%resc2%resc3.
- * \param[in,out] rei - The RuleExecInfo structure that is automatically
- *    handled by the rule engine. The user does not include rei as a
- *    parameter in the rule invocation.
+ * \param[in] xrescList - InpParam is a xrescList of type STR_MS_T which is a list of %-delimited resourceNames e.g.,
+ *resc1%resc2%resc3. \param[in,out] rei - The RuleExecInfo structure that is automatically handled by the rule engine.
+ *The user does not include rei as a parameter in the rule invocation.
  *
  * \DolVarDependence rei->doinp->condInput - user set  resource list
  *                   rei->rsComm->proxyUser.authInfo.authFlag
@@ -140,59 +142,58 @@ msiSetRescSortScheme( msParam_t*, ruleExecInfo_t* ) {
  * \post none
  * \sa none
  **/
-int
-msiSetNoDirectRescInp( msParam_t *xrescList, ruleExecInfo_t *rei ) {
-
-    keyValPair_t *condInput;
-    char *rescName;
-    char *value;
+int msiSetNoDirectRescInp(msParam_t* xrescList, ruleExecInfo_t* rei)
+{
+    keyValPair_t* condInput;
+    char* rescName;
+    char* value;
     strArray_t strArray;
     int status, i;
-    char *rescList;
+    char* rescList;
 
-    rescList = ( char * ) xrescList->inOutStruct;
+    rescList = (char*) xrescList->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiSetNoDirectRescInp" )
+    RE_TEST_MACRO("    Calling msiSetNoDirectRescInp")
 
     rei->status = 0;
 
-    if ( rescList == NULL || strcmp( rescList, "null" ) == 0 ) {
+    if (rescList == NULL || strcmp(rescList, "null") == 0) {
         return 0;
     }
 
-    if ( rei->rsComm->proxyUser.authInfo.authFlag >= LOCAL_PRIV_USER_AUTH ) {
+    if (rei->rsComm->proxyUser.authInfo.authFlag >= LOCAL_PRIV_USER_AUTH) {
         /* have enough privilege */
         return 0;
     }
 
     condInput = &rei->doinp->condInput;
 
-    if ( ( rescName = getValByKey( condInput, BACKUP_RESC_NAME_KW ) ) == NULL &&
-            ( rescName = getValByKey( condInput, DEST_RESC_NAME_KW ) ) == NULL &&
-            ( rescName = getValByKey( condInput, DEF_RESC_NAME_KW ) ) == NULL &&
-            ( rescName = getValByKey( condInput, RESC_NAME_KW ) ) == NULL ) {
+    if ((rescName = getValByKey(condInput, BACKUP_RESC_NAME_KW)) == NULL &&
+        (rescName = getValByKey(condInput, DEST_RESC_NAME_KW)) == NULL &&
+        (rescName = getValByKey(condInput, DEF_RESC_NAME_KW)) == NULL &&
+        (rescName = getValByKey(condInput, RESC_NAME_KW)) == NULL) {
         return 0;
     }
 
-    memset( &strArray, 0, sizeof( strArray ) );
+    memset(&strArray, 0, sizeof(strArray));
 
-    status = parseMultiStr( rescList, &strArray );
+    status = parseMultiStr(rescList, &strArray);
 
-    if ( status <= 0 ) {
+    if (status <= 0) {
         return 0;
     }
 
     value = strArray.value;
-    for ( i = 0; i < strArray.len; i++ ) {
-        if ( strcmp( rescName, &value[i * strArray.size] ) == 0 ) {
+    for (i = 0; i < strArray.len; i++) {
+        if (strcmp(rescName, &value[i * strArray.size]) == 0) {
             /* a match */
             rei->status = USER_DIRECT_RESC_INPUT_ERR;
-            free( value );
+            free(value);
             return USER_DIRECT_RESC_INPUT_ERR;
         }
     }
-    if ( value != NULL ) {
-        free( value );
+    if (value != NULL) {
+        free(value);
     }
     return 0;
 }
@@ -232,42 +233,41 @@ msiSetNoDirectRescInp( msParam_t *xrescList, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetDataObjPreferredResc( msParam_t *xpreferredRescList, ruleExecInfo_t *rei ) {
+int msiSetDataObjPreferredResc(msParam_t* xpreferredRescList, ruleExecInfo_t* rei)
+{
     int writeFlag;
-    char *value;
+    char* value;
     strArray_t strArray;
     int status, i;
-    char *preferredRescList;
+    char* preferredRescList;
 
-    preferredRescList = ( char * ) xpreferredRescList->inOutStruct;
+    preferredRescList = (char*) xpreferredRescList->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiSetDataObjPreferredResc" )
+    RE_TEST_MACRO("    Calling msiSetDataObjPreferredResc")
 
     rei->status = 0;
 
-    if ( preferredRescList == NULL || strcmp( preferredRescList, "null" ) == 0 ) {
+    if (preferredRescList == NULL || strcmp(preferredRescList, "null") == 0) {
         return 0;
     }
 
-    writeFlag = getWriteFlag( rei->doinp->openFlags );
+    writeFlag = getWriteFlag(rei->doinp->openFlags);
 
-    memset( &strArray, 0, sizeof( strArray ) );
+    memset(&strArray, 0, sizeof(strArray));
 
-    status = parseMultiStr( preferredRescList, &strArray );
+    status = parseMultiStr(preferredRescList, &strArray);
 
-    if ( status <= 0 ) {
+    if (status <= 0) {
         return 0;
     }
 
-    if ( rei->doi == NULL || rei->doi->next == NULL ) {
+    if (rei->doi == NULL || rei->doi->next == NULL) {
         return 0;
     }
 
     value = strArray.value;
-    for ( i = 0; i < strArray.len; i++ ) {
-        if ( requeDataObjInfoByResc( &rei->doi, &value[i * strArray.size],
-                                     writeFlag, 1 ) >= 0 ) {
+    for (i = 0; i < strArray.len; i++) {
+        if (requeDataObjInfoByResc(&rei->doi, &value[i * strArray.size], writeFlag, 1) >= 0) {
             rei->status = 1;
             return rei->status;
         }
@@ -305,22 +305,21 @@ msiSetDataObjPreferredResc( msParam_t *xpreferredRescList, ruleExecInfo_t *rei )
  * \post none
  * \sa none
  **/
-int
-msiSetDataObjAvoidResc( msParam_t *xavoidResc, ruleExecInfo_t *rei ) {
+int msiSetDataObjAvoidResc(msParam_t* xavoidResc, ruleExecInfo_t* rei)
+{
     int writeFlag;
-    char *avoidResc;
+    char* avoidResc;
 
-    avoidResc = ( char * ) xavoidResc->inOutStruct;
+    avoidResc = (char*) xavoidResc->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiSetDataObjAvoidResc" )
+    RE_TEST_MACRO("    Calling msiSetDataObjAvoidResc")
 
     rei->status = 0;
 
-    writeFlag = getWriteFlag( rei->doinp->openFlags );
+    writeFlag = getWriteFlag(rei->doinp->openFlags);
 
-    if ( avoidResc != NULL && strcmp( avoidResc, "null" ) != 0 ) {
-        if ( requeDataObjInfoByResc( &rei->doi, avoidResc, writeFlag, 0 )
-                >= 0 ) {
+    if (avoidResc != NULL && strcmp(avoidResc, "null") != 0) {
+        if (requeDataObjInfoByResc(&rei->doi, avoidResc, writeFlag, 0) >= 0) {
             rei->status = 1;
         }
     }
@@ -330,7 +329,8 @@ msiSetDataObjAvoidResc( msParam_t *xavoidResc, ruleExecInfo_t *rei ) {
 /**
  * \fn msiSortDataObj (msParam_t *xsortScheme, ruleExecInfo_t *rei)
  *
- * \brief  This microservice sorts the copies of the data object using this scheme. Currently, "random" sorting scheme is supported.
+ * \brief  This microservice sorts the copies of the data object using this scheme. Currently, "random" sorting scheme
+ *is supported.
  *
  * \module core
  *
@@ -357,24 +357,23 @@ msiSetDataObjAvoidResc( msParam_t *xavoidResc, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSortDataObj( msParam_t *xsortScheme, ruleExecInfo_t *rei ) {
-    char *sortScheme;
+int msiSortDataObj(msParam_t* xsortScheme, ruleExecInfo_t* rei)
+{
+    char* sortScheme;
 
-    sortScheme = ( char * ) xsortScheme->inOutStruct;
-    RE_TEST_MACRO( "    Calling msiSortDataObj" )
+    sortScheme = (char*) xsortScheme->inOutStruct;
+    RE_TEST_MACRO("    Calling msiSortDataObj")
 
     rei->status = 0;
-    if ( sortScheme != NULL ) {
-        if ( strcmp( sortScheme, "random" ) == 0 ) {
-            sortDataObjInfoRandom( &rei->doi );
+    if (sortScheme != NULL) {
+        if (strcmp(sortScheme, "random") == 0) {
+            sortDataObjInfoRandom(&rei->doi);
             // JMC - legacy resource -     } else if (strcmp (sortScheme, "byRescClass") == 0) {
             //    rei->status = sortObjInfoForOpen( &rei->doi, NULL, 1 );
         }
     }
     return rei->status;
 }
-
 
 /**
  * \fn msiSysChksumDataObj (ruleExecInfo_t *rei)
@@ -405,12 +404,12 @@ msiSortDataObj( msParam_t *xsortScheme, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSysChksumDataObj( ruleExecInfo_t *rei ) {
-    dataObjInfo_t *dataObjInfoHead;
-    char *chksumStr = NULL;
+int msiSysChksumDataObj(ruleExecInfo_t* rei)
+{
+    dataObjInfo_t* dataObjInfoHead;
+    char* chksumStr = NULL;
 
-    RE_TEST_MACRO( "    Calling msiSysChksumDataObj" )
+    RE_TEST_MACRO("    Calling msiSysChksumDataObj")
 
     rei->status = 0;
 
@@ -418,17 +417,16 @@ msiSysChksumDataObj( ruleExecInfo_t *rei ) {
 
     dataObjInfoHead = rei->doi;
 
-    if ( dataObjInfoHead == NULL ) {
+    if (dataObjInfoHead == NULL) {
         return 0;
     }
 
-    if ( strlen( dataObjInfoHead->chksum ) == 0 ) {
+    if (strlen(dataObjInfoHead->chksum) == 0) {
         /* not already checksumed */
-        rei->status = dataObjChksumAndReg( rei->rsComm, dataObjInfoHead,
-                                           &chksumStr );
-        if ( chksumStr != NULL ) {
-            rstrcpy( dataObjInfoHead->chksum, chksumStr, NAME_LEN );
-            free( chksumStr );
+        rei->status = dataObjChksumAndReg(rei->rsComm, dataObjInfoHead, &chksumStr);
+        if (chksumStr != NULL) {
+            rstrcpy(dataObjInfoHead->chksum, chksumStr, NAME_LEN);
+            free(chksumStr);
         }
     }
 
@@ -467,17 +465,17 @@ msiSysChksumDataObj( ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetDataTypeFromExt( ruleExecInfo_t *rei ) {
-    RE_TEST_MACRO( "    Calling msiSetDataType" )
+int msiSetDataTypeFromExt(ruleExecInfo_t* rei)
+{
+    RE_TEST_MACRO("    Calling msiSetDataType")
 
     rei->status = 0;
 
-    if ( rei->doi == NULL ) {
+    if (rei->doi == NULL) {
         return 0;
     }
 
-    dataObjInfo_t *dataObjInfoHead = rei->doi;
+    dataObjInfo_t* dataObjInfoHead = rei->doi;
 
     char logicalCollName[MAX_NAME_LEN];
     char logicalFileName[MAX_NAME_LEN] = "";
@@ -488,14 +486,13 @@ msiSetDataTypeFromExt( ruleExecInfo_t *rei ) {
                               sizeof(logicalFileName),
                               '/')};
     if (status < 0) {
-        const auto err{ERROR(status,
-                             (boost::format("splitPathByKey failed for [%s]") %
-                              dataObjInfoHead->objPath).str().c_str())};
+        const auto err{
+            ERROR(status, (boost::format("splitPathByKey failed for [%s]") % dataObjInfoHead->objPath).str().c_str())};
         irods::log(err);
         return err.code();
     }
 
-    if ( strlen( logicalFileName ) <= 0 ) {
+    if (strlen(logicalFileName) <= 0) {
         return 0;
     }
 
@@ -508,43 +505,42 @@ msiSetDataTypeFromExt( ruleExecInfo_t *rei ) {
                             sizeof(logicalFileNameExt),
                             '.');
     if (status < 0) {
-        const auto err{ERROR(status,
-                             (boost::format("splitPathByKey failed for [%s]") %
-                              dataObjInfoHead->objPath).str().c_str())};
+        const auto err{
+            ERROR(status, (boost::format("splitPathByKey failed for [%s]") % dataObjInfoHead->objPath).str().c_str())};
         irods::log(err);
         return err.code();
     }
 
-    if ( strlen( logicalFileNameExt ) <= 0 ) {
+    if (strlen(logicalFileNameExt) <= 0) {
         return 0;
     }
 
     /* see if there's an entry in the catalog for this extension */
     genQueryInp_t genQueryInp;
-    memset( &genQueryInp, 0, sizeof( genQueryInp ) );
-    addInxIval( &genQueryInp.selectInp, COL_TOKEN_NAME, 1 );
+    memset(&genQueryInp, 0, sizeof(genQueryInp));
+    addInxIval(&genQueryInp.selectInp, COL_TOKEN_NAME, 1);
 
     char condStr1[MAX_NAME_LEN];
-    snprintf( condStr1, sizeof( condStr1 ), "= 'data_type'" );
-    addInxVal( &genQueryInp.sqlCondInp,  COL_TOKEN_NAMESPACE, condStr1 );
+    snprintf(condStr1, sizeof(condStr1), "= 'data_type'");
+    addInxVal(&genQueryInp.sqlCondInp, COL_TOKEN_NAMESPACE, condStr1);
 
     char condStr2[MAX_NAME_LEN];
-    snprintf( condStr2, sizeof( condStr2 ), "like '%s|.%s|%s'", "%", logicalFileNameExt, "%" );
-    addInxVal( &genQueryInp.sqlCondInp,  COL_TOKEN_VALUE2, condStr2 );
+    snprintf(condStr2, sizeof(condStr2), "like '%s|.%s|%s'", "%", logicalFileNameExt, "%");
+    addInxVal(&genQueryInp.sqlCondInp, COL_TOKEN_VALUE2, condStr2);
 
     genQueryInp.maxRows = 1;
 
-    genQueryOut_t *genQueryOut = NULL;
-    status = rsGenQuery( rei->rsComm, &genQueryInp, &genQueryOut );
-    if ( status != 0 || genQueryOut == NULL ) {
-		freeGenQueryOut( &genQueryOut );
-		clearGenQueryInp( &genQueryInp );
+    genQueryOut_t* genQueryOut = NULL;
+    status = rsGenQuery(rei->rsComm, &genQueryInp, &genQueryOut);
+    if (status != 0 || genQueryOut == NULL) {
+        freeGenQueryOut(&genQueryOut);
+        clearGenQueryInp(&genQueryInp);
         return 0;
     }
 
-    rodsLog( LOG_DEBUG, "msiSetDataTypeFromExt: query status %d rowCnt=%d", status, genQueryOut->rowCnt );
+    rodsLog(LOG_DEBUG, "msiSetDataTypeFromExt: query status %d rowCnt=%d", status, genQueryOut->rowCnt);
 
-    if ( genQueryOut->rowCnt != 1 ) {
+    if (genQueryOut->rowCnt != 1) {
         return 0;
     }
 
@@ -557,11 +553,11 @@ msiSetDataTypeFromExt( ruleExecInfo_t *rei ) {
 
     /* register it */
     keyValPair_t regParam;
-    memset( &regParam, 0, sizeof( regParam ) );
-    addKeyVal( &regParam, DATA_TYPE_KW,  genQueryOut->sqlResult[0].value );
+    memset(&regParam, 0, sizeof(regParam));
+    addKeyVal(&regParam, DATA_TYPE_KW, genQueryOut->sqlResult[0].value);
 
-    if ( strcmp( dataObjInfoHead->rescHier, "" ) ) {
-        addKeyVal( &regParam, IN_PDMO_KW, dataObjInfoHead->rescHier );
+    if (strcmp(dataObjInfoHead->rescHier, "")) {
+        addKeyVal(&regParam, IN_PDMO_KW, dataObjInfoHead->rescHier);
     }
 
     modDataObjMeta_t modDataObjMetaInp;
@@ -607,35 +603,33 @@ msiSetDataTypeFromExt( ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiStageDataObj( msParam_t *xcacheResc, ruleExecInfo_t *rei ) {
+int msiStageDataObj(msParam_t* xcacheResc, ruleExecInfo_t* rei)
+{
     int status;
-    char *cacheResc;
+    char* cacheResc;
 
-    cacheResc = ( char * ) xcacheResc->inOutStruct;
+    cacheResc = (char*) xcacheResc->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiStageDataObj" )
+    RE_TEST_MACRO("    Calling msiStageDataObj")
 
     rei->status = 0;
 
-    if ( cacheResc == NULL || strcmp( cacheResc, "null" ) == 0 ) {
+    if (cacheResc == NULL || strcmp(cacheResc, "null") == 0) {
         return rei->status;
     }
 
     /* preProcessing */
-    if ( rei->doinp->oprType == REPLICATE_OPR ||
-            rei->doinp->oprType == COPY_DEST ||
-            rei->doinp->oprType == COPY_SRC ) {
+    if (rei->doinp->oprType == REPLICATE_OPR || rei->doinp->oprType == COPY_DEST || rei->doinp->oprType == COPY_SRC) {
         return rei->status;
     }
 
-    if ( getValByKey( &rei->doinp->condInput, RESC_NAME_KW ) != NULL ||
-            getValByKey( &rei->doinp->condInput, REPL_NUM_KW ) != NULL ) {
+    if (getValByKey(&rei->doinp->condInput, RESC_NAME_KW) != NULL ||
+        getValByKey(&rei->doinp->condInput, REPL_NUM_KW) != NULL) {
         /* a specific replNum or resource is specified. Don't cache */
         return rei->status;
     }
 
-    status = msiSysReplDataObj( xcacheResc, NULL, rei );
+    status = msiSysReplDataObj(xcacheResc, NULL, rei);
 
     return status;
 }
@@ -674,43 +668,41 @@ msiStageDataObj( msParam_t *xcacheResc, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSysReplDataObj( msParam_t *xcacheResc, msParam_t *xflag,
-                   ruleExecInfo_t *rei ) {
-    dataObjInfo_t *dataObjInfoHead;
-    char *cacheResc;
-    char *flag = NULL;
+int msiSysReplDataObj(msParam_t* xcacheResc, msParam_t* xflag, ruleExecInfo_t* rei)
+{
+    dataObjInfo_t* dataObjInfoHead;
+    char* cacheResc;
+    char* flag = NULL;
 
-    cacheResc = ( char * ) xcacheResc->inOutStruct;
-    if ( xflag != NULL && xflag->inOutStruct != NULL ) {
-        flag = ( char * ) xflag->inOutStruct;
+    cacheResc = (char*) xcacheResc->inOutStruct;
+    if (xflag != NULL && xflag->inOutStruct != NULL) {
+        flag = (char*) xflag->inOutStruct;
     }
 
-    RE_TEST_MACRO( "    Calling msiSysReplDataObj" )
+    RE_TEST_MACRO("    Calling msiSysReplDataObj")
 
     rei->status = 0;
 
-    if ( cacheResc == NULL || strcmp( cacheResc, "null" ) == 0 ||
-            strlen( cacheResc ) == 0 ) {
+    if (cacheResc == NULL || strcmp(cacheResc, "null") == 0 || strlen(cacheResc) == 0) {
         return rei->status;
     }
 
     dataObjInfoHead = rei->doi;
 
-    if ( dataObjInfoHead == NULL ) {
+    if (dataObjInfoHead == NULL) {
         return rei->status;
     }
 
-    rei->status = rsReplAndRequeDataObjInfo( rei->rsComm, &dataObjInfoHead,
-                  cacheResc, flag );
-    if ( rei->status >= 0 ) {
+    rei->status = rsReplAndRequeDataObjInfo(rei->rsComm, &dataObjInfoHead, cacheResc, flag);
+    if (rei->status >= 0) {
         rei->doi = dataObjInfoHead;
     }
     return rei->status;
 }
 
 /**
- * \fn msiSetNumThreads (msParam_t *xsizePerThrInMbStr, msParam_t *xmaxNumThrStr, msParam_t *xwindowSizeStr, ruleExecInfo_t *rei)
+ * \fn msiSetNumThreads (msParam_t *xsizePerThrInMbStr, msParam_t *xmaxNumThrStr, msParam_t *xwindowSizeStr,
+ *ruleExecInfo_t *rei)
  *
  * \brief  This microservice specifies the parameters for determining the number of
  *    threads to use for data transfer. It sets the number of threads and the TCP window size.
@@ -731,10 +723,9 @@ msiSysReplDataObj( msParam_t *xcacheResc, msParam_t *xflag,
  *    sizePerThrInMb to a default value of 32.
  * \param[in] xmaxNumThrStr - The maximum number of threads to use. It accepts integer
  *    value up to 64. It also accepts the word "default" which sets maxNumThr to a default value of 4.
- * \param[in] xwindowSizeStr - The TCP window size in Bytes for the parallel transfer. A value of 0 or "default" means a default size of 1,048,576 Bytes.
- * \param[in,out] rei - The RuleExecInfo structure that is automatically
- *    handled by the rule engine. The user does not include rei as a
- *    parameter in the rule invocation.
+ * \param[in] xwindowSizeStr - The TCP window size in Bytes for the parallel transfer. A value of 0 or "default" means a
+ *default size of 1,048,576 Bytes. \param[in,out] rei - The RuleExecInfo structure that is automatically handled by the
+ *rule engine. The user does not include rei as a parameter in the rule invocation.
  *
  * \DolVarDependence - rei->doinp->numThreads, rei->doinp->dataSize
  * \DolVarModified - rei->rsComm->windowSize (rei->rsComm == NULL, OK),
@@ -748,114 +739,115 @@ msiSysReplDataObj( msParam_t *xcacheResc, msParam_t *xflag,
  * \post none
  * \sa none
  **/
-int
-msiSetNumThreads( msParam_t *xsizePerThrInMbStr, msParam_t *xmaxNumThrStr,
-                  msParam_t *xwindowSizeStr, ruleExecInfo_t *rei ) {
+int msiSetNumThreads(msParam_t* xsizePerThrInMbStr,
+                     msParam_t* xmaxNumThrStr,
+                     msParam_t* xwindowSizeStr,
+                     ruleExecInfo_t* rei)
+{
     int sizePerThr;
     int maxNumThr;
-    dataObjInp_t *doinp;
+    dataObjInp_t* doinp;
     int numThr;
-    char *sizePerThrInMbStr;
-    char *maxNumThrStr;
-    char *windowSizeStr;
+    char* sizePerThrInMbStr;
+    char* maxNumThrStr;
+    char* windowSizeStr;
 
-    sizePerThrInMbStr = ( char * ) xsizePerThrInMbStr->inOutStruct;
-    maxNumThrStr = ( char * ) xmaxNumThrStr->inOutStruct;
-    windowSizeStr = ( char * ) xwindowSizeStr->inOutStruct;
-
+    sizePerThrInMbStr = (char*) xsizePerThrInMbStr->inOutStruct;
+    maxNumThrStr = (char*) xmaxNumThrStr->inOutStruct;
+    windowSizeStr = (char*) xwindowSizeStr->inOutStruct;
 
     int def_num_thr = 0;
     try {
         def_num_thr = irods::get_advanced_setting<const int>(irods::CFG_DEF_NUMBER_TRANSFER_THREADS);
-    } catch ( const irods::exception& e ) {
+    }
+    catch (const irods::exception& e) {
         irods::log(e);
         return e.code();
     }
 
-    if ( rei->rsComm != NULL ) {
-        if ( strcmp( windowSizeStr, "null" ) == 0 ||
-                strcmp( windowSizeStr, "default" ) == 0 ) {
+    if (rei->rsComm != NULL) {
+        if (strcmp(windowSizeStr, "null") == 0 || strcmp(windowSizeStr, "default") == 0) {
             rei->rsComm->windowSize = 0;
         }
         else {
-            rei->rsComm->windowSize = atoi( windowSizeStr );
+            rei->rsComm->windowSize = atoi(windowSizeStr);
         }
     }
 
     int size_per_tran_thr = 0;
     try {
         size_per_tran_thr = irods::get_advanced_setting<const int>(irods::CFG_TRANS_BUFFER_SIZE_FOR_PARA_TRANS);
-    } catch ( const irods::exception& e ) {
+    }
+    catch (const irods::exception& e) {
         irods::log(e);
         return e.code();
     }
-    if ( 0 >= size_per_tran_thr ) {
-        rodsLog( LOG_ERROR, "%d is an invalid size_per_tran_thr value. "
-                 "size_per_tran_thr must be greater than zero.", size_per_tran_thr );
+    if (0 >= size_per_tran_thr) {
+        rodsLog(LOG_ERROR,
+                "%d is an invalid size_per_tran_thr value. "
+                "size_per_tran_thr must be greater than zero.",
+                size_per_tran_thr);
         return SYS_INVALID_INPUT_PARAM;
     }
     size_per_tran_thr *= 1024 * 1024;
 
-    if ( strcmp( sizePerThrInMbStr, "default" ) == 0 ) {
+    if (strcmp(sizePerThrInMbStr, "default") == 0) {
         sizePerThr = size_per_tran_thr;
     }
     else {
-        sizePerThr = atoi( sizePerThrInMbStr ) * ( 1024 * 1024 );
-        if ( sizePerThr <= 0 ) {
-            rodsLog( LOG_ERROR,
-                     "msiSetNumThreads: Bad input sizePerThrInMb %s", sizePerThrInMbStr );
+        sizePerThr = atoi(sizePerThrInMbStr) * (1024 * 1024);
+        if (sizePerThr <= 0) {
+            rodsLog(LOG_ERROR, "msiSetNumThreads: Bad input sizePerThrInMb %s", sizePerThrInMbStr);
             sizePerThr = size_per_tran_thr;
         }
     }
 
     doinp = rei->doinp;
-    if ( doinp == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "msiSetNumThreads: doinp is NULL" );
+    if (doinp == NULL) {
+        rodsLog(LOG_ERROR, "msiSetNumThreads: doinp is NULL");
         rei->status = def_num_thr;
         return def_num_thr;
     }
 
-    if ( strcmp( maxNumThrStr, "default" ) == 0 ) {
+    if (strcmp(maxNumThrStr, "default") == 0) {
         maxNumThr = def_num_thr;
     }
     else {
-        maxNumThr = atoi( maxNumThrStr );
-        if ( maxNumThr < 0 ) {
-            rodsLog( LOG_ERROR,
-                     "msiSetNumThreads: Bad input maxNumThr %s", maxNumThrStr );
+        maxNumThr = atoi(maxNumThrStr);
+        if (maxNumThr < 0) {
+            rodsLog(LOG_ERROR, "msiSetNumThreads: Bad input maxNumThr %s", maxNumThrStr);
             maxNumThr = def_num_thr;
         }
-        else if ( maxNumThr == 0 ) {
+        else if (maxNumThr == 0) {
             rei->status = 0;
             return rei->status;
         }
-        else if ( maxNumThr > MAX_NUM_CONFIG_TRAN_THR ) {
-            rodsLog( LOG_ERROR,
-                     "msiSetNumThreads: input maxNumThr %s too large", maxNumThrStr );
+        else if (maxNumThr > MAX_NUM_CONFIG_TRAN_THR) {
+            rodsLog(LOG_ERROR, "msiSetNumThreads: input maxNumThr %s too large", maxNumThrStr);
             maxNumThr = MAX_NUM_CONFIG_TRAN_THR;
         }
     }
 
-
-    if ( doinp->numThreads > 0 ) {
-
+    if (doinp->numThreads > 0) {
         int trans_buff_size = 0;
         try {
             trans_buff_size = irods::get_advanced_setting<const int>(irods::CFG_TRANS_BUFFER_SIZE_FOR_PARA_TRANS);
-        } catch ( const irods::exception& e ) {
+        }
+        catch (const irods::exception& e) {
             irods::log(e);
             return e.code();
         }
-        if ( 0 >= trans_buff_size ) {
-            rodsLog( LOG_ERROR, "%d is an invalid trans_buff size. "
-                     "trans_buff_size must be greater than zero.", trans_buff_size );
+        if (0 >= trans_buff_size) {
+            rodsLog(LOG_ERROR,
+                    "%d is an invalid trans_buff size. "
+                    "trans_buff_size must be greater than zero.",
+                    trans_buff_size);
             return SYS_INVALID_INPUT_PARAM;
         }
         trans_buff_size *= 1024 * 1024;
 
         numThr = doinp->dataSize / trans_buff_size + 1;
-        if ( numThr > doinp->numThreads ) {
+        if (numThr > doinp->numThreads) {
             numThr = doinp->numThreads;
         }
     }
@@ -863,13 +855,12 @@ msiSetNumThreads( msParam_t *xsizePerThrInMbStr, msParam_t *xmaxNumThrStr,
         numThr = doinp->dataSize / sizePerThr + 1;
     }
 
-    if ( numThr > maxNumThr ) {
+    if (numThr > maxNumThr) {
         numThr = maxNumThr;
     }
 
     rei->status = numThr;
     return rei->status;
-
 }
 
 /**
@@ -901,9 +892,9 @@ msiSetNumThreads( msParam_t *xsizePerThrInMbStr, msParam_t *xmaxNumThrStr,
  * \post none
  * \sa none
  **/
-int
-msiDeleteDisallowed( ruleExecInfo_t *rei ) {
-    RE_TEST_MACRO( "    Calling msiDeleteDisallowed" )
+int msiDeleteDisallowed(ruleExecInfo_t* rei)
+{
+    RE_TEST_MACRO("    Calling msiDeleteDisallowed")
 
     rei->status = SYS_DELETE_DISALLOWED;
 
@@ -940,20 +931,20 @@ msiDeleteDisallowed( ruleExecInfo_t *rei ) {
  * \post
  * \sa
  **/
-int
-msiOprDisallowed( ruleExecInfo_t *rei ) {
-    RE_TEST_MACRO( "    Calling msiOprDisallowed" )
+int msiOprDisallowed(ruleExecInfo_t* rei)
+{
+    RE_TEST_MACRO("    Calling msiOprDisallowed")
 
     rei->status = MSI_OPERATION_NOT_ALLOWED;
 
     return rei->status;
 }
 
-
 /**
  * \fn msiSetMultiReplPerResc (ruleExecInfo_t *rei)
  *
- * \brief  By default, the system allows one copy per resource. This microservice sets the number of copies per resource to unlimited.
+ * \brief  By default, the system allows one copy per resource. This microservice sets the number of copies per resource
+ *to unlimited.
  *
  * \module core
  *
@@ -979,16 +970,17 @@ msiOprDisallowed( ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetMultiReplPerResc( ruleExecInfo_t *rei ) {
-    rstrcpy( rei->statusStr, MULTI_COPIES_PER_RESC, MAX_NAME_LEN );
+int msiSetMultiReplPerResc(ruleExecInfo_t* rei)
+{
+    rstrcpy(rei->statusStr, MULTI_COPIES_PER_RESC, MAX_NAME_LEN);
     return 0;
 }
 
 /**
  * \fn msiNoChkFilePathPerm (ruleExecInfo_t *rei)
  *
- * \brief  This microservice does not check file path permissions when registering a file. This microservice is REPLACED by msiSetChkFilePathPerm
+ * \brief  This microservice does not check file path permissions when registering a file. This microservice is REPLACED
+ *by msiSetChkFilePathPerm
  *
  * \module core
  *
@@ -1016,8 +1008,8 @@ msiSetMultiReplPerResc( ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiNoChkFilePathPerm( ruleExecInfo_t *rei ) {
+int msiNoChkFilePathPerm(ruleExecInfo_t* rei)
+{
     rei->status = NO_CHK_PATH_PERM;
     return NO_CHK_PATH_PERM;
 }
@@ -1032,13 +1024,14 @@ msiNoChkFilePathPerm( ruleExecInfo_t *rei ) {
  *
  * \author Mike Wan
  *
- * \warning This microservice can create a security problem if set to anything other than DISALLOW_PATH_REG and used incorrectly.
+ * \warning This microservice can create a security problem if set to anything other than DISALLOW_PATH_REG and used
+ *incorrectly.
  *
  * \usage See clients/icommands/test/rules/
  *
- * \param[in] xchkType - Required - a msParam of type STR_MS_T which defines the check type to set. Valid values are DO_CHK_PATH_PERM_STR, NO_CHK_PATH_PERM_STR, CHK_NON_VAULT_PATH_PERM_STR and DISALLOW_PATH_REG_STR.
- * \param[in,out] rei - The RuleExecInfo structure that is automatically
- *    handled by the rule engine. The user does not include rei as a
+ * \param[in] xchkType - Required - a msParam of type STR_MS_T which defines the check type to set. Valid values are
+ *DO_CHK_PATH_PERM_STR, NO_CHK_PATH_PERM_STR, CHK_NON_VAULT_PATH_PERM_STR and DISALLOW_PATH_REG_STR. \param[in,out] rei
+ *- The RuleExecInfo structure that is automatically handled by the rule engine. The user does not include rei as a
  *    parameter in the rule invocation.
  *
  * \DolVarDependence none
@@ -1053,27 +1046,26 @@ msiNoChkFilePathPerm( ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetChkFilePathPerm( msParam_t *xchkType, ruleExecInfo_t *rei ) {
-    char *chkType;
+int msiSetChkFilePathPerm(msParam_t* xchkType, ruleExecInfo_t* rei)
+{
+    char* chkType;
 
-    chkType = ( char * ) xchkType->inOutStruct;
+    chkType = (char*) xchkType->inOutStruct;
 
-    if ( strcmp( chkType, DO_CHK_PATH_PERM_STR ) == 0 ) {
+    if (strcmp(chkType, DO_CHK_PATH_PERM_STR) == 0) {
         rei->status = DO_CHK_PATH_PERM;
     }
-    else if ( strcmp( chkType, NO_CHK_PATH_PERM_STR ) == 0 ) {
+    else if (strcmp(chkType, NO_CHK_PATH_PERM_STR) == 0) {
         rei->status = NO_CHK_PATH_PERM;
     }
-    else if ( strcmp( chkType, CHK_NON_VAULT_PATH_PERM_STR ) == 0 ) {
+    else if (strcmp(chkType, CHK_NON_VAULT_PATH_PERM_STR) == 0) {
         rei->status = CHK_NON_VAULT_PATH_PERM;
     }
-    else if ( strcmp( chkType, DISALLOW_PATH_REG_STR ) == 0 ) {
+    else if (strcmp(chkType, DISALLOW_PATH_REG_STR) == 0) {
         rei->status = DISALLOW_PATH_REG;
     }
     else {
-        rodsLog( LOG_ERROR,
-                 "msiNoChkFilePathPerm:invalid check type %s,set to DISALLOW_PATH_REG" );
+        rodsLog(LOG_ERROR, "msiNoChkFilePathPerm:invalid check type %s,set to DISALLOW_PATH_REG");
         rei->status = DISALLOW_PATH_REG;
     }
     return rei->status;
@@ -1109,8 +1101,8 @@ msiSetChkFilePathPerm( msParam_t *xchkType, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiNoTrashCan( ruleExecInfo_t *rei ) {
+int msiNoTrashCan(ruleExecInfo_t* rei)
+{
     rei->status = NO_TRASH_CAN;
     return NO_TRASH_CAN;
 }
@@ -1148,95 +1140,84 @@ msiNoTrashCan( ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetPublicUserOpr( msParam_t *xoprList, ruleExecInfo_t *rei ) {
-
-    char *value;
+int msiSetPublicUserOpr(msParam_t* xoprList, ruleExecInfo_t* rei)
+{
+    char* value;
     strArray_t strArray;
     int status, i;
-    char *oprList;
+    char* oprList;
 
-    oprList = ( char * ) xoprList->inOutStruct;
+    oprList = (char*) xoprList->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiSetPublicUserOpr" )
+    RE_TEST_MACRO("    Calling msiSetPublicUserOpr")
 
     rei->status = 0;
 
-    if ( oprList == NULL || strcmp( oprList, "null" ) == 0 ) {
+    if (oprList == NULL || strcmp(oprList, "null") == 0) {
         return 0;
     }
 
-    if ( rei->rsComm->clientUser.authInfo.authFlag < LOCAL_PRIV_USER_AUTH ) {
+    if (rei->rsComm->clientUser.authInfo.authFlag < LOCAL_PRIV_USER_AUTH) {
         /* not enough privilege */
         return SYS_NO_API_PRIV;
     }
 
-    memset( &strArray, 0, sizeof( strArray ) );
+    memset(&strArray, 0, sizeof(strArray));
 
-    status = parseMultiStr( oprList, &strArray );
+    status = parseMultiStr(oprList, &strArray);
 
-    if ( status <= 0 ) {
+    if (status <= 0) {
         return 0;
     }
 
     value = strArray.value;
-    for ( i = 0; i < strArray.len; i++ ) {
-        if ( strcmp( "read", &value[i * strArray.size] ) == 0 ) {
+    for (i = 0; i < strArray.len; i++) {
+        if (strcmp("read", &value[i * strArray.size]) == 0) {
             /* a match */
-            setApiPerm( DATA_OBJ_OPEN_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH );
-            setApiPerm( FILE_OPEN_AN, REMOTE_PRIV_USER_AUTH,
-                        PUBLIC_USER_AUTH );
-            setApiPerm( FILE_READ_AN, REMOTE_PRIV_USER_AUTH,
-                        PUBLIC_USER_AUTH );
-            setApiPerm( DATA_OBJ_LSEEK_AN, PUBLIC_USER_AUTH,
-                        PUBLIC_USER_AUTH );
-            setApiPerm( FILE_LSEEK_AN, REMOTE_PRIV_USER_AUTH,
-                        PUBLIC_USER_AUTH );
-            setApiPerm( DATA_OBJ_CLOSE_AN, PUBLIC_USER_AUTH,
-                        PUBLIC_USER_AUTH );
-            setApiPerm( FILE_CLOSE_AN, REMOTE_PRIV_USER_AUTH,
-                        PUBLIC_USER_AUTH );
-            setApiPerm( OBJ_STAT_AN, PUBLIC_USER_AUTH,
-                        PUBLIC_USER_AUTH );
-            setApiPerm( DATA_OBJ_GET_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH );
-            setApiPerm( DATA_GET_AN, REMOTE_PRIV_USER_AUTH, PUBLIC_USER_AUTH );
+            setApiPerm(DATA_OBJ_OPEN_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(FILE_OPEN_AN, REMOTE_PRIV_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(FILE_READ_AN, REMOTE_PRIV_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(DATA_OBJ_LSEEK_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(FILE_LSEEK_AN, REMOTE_PRIV_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(DATA_OBJ_CLOSE_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(FILE_CLOSE_AN, REMOTE_PRIV_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(OBJ_STAT_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(DATA_OBJ_GET_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH);
+            setApiPerm(DATA_GET_AN, REMOTE_PRIV_USER_AUTH, PUBLIC_USER_AUTH);
         }
-        else if ( strcmp( "query", &value[i * strArray.size] ) == 0 ) {
-            setApiPerm( GEN_QUERY_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH );
+        else if (strcmp("query", &value[i * strArray.size]) == 0) {
+            setApiPerm(GEN_QUERY_AN, PUBLIC_USER_AUTH, PUBLIC_USER_AUTH);
         }
         else {
-            rodsLog( LOG_ERROR,
-                     "msiSetPublicUserOpr: operation %s for user public not allowed",
-                     &value[i * strArray.size] );
+            rodsLog(
+                LOG_ERROR, "msiSetPublicUserOpr: operation %s for user public not allowed", &value[i * strArray.size]);
         }
     }
 
-    if ( value != NULL ) {
-        free( value );
+    if (value != NULL) {
+        free(value);
     }
 
     return 0;
 }
 
-int
-setApiPerm( int apiNumber, int proxyPerm, int clientPerm ) {
+int setApiPerm(int apiNumber, int proxyPerm, int clientPerm)
+{
     int apiInx;
 
-    if ( proxyPerm < NO_USER_AUTH || proxyPerm > LOCAL_PRIV_USER_AUTH ) {
-        rodsLog( LOG_ERROR,
-                 "setApiPerm: input proxyPerm %d out of range", proxyPerm );
+    if (proxyPerm < NO_USER_AUTH || proxyPerm > LOCAL_PRIV_USER_AUTH) {
+        rodsLog(LOG_ERROR, "setApiPerm: input proxyPerm %d out of range", proxyPerm);
         return SYS_INPUT_PERM_OUT_OF_RANGE;
     }
 
-    if ( clientPerm < NO_USER_AUTH || clientPerm > LOCAL_PRIV_USER_AUTH ) {
-        rodsLog( LOG_ERROR,
-                 "setApiPerm: input clientPerm %d out of range", clientPerm );
+    if (clientPerm < NO_USER_AUTH || clientPerm > LOCAL_PRIV_USER_AUTH) {
+        rodsLog(LOG_ERROR, "setApiPerm: input clientPerm %d out of range", clientPerm);
         return SYS_INPUT_PERM_OUT_OF_RANGE;
     }
 
-    apiInx = apiTableLookup( apiNumber );
+    apiInx = apiTableLookup(apiNumber);
 
-    if ( apiInx < 0 ) {
+    if (apiInx < 0) {
         return apiInx;
     }
 
@@ -1286,52 +1267,48 @@ setApiPerm( int apiNumber, int proxyPerm, int clientPerm ) {
  * \post none
  * \sa none
  **/
-int
-msiSetGraftPathScheme( msParam_t *xaddUserName, msParam_t *xtrimDirCnt,
-                       ruleExecInfo_t *rei ) {
-    char *addUserNameStr;
-    char *trimDirCntStr;
+int msiSetGraftPathScheme(msParam_t* xaddUserName, msParam_t* xtrimDirCnt, ruleExecInfo_t* rei)
+{
+    char* addUserNameStr;
+    char* trimDirCntStr;
     int addUserName;
     int trimDirCnt;
-    msParam_t *msParam;
-    vaultPathPolicy_t *vaultPathPolicy;
+    msParam_t* msParam;
+    vaultPathPolicy_t* vaultPathPolicy;
 
-    RE_TEST_MACRO( "    Calling msiSetGraftPathScheme" )
+    RE_TEST_MACRO("    Calling msiSetGraftPathScheme")
 
-    addUserNameStr = ( char * ) xaddUserName->inOutStruct;
-    trimDirCntStr = ( char * ) xtrimDirCnt->inOutStruct;
+    addUserNameStr = (char*) xaddUserName->inOutStruct;
+    trimDirCntStr = (char*) xtrimDirCnt->inOutStruct;
 
-    if ( strcmp( addUserNameStr, "no" ) == 0 ) {
+    if (strcmp(addUserNameStr, "no") == 0) {
         addUserName = 0;
     }
-    else if ( strcmp( addUserNameStr, "yes" ) == 0 ) {
+    else if (strcmp(addUserNameStr, "yes") == 0) {
         addUserName = 1;
     }
     else {
-        rodsLog( LOG_ERROR,
-                 "msiSetGraftPathScheme: invalid input addUserName %s", addUserNameStr );
+        rodsLog(LOG_ERROR, "msiSetGraftPathScheme: invalid input addUserName %s", addUserNameStr);
         rei->status = SYS_INPUT_PERM_OUT_OF_RANGE;
         return SYS_INPUT_PERM_OUT_OF_RANGE;
     }
 
-    if ( !isdigit( trimDirCntStr[0] ) ) {
-        rodsLog( LOG_ERROR,
-                 "msiSetGraftPathScheme: input trimDirCnt %s", trimDirCntStr );
+    if (!isdigit(trimDirCntStr[0])) {
+        rodsLog(LOG_ERROR, "msiSetGraftPathScheme: input trimDirCnt %s", trimDirCntStr);
         rei->status = SYS_INPUT_PERM_OUT_OF_RANGE;
         return SYS_INPUT_PERM_OUT_OF_RANGE;
     }
     else {
-        trimDirCnt = atoi( trimDirCntStr );
+        trimDirCnt = atoi(trimDirCntStr);
     }
 
     rei->status = 0;
 
-    if ( ( msParam = getMsParamByLabel( &rei->inOutMsParamArray,
-                                        VAULT_PATH_POLICY ) ) != NULL ) {
-        vaultPathPolicy = ( vaultPathPolicy_t * ) msParam->inOutStruct;
-        if ( vaultPathPolicy == NULL ) {
-            vaultPathPolicy = ( vaultPathPolicy_t* )malloc( sizeof( vaultPathPolicy_t ) );
-            msParam->inOutStruct = ( void * ) vaultPathPolicy;
+    if ((msParam = getMsParamByLabel(&rei->inOutMsParamArray, VAULT_PATH_POLICY)) != NULL) {
+        vaultPathPolicy = (vaultPathPolicy_t*) msParam->inOutStruct;
+        if (vaultPathPolicy == NULL) {
+            vaultPathPolicy = (vaultPathPolicy_t*) malloc(sizeof(vaultPathPolicy_t));
+            msParam->inOutStruct = (void*) vaultPathPolicy;
         }
         vaultPathPolicy->scheme = GRAFT_PATH_S;
         vaultPathPolicy->addUserName = addUserName;
@@ -1339,13 +1316,11 @@ msiSetGraftPathScheme( msParam_t *xaddUserName, msParam_t *xtrimDirCnt,
         return 0;
     }
     else {
-        vaultPathPolicy = ( vaultPathPolicy_t * ) malloc(
-                              sizeof( vaultPathPolicy_t ) );
+        vaultPathPolicy = (vaultPathPolicy_t*) malloc(sizeof(vaultPathPolicy_t));
         vaultPathPolicy->scheme = GRAFT_PATH_S;
         vaultPathPolicy->addUserName = addUserName;
         vaultPathPolicy->trimDirCnt = trimDirCnt;
-        addMsParam( &rei->inOutMsParamArray, VAULT_PATH_POLICY,
-                    VaultPathPolicy_MS_T, ( void * ) vaultPathPolicy, NULL );
+        addMsParam(&rei->inOutMsParamArray, VAULT_PATH_POLICY, VaultPathPolicy_MS_T, (void*) vaultPathPolicy, NULL);
     }
     return 0;
 }
@@ -1353,9 +1328,10 @@ msiSetGraftPathScheme( msParam_t *xaddUserName, msParam_t *xtrimDirCnt,
 /**
  * \fn msiSetRandomScheme (ruleExecInfo_t *rei)
  *
- * \brief  This microservice sets the scheme for composing the physical path in the vault to RANDOM.  A randomly generated path is appended to the
- *         vaultPath when generating the physical path. e.g., $vaultPath/$userName/$randomPath. The advantage with the RANDOM scheme is renaming
- *         operations (imv, irm) are much faster because there is no need to rename the corresponding physical path.
+ * \brief  This microservice sets the scheme for composing the physical path in the vault to RANDOM.  A randomly
+ *generated path is appended to the vaultPath when generating the physical path. e.g., $vaultPath/$userName/$randomPath.
+ *The advantage with the RANDOM scheme is renaming operations (imv, irm) are much faster because there is no need to
+ *rename the corresponding physical path.
  *
  * \module core
  *
@@ -1381,37 +1357,33 @@ msiSetGraftPathScheme( msParam_t *xaddUserName, msParam_t *xtrimDirCnt,
  * \post none
  * \sa none
  **/
-int
-msiSetRandomScheme( ruleExecInfo_t *rei ) {
-    msParam_t *msParam;
-    vaultPathPolicy_t *vaultPathPolicy;
+int msiSetRandomScheme(ruleExecInfo_t* rei)
+{
+    msParam_t* msParam;
+    vaultPathPolicy_t* vaultPathPolicy;
 
-    RE_TEST_MACRO( "    Calling msiSetRandomScheme" )
+    RE_TEST_MACRO("    Calling msiSetRandomScheme")
 
     rei->status = 0;
 
-    if ( ( msParam = getMsParamByLabel( &rei->inOutMsParamArray,
-                                        VAULT_PATH_POLICY ) ) != NULL ) {
-        vaultPathPolicy = ( vaultPathPolicy_t * ) msParam->inOutStruct;
-        if ( vaultPathPolicy == NULL ) {
-            vaultPathPolicy = ( vaultPathPolicy_t* )malloc( sizeof( vaultPathPolicy_t ) );
-            msParam->inOutStruct = ( void * ) vaultPathPolicy;
+    if ((msParam = getMsParamByLabel(&rei->inOutMsParamArray, VAULT_PATH_POLICY)) != NULL) {
+        vaultPathPolicy = (vaultPathPolicy_t*) msParam->inOutStruct;
+        if (vaultPathPolicy == NULL) {
+            vaultPathPolicy = (vaultPathPolicy_t*) malloc(sizeof(vaultPathPolicy_t));
+            msParam->inOutStruct = (void*) vaultPathPolicy;
         }
-        memset( vaultPathPolicy, 0, sizeof( vaultPathPolicy_t ) );
+        memset(vaultPathPolicy, 0, sizeof(vaultPathPolicy_t));
         vaultPathPolicy->scheme = RANDOM_S;
         return 0;
     }
     else {
-        vaultPathPolicy = ( vaultPathPolicy_t * ) malloc(
-                              sizeof( vaultPathPolicy_t ) );
-        memset( vaultPathPolicy, 0, sizeof( vaultPathPolicy_t ) );
+        vaultPathPolicy = (vaultPathPolicy_t*) malloc(sizeof(vaultPathPolicy_t));
+        memset(vaultPathPolicy, 0, sizeof(vaultPathPolicy_t));
         vaultPathPolicy->scheme = RANDOM_S;
-        addMsParam( &rei->inOutMsParamArray, VAULT_PATH_POLICY,
-                    VaultPathPolicy_MS_T, ( void * ) vaultPathPolicy, NULL );
+        addMsParam(&rei->inOutMsParamArray, VAULT_PATH_POLICY, VaultPathPolicy_MS_T, (void*) vaultPathPolicy, NULL);
     }
     return 0;
 }
-
 
 /**
  * \fn msiSetReServerNumProc (msParam_t *xnumProc, ruleExecInfo_t *rei)
@@ -1444,30 +1416,31 @@ msiSetRandomScheme( ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetReServerNumProc( msParam_t *xnumProc, ruleExecInfo_t *rei ) {
-    char *numProcStr;
+int msiSetReServerNumProc(msParam_t* xnumProc, ruleExecInfo_t* rei)
+{
+    char* numProcStr;
     int numProc;
 
-    numProcStr = ( char* )xnumProc->inOutStruct;
+    numProcStr = (char*) xnumProc->inOutStruct;
 
-    if ( strcmp( numProcStr, "default" ) == 0 ) {
+    if (strcmp(numProcStr, "default") == 0) {
         numProc = DEF_NUM_RE_PROCS;
     }
     else {
-        numProc = atoi( numProcStr );
+        numProc = atoi(numProcStr);
         int max_re_procs = 0;
         try {
             max_re_procs = irods::get_advanced_setting<const int>(irods::CFG_MAX_NUMBER_OF_CONCURRENT_RE_PROCS);
-        } catch ( const irods::exception& e ) {
+        }
+        catch (const irods::exception& e) {
             irods::log(e);
             return e.code();
         }
 
-        if ( numProc > max_re_procs ) {
+        if (numProc > max_re_procs) {
             numProc = max_re_procs;
         }
-        else if ( numProc < 0 ) {
+        else if (numProc < 0) {
             numProc = DEF_NUM_RE_PROCS;
         }
     }
@@ -1507,15 +1480,15 @@ msiSetReServerNumProc( msParam_t *xnumProc, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetRescQuotaPolicy( msParam_t *xflag, ruleExecInfo_t *rei ) {
-    char *flag;
+int msiSetRescQuotaPolicy(msParam_t* xflag, ruleExecInfo_t* rei)
+{
+    char* flag;
 
-    flag = ( char * ) xflag->inOutStruct;
+    flag = (char*) xflag->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiSetRescQuotaPolic" )
+    RE_TEST_MACRO("    Calling msiSetRescQuotaPolic")
 
-    if ( strcmp( flag, "on" ) == 0 ) {
+    if (strcmp(flag, "on") == 0) {
         rei->status = RescQuotaPolicy = RESC_QUOTA_ON;
     }
     else {
@@ -1539,8 +1512,8 @@ msiSetRescQuotaPolicy( msParam_t *xflag, ruleExecInfo_t *rei ) {
  *
  * \usage See clients/icommands/test/rules/
  *
- * \param[in] inpParam1 - a STR_MS_T with the id of the object (can be null if unknown, the next param will then be used)
- * \param[in] inpParam2 - a msParam of type DataObjInp_MS_T or a STR_MS_T which would be taken as dataObj path
+ * \param[in] inpParam1 - a STR_MS_T with the id of the object (can be null if unknown, the next param will then be
+ *used) \param[in] inpParam2 - a msParam of type DataObjInp_MS_T or a STR_MS_T which would be taken as dataObj path
  * \param[in] inpParam3 - a INT which gives the replica number
  * \param[in] inpParam4 - a STR_MS_T containing the comment
  * \param[in,out] rei - The RuleExecInfo structure that is automatically
@@ -1559,83 +1532,90 @@ msiSetRescQuotaPolicy( msParam_t *xflag, ruleExecInfo_t *rei ) {
  * \post none
  * \sa none
  **/
-int
-msiSetReplComment( msParam_t *inpParam1, msParam_t *inpParam2,
-                   msParam_t *inpParam3, msParam_t *inpParam4,
-                   ruleExecInfo_t *rei ) {
-    rsComm_t *rsComm;
-    char *dataCommentStr, *dataIdStr;    /* for parsing of input params */
+int msiSetReplComment(msParam_t* inpParam1,
+                      msParam_t* inpParam2,
+                      msParam_t* inpParam3,
+                      msParam_t* inpParam4,
+                      ruleExecInfo_t* rei)
+{
+    rsComm_t* rsComm;
+    char *dataCommentStr, *dataIdStr; /* for parsing of input params */
 
-    modDataObjMeta_t modDataObjMetaInp;  /* for rsModDataObjMeta() */
-    dataObjInfo_t dataObjInfo;           /* for rsModDataObjMeta() */
-    keyValPair_t regParam;                       /* for rsModDataObjMeta() */
+    modDataObjMeta_t modDataObjMetaInp; /* for rsModDataObjMeta() */
+    dataObjInfo_t dataObjInfo;          /* for rsModDataObjMeta() */
+    keyValPair_t regParam;              /* for rsModDataObjMeta() */
 
-    RE_TEST_MACRO( "    Calling msiSetReplComment" )
+    RE_TEST_MACRO("    Calling msiSetReplComment")
 
-    if ( rei == NULL || rei->rsComm == NULL ) {
-        rodsLog( LOG_ERROR, "msiSetReplComment: input rei or rsComm is NULL." );
+    if (rei == NULL || rei->rsComm == NULL) {
+        rodsLog(LOG_ERROR, "msiSetReplComment: input rei or rsComm is NULL.");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
-    rsComm = rei->rsComm ;
+    rsComm = rei->rsComm;
 
-    memset( &dataObjInfo, 0, sizeof( dataObjInfo ) );
+    memset(&dataObjInfo, 0, sizeof(dataObjInfo));
 
     /* parse inpParam1: data object ID */
-    if ( ( dataIdStr = parseMspForStr( inpParam1 ) ) != NULL )  {
-        dataObjInfo.dataId = ( rodsLong_t ) atoll( dataIdStr );
+    if ((dataIdStr = parseMspForStr(inpParam1)) != NULL) {
+        dataObjInfo.dataId = (rodsLong_t) atoll(dataIdStr);
     }
     else {
         dataObjInfo.dataId = 0;
     }
 
     /* parse inpParam2: data object path */
-    if ( parseMspForStr( inpParam2 ) ) {
-        snprintf( dataObjInfo.objPath, sizeof( dataObjInfo.objPath ), "%s", parseMspForStr( inpParam2 ) );
+    if (parseMspForStr(inpParam2)) {
+        snprintf(dataObjInfo.objPath, sizeof(dataObjInfo.objPath), "%s", parseMspForStr(inpParam2));
     }
     /* make sure to have at least data ID or path */
-    if ( !( dataIdStr || strlen( dataObjInfo.objPath ) > 0 ) ) {
-        rodsLog( LOG_ERROR, "msiSetReplComment: No data object ID or path provided." );
+    if (!(dataIdStr || strlen(dataObjInfo.objPath) > 0)) {
+        rodsLog(LOG_ERROR, "msiSetReplComment: No data object ID or path provided.");
         return USER__NULL_INPUT_ERR;
     }
 
-    if ( inpParam3 != NULL ) {
-        dataObjInfo.replNum = parseMspForPosInt( inpParam3 );
+    if (inpParam3 != NULL) {
+        dataObjInfo.replNum = parseMspForPosInt(inpParam3);
     }
 
     /* parse inpParam3: data type string */
-    if ( ( dataCommentStr = parseMspForStr( inpParam4 ) ) == NULL ) {
-        rodsLog( LOG_ERROR, "msiSetReplComment: parseMspForStr error for param 4." );
+    if ((dataCommentStr = parseMspForStr(inpParam4)) == NULL) {
+        rodsLog(LOG_ERROR, "msiSetReplComment: parseMspForStr error for param 4.");
         return USER__NULL_INPUT_ERR;
     }
-    memset( &regParam, 0, sizeof( regParam ) );
-    addKeyVal( &regParam, DATA_COMMENTS_KW, dataCommentStr );
-    if ( strcmp( dataObjInfo.rescHier, "" ) ) {
-        addKeyVal( &regParam, IN_PDMO_KW, dataObjInfo.rescHier );
+    memset(&regParam, 0, sizeof(regParam));
+    addKeyVal(&regParam, DATA_COMMENTS_KW, dataCommentStr);
+    if (strcmp(dataObjInfo.rescHier, "")) {
+        addKeyVal(&regParam, IN_PDMO_KW, dataObjInfo.rescHier);
     }
 
-    rodsLog( LOG_NOTICE, "msiSetReplComment: mod %s (%d) with %s",
-             dataObjInfo.objPath, dataObjInfo.replNum, dataCommentStr );
+    rodsLog(
+        LOG_NOTICE, "msiSetReplComment: mod %s (%d) with %s", dataObjInfo.objPath, dataObjInfo.replNum, dataCommentStr);
     /* call rsModDataObjMeta() */
     modDataObjMetaInp.dataObjInfo = &dataObjInfo;
     modDataObjMetaInp.regParam = &regParam;
-    rei->status = rsModDataObjMeta( rsComm, &modDataObjMetaInp );
+    rei->status = rsModDataObjMeta(rsComm, &modDataObjMetaInp);
 
     /* failure? */
-    if ( rei->status < 0 ) {
-        if ( strlen( dataObjInfo.objPath ) > 0 ) {
-            rodsLog( LOG_ERROR,
-                     "msiSetReplComment: rsModDataObjMeta failed for object %s, status = %d",
-                     dataObjInfo.objPath, rei->status );
+    if (rei->status < 0) {
+        if (strlen(dataObjInfo.objPath) > 0) {
+            rodsLog(LOG_ERROR,
+                    "msiSetReplComment: rsModDataObjMeta failed for object %s, status = %d",
+                    dataObjInfo.objPath,
+                    rei->status);
         }
         else {
-            rodsLog( LOG_ERROR,
-                     "msiSetReplComment: rsModDataObjMeta failed for object ID %d, status = %d",
-                     dataObjInfo.dataId, rei->status );
+            rodsLog(LOG_ERROR,
+                    "msiSetReplComment: rsModDataObjMeta failed for object ID %d, status = %d",
+                    dataObjInfo.dataId,
+                    rei->status);
         }
     }
     else {
-        rodsLog( LOG_NOTICE, "msiSetReplComment: OK mod %s (%d) with %s",
-                 dataObjInfo.objPath, dataObjInfo.replNum, dataCommentStr );
+        rodsLog(LOG_NOTICE,
+                "msiSetReplComment: OK mod %s (%d) with %s",
+                dataObjInfo.objPath,
+                dataObjInfo.replNum,
+                dataCommentStr);
     }
     return rei->status;
 }
@@ -1673,15 +1653,15 @@ msiSetReplComment( msParam_t *inpParam1, msParam_t *inpParam2,
  * \post none
  * \sa none
  **/
-int
-msiSetBulkPutPostProcPolicy( msParam_t *xflag, ruleExecInfo_t *rei ) {
-    char *flag;
+int msiSetBulkPutPostProcPolicy(msParam_t* xflag, ruleExecInfo_t* rei)
+{
+    char* flag;
 
-    flag = ( char * ) xflag->inOutStruct;
+    flag = (char*) xflag->inOutStruct;
 
-    RE_TEST_MACRO( "    Calling msiSetBulkPutPostProcPolicy" )
+    RE_TEST_MACRO("    Calling msiSetBulkPutPostProcPolicy")
 
-    if ( strcmp( flag, "on" ) == 0 ) {
+    if (strcmp(flag, "on") == 0) {
         rei->status = POLICY_ON;
     }
     else {
@@ -1709,10 +1689,9 @@ msiSetBulkPutPostProcPolicy( msParam_t *xflag, ruleExecInfo_t *rei ) {
  *
  * \param[in] sysMetadata - A STR_MS_T which specifies the system metadata to be modified.
  *            Allowed values are: "datatype", "comment", "expirytime". If one wants to modify
- *                       only the sys metadata for one given replica, the value should be for example // JMC - backport 4573
- *                   "comment++++numRepl=2". It will only modify the comment for the replica number 2.
- *            If the syntax after "++++" is invalid, it will be ignored and all replica will be modified.
- *            This does not work for the "datatype" metadata.
+ *                       only the sys metadata for one given replica, the value should be for example // JMC - backport
+ *4573 "comment++++numRepl=2". It will only modify the comment for the replica number 2. If the syntax after "++++" is
+ *invalid, it will be ignored and all replica will be modified. This does not work for the "datatype" metadata.
  * \param[in] value - A STR_MS_T which specifies the value to be given to the system metadata.
  * \param[in,out] rei - The RuleExecInfo structure that is automatically
  *    handled by the rule engine. The user does not include rei as a
@@ -1730,8 +1709,8 @@ msiSetBulkPutPostProcPolicy( msParam_t *xflag, ruleExecInfo_t *rei ) {
  * \post N/A
  * \sa N/A
  **/
-int
-msiSysMetaModify( msParam_t *sysMetadata, msParam_t *value, ruleExecInfo_t *rei ) {
+int msiSysMetaModify(msParam_t* sysMetadata, msParam_t* value, ruleExecInfo_t* rei)
+{
     keyValPair_t regParam;
     modDataObjMeta_t modDataObjMetaInp;
     // =-=-=-=-=-=-=-
@@ -1740,58 +1719,54 @@ msiSysMetaModify( msParam_t *sysMetadata, msParam_t *value, ruleExecInfo_t *rei 
     char theTime[TIME_LEN], *inpStr = 0, mdname[MAX_NAME_LEN], replAttr[MAX_NAME_LEN], *pstr1 = 0, *pstr2 = 0;
     int allRepl = 0, len1 = 0, len2 = 0, numRepl = 0, status = 0;
     // =-=-=-=-=-=-=-
-    rsComm_t *rsComm = 0;
+    rsComm_t* rsComm = 0;
 
-    RE_TEST_MACRO( " Calling msiSysMetaModify" )
+    RE_TEST_MACRO(" Calling msiSysMetaModify")
 
-    memset( &mdname, 0, sizeof( mdname ) );
+    memset(&mdname, 0, sizeof(mdname));
 
-
-    if ( rei == NULL || rei->rsComm == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "msiSysMetaModify: input rei or rsComm is NULL" );
+    if (rei == NULL || rei->rsComm == NULL) {
+        rodsLog(LOG_ERROR, "msiSysMetaModify: input rei or rsComm is NULL");
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
     rsComm = rei->rsComm;
 
-    if ( sysMetadata == NULL ) {
-        rodsLogAndErrorMsg( LOG_ERROR, &rsComm->rError, rei->status,
-                            "msiSysMetaModify: input Param1 is NULL" );
+    if (sysMetadata == NULL) {
+        rodsLogAndErrorMsg(LOG_ERROR, &rsComm->rError, rei->status, "msiSysMetaModify: input Param1 is NULL");
         rei->status = USER__NULL_INPUT_ERR;
         return rei->status;
     }
 
-    if ( value == NULL ) {
-        rodsLogAndErrorMsg( LOG_ERROR, &rsComm->rError, rei->status,
-                            "msiSysMetaModify: input Param2 is NULL" );
+    if (value == NULL) {
+        rodsLogAndErrorMsg(LOG_ERROR, &rsComm->rError, rei->status, "msiSysMetaModify: input Param2 is NULL");
         rei->status = USER__NULL_INPUT_ERR;
         return rei->status;
     }
 
-    if ( strcmp( sysMetadata->type, STR_MS_T ) == 0 && strcmp( value->type, STR_MS_T ) == 0 ) {
-        memset( &regParam, 0, sizeof( regParam ) );
+    if (strcmp(sysMetadata->type, STR_MS_T) == 0 && strcmp(value->type, STR_MS_T) == 0) {
+        memset(&regParam, 0, sizeof(regParam));
         // =-=-=-=-=-=-=-
         // JMC - backport 4573
-        memcpy( &dataObjInfo, rei->doi, sizeof( dataObjInfo_t ) );
-        inpStr = ( char * ) sysMetadata->inOutStruct;
+        memcpy(&dataObjInfo, rei->doi, sizeof(dataObjInfo_t));
+        inpStr = (char*) sysMetadata->inOutStruct;
         allRepl = 1;
         /* parse the input parameter which is: <string> or <string>++++replNum=<int> */
-        pstr1 = strstr( inpStr, "++++" );
-        if ( pstr1 != NULL ) {
-            len1 = strlen( inpStr ) - strlen( pstr1 );
-            if ( len1 > 0 ) {
-                strncpy( mdname, inpStr, len1 );
+        pstr1 = strstr(inpStr, "++++");
+        if (pstr1 != NULL) {
+            len1 = strlen(inpStr) - strlen(pstr1);
+            if (len1 > 0) {
+                strncpy(mdname, inpStr, len1);
             }
-            pstr2 = strstr( pstr1 + 4, "=" );
-            if ( pstr2 != NULL ) {
-                len2 = strlen( pstr1 + 4 ) - strlen( pstr2 );
-                memset( replAttr, 0, sizeof( replAttr ) ); // JMC - backport 4803
-                strncpy( replAttr, pstr1 + 4, len2 );
-                if ( len2 > 0 ) {
-                    if ( strcmp( replAttr, "numRepl" ) == 0 ) {
-                        numRepl = atoi( pstr2 + 1 );
-                        if ( ( numRepl == 0 && strcmp( pstr2 + 1, "0" ) == 0 ) || numRepl > 0 ) {
+            pstr2 = strstr(pstr1 + 4, "=");
+            if (pstr2 != NULL) {
+                len2 = strlen(pstr1 + 4) - strlen(pstr2);
+                memset(replAttr, 0, sizeof(replAttr)); // JMC - backport 4803
+                strncpy(replAttr, pstr1 + 4, len2);
+                if (len2 > 0) {
+                    if (strcmp(replAttr, "numRepl") == 0) {
+                        numRepl = atoi(pstr2 + 1);
+                        if ((numRepl == 0 && strcmp(pstr2 + 1, "0") == 0) || numRepl > 0) {
                             dataObjInfo.replNum = numRepl;
                             allRepl = 0;
                         }
@@ -1800,70 +1775,78 @@ msiSysMetaModify( msParam_t *sysMetadata, msParam_t *value, ruleExecInfo_t *rei 
             }
         }
         else {
-            strncpy( mdname , inpStr, strlen( inpStr ) );
+            strncpy(mdname, inpStr, strlen(inpStr));
             allRepl = 1;
         }
         /* end of the parsing */
         // =-=-=-=-=-=-=-
-        if ( strcmp( mdname, "datatype" ) == 0 ) {
-            addKeyVal( &regParam, DATA_TYPE_KW, ( char * ) value->inOutStruct );
+        if (strcmp(mdname, "datatype") == 0) {
+            addKeyVal(&regParam, DATA_TYPE_KW, (char*) value->inOutStruct);
         }
-        else if ( strcmp( mdname, "comment" ) == 0 ) {
-            addKeyVal( &regParam, DATA_COMMENTS_KW, ( char * ) value->inOutStruct );
+        else if (strcmp(mdname, "comment") == 0) {
+            addKeyVal(&regParam, DATA_COMMENTS_KW, (char*) value->inOutStruct);
             // =-=-=-=-=-=-=-
             // JMC - backport 4573
-            if ( allRepl == 1 ) {
-                addKeyVal( &regParam, ALL_KW, ( char * ) value->inOutStruct );
+            if (allRepl == 1) {
+                addKeyVal(&regParam, ALL_KW, (char*) value->inOutStruct);
             }
 
             // =-=-=-=-=-=-=-
         }
-        else if ( strcmp( mdname, "expirytime" ) == 0 ) {
-            rstrcpy( theTime, ( char * ) value->inOutStruct, TIME_LEN );
-            if ( strncmp( theTime, "+", 1 ) == 0 ) {
-                rstrcpy( theTime, ( char * ) value->inOutStruct + 1, TIME_LEN ); /* skip the + */
-                status = checkDateFormat( theTime );    /* check and convert the time value */
-                getOffsetTimeStr( theTime, theTime );   /* convert delta format to now + this*/
+        else if (strcmp(mdname, "expirytime") == 0) {
+            rstrcpy(theTime, (char*) value->inOutStruct, TIME_LEN);
+            if (strncmp(theTime, "+", 1) == 0) {
+                rstrcpy(theTime, (char*) value->inOutStruct + 1, TIME_LEN); /* skip the + */
+                status = checkDateFormat(theTime);                          /* check and convert the time value */
+                getOffsetTimeStr(theTime, theTime);                         /* convert delta format to now + this*/
             }
             else {
-                status = checkDateFormat( theTime );    /* check and convert the time value */
+                status = checkDateFormat(theTime); /* check and convert the time value */
             }
-            if ( status != 0 )  {
+            if (status != 0) {
                 rei->status = DATE_FORMAT_ERR;
-                rodsLogAndErrorMsg( LOG_ERROR, &rsComm->rError, rei->status,
-                                    "msiSysMetaModify: bad format for the input time: %s. Please refer to isysmeta help.",
-                                    ( char * ) value->inOutStruct );
+                rodsLogAndErrorMsg(
+                    LOG_ERROR,
+                    &rsComm->rError,
+                    rei->status,
+                    "msiSysMetaModify: bad format for the input time: %s. Please refer to isysmeta help.",
+                    (char*) value->inOutStruct);
                 return rei->status;
             }
             else {
-                addKeyVal( &regParam, DATA_EXPIRY_KW, theTime );
+                addKeyVal(&regParam, DATA_EXPIRY_KW, theTime);
                 // =-=-=-=-=-=-=-
                 // JMC - backport 4573
-                if ( allRepl == 1 ) {
-                    addKeyVal( &regParam, ALL_KW, theTime );
+                if (allRepl == 1) {
+                    addKeyVal(&regParam, ALL_KW, theTime);
                 }
                 // =-=-=-=-=-=-=-
             }
         }
         else {
             rei->status = USER_BAD_KEYWORD_ERR;
-            rodsLogAndErrorMsg( LOG_ERROR, &rsComm->rError, rei->status,
-                                "msiSysMetaModify: unknown system metadata or impossible to modify it: %s",
-                                ( char * ) sysMetadata->inOutStruct );
+            rodsLogAndErrorMsg(LOG_ERROR,
+                               &rsComm->rError,
+                               rei->status,
+                               "msiSysMetaModify: unknown system metadata or impossible to modify it: %s",
+                               (char*) sysMetadata->inOutStruct);
         }
 
-        if ( strcmp( dataObjInfo.rescHier,  "" ) ) {
-            addKeyVal( &regParam, IN_PDMO_KW, dataObjInfo.rescHier );
+        if (strcmp(dataObjInfo.rescHier, "")) {
+            addKeyVal(&regParam, IN_PDMO_KW, dataObjInfo.rescHier);
         }
 
         modDataObjMetaInp.dataObjInfo = &dataObjInfo; // JMC - backport 4573
         modDataObjMetaInp.regParam = &regParam;
-        rei->status = rsModDataObjMeta( rsComm, &modDataObjMetaInp );
+        rei->status = rsModDataObjMeta(rsComm, &modDataObjMetaInp);
     }
-    else {       /* one or two bad input parameter type for the msi */
-        rodsLogAndErrorMsg( LOG_ERROR, &rsComm->rError, rei->status,
-                            "msiSysMetaModify: Unsupported input Param1 type %s or Param2 type %s",
-                            sysMetadata->type, value->type );
+    else { /* one or two bad input parameter type for the msi */
+        rodsLogAndErrorMsg(LOG_ERROR,
+                           &rsComm->rError,
+                           rei->status,
+                           "msiSysMetaModify: Unsupported input Param1 type %s or Param2 type %s",
+                           sysMetadata->type,
+                           value->type);
         rei->status = UNKNOWN_PARAM_IN_RULE_ERR;
         return rei->status;
     }

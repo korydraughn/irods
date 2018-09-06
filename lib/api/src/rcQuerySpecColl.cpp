@@ -28,13 +28,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcQuerySpecColl( rcComm_t *conn, dataObjInp_t *querySpecCollInp,
-                 genQueryOut_t **genQueryOut ) {
+ **/
+int rcQuerySpecColl(rcComm_t* conn, dataObjInp_t* querySpecCollInp, genQueryOut_t** genQueryOut)
+{
     int status;
-    status = procApiRequest( conn, QUERY_SPEC_COLL_AN, querySpecCollInp, NULL,
-                             ( void ** ) genQueryOut, NULL );
+    status = procApiRequest(conn, QUERY_SPEC_COLL_AN, querySpecCollInp, NULL, (void**) genQueryOut, NULL);
 
     return status;
 }

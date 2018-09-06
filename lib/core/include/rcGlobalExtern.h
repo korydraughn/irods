@@ -17,11 +17,11 @@ extern int ProcessType;
 extern packType_t packTypeTable[];
 extern int NumOfPackTypes;
 extern int NumOfApi;
-extern char *dataObjCond[];
-extern char *compareOperator[];
-extern char *rescCond[];
-extern char *userCond[];
-extern char *collCond[];
+extern char* dataObjCond[];
+extern char* compareOperator[];
+extern char* rescCond[];
+extern char* userCond[];
+extern char* collCond[];
 extern int NumRescTypeDef;
 // JMC - legacy resource - extern rescClass_t RescClass[];
 // JMC - legacy resource - extern int NumRescClass;
@@ -36,12 +36,13 @@ extern int NumStructFileExtAndRegInpKeyWd;
 extern struct timeval SysTimingVal;
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-extern guiProgressCallback gGuiProgressCB;
+    extern guiProgressCallback gGuiProgressCB;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	// RC_GLOBAL_EXTERN_H__
+#endif // RC_GLOBAL_EXTERN_H__

@@ -4,8 +4,8 @@
 #include "rodsConnect.h"
 #include "objInfo.h"
 
-int rsSubStructFileCreate( rsComm_t *rsComm, subFile_t *subFile );
-int _rsSubStructFileCreate( rsComm_t *rsComm, subFile_t *subFile );
-int remoteSubStructFileCreate( rsComm_t *rsComm, subFile_t *subFile, rodsServerHost_t *rodsServerHost );
+int rsSubStructFileCreate(rsComm_t* rsComm, subFile_t* subFile);
+int _rsSubStructFileCreate(rsComm_t* rsComm, subFile_t* subFile);
+int remoteSubStructFileCreate(rsComm_t* rsComm, subFile_t* subFile, rodsServerHost_t* rodsServerHost);
 
 #endif

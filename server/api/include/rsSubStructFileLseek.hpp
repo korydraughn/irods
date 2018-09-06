@@ -5,9 +5,15 @@
 #include "fileLseek.h"
 #include "subStructFileLseek.h"
 
-
-int rsSubStructFileLseek( rsComm_t *rsComm, subStructFileLseekInp_t *subStructFileLseekInp, fileLseekOut_t **subStructFileLseekOut );
-int _rsSubStructFileLseek( rsComm_t *rsComm, subStructFileLseekInp_t *subStructFileLseekInp, fileLseekOut_t **subStructFileLseekOut );
-int remoteSubStructFileLseek( rsComm_t *rsComm, subStructFileLseekInp_t *subStructFileLseekInp, fileLseekOut_t **subStructFileLseekOut, rodsServerHost_t *rodsServerHost );
+int rsSubStructFileLseek(rsComm_t* rsComm,
+                         subStructFileLseekInp_t* subStructFileLseekInp,
+                         fileLseekOut_t** subStructFileLseekOut);
+int _rsSubStructFileLseek(rsComm_t* rsComm,
+                          subStructFileLseekInp_t* subStructFileLseekInp,
+                          fileLseekOut_t** subStructFileLseekOut);
+int remoteSubStructFileLseek(rsComm_t* rsComm,
+                             subStructFileLseekInp_t* subStructFileLseekInp,
+                             fileLseekOut_t** subStructFileLseekOut,
+                             rodsServerHost_t* rodsServerHost);
 
 #endif

@@ -2,16 +2,13 @@
  */
 
 #ifndef REGION_CHECK_PROTO_HPP
-#define REGION_CHECK_PROTO_HPP
+#    define REGION_CHECK_PROTO_HPP
 
-typedef int ( ChkFuncType )( void *ptr, Region *r );
+typedef int(ChkFuncType)(void* ptr, Region* r);
 #endif
 
 #include "proto.hpp"
 
-#define RE_STRUCT_FUNC_PROTO(T) \
-    int regionChk##T(T *ptr, Region *r)
+#define RE_STRUCT_FUNC_PROTO(T) int regionChk##T(T* ptr, Region* r)
 
-#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn) \
-    int regionChk##T(T *ptr, Region *r, ChkFuncType *cpfn)
-
+#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn) int regionChk##T(T* ptr, Region* r, ChkFuncType* cpfn)

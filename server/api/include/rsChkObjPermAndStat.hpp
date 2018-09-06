@@ -3,8 +3,8 @@
 
 #include "chkObjPermAndStat.h"
 
-int rsChkObjPermAndStat( rsComm_t *rsComm, chkObjPermAndStat_t *chkObjPermAndStatInp );
-int _rsChkObjPermAndStat( rsComm_t *rsComm, chkObjPermAndStat_t *chkObjPermAndStatInp );
-int chkCollForBundleOpr( rsComm_t *rsComm, chkObjPermAndStat_t *chkObjPermAndStatInp );
+int rsChkObjPermAndStat(rsComm_t* rsComm, chkObjPermAndStat_t* chkObjPermAndStatInp);
+int _rsChkObjPermAndStat(rsComm_t* rsComm, chkObjPermAndStat_t* chkObjPermAndStatInp);
+int chkCollForBundleOpr(rsComm_t* rsComm, chkObjPermAndStat_t* chkObjPermAndStatInp);
 
 #endif

@@ -18,6 +18,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcRegColl( rcComm_t *conn, collInp_t *regCollInp );
+    int
+    rcRegColl(rcComm_t* conn, collInp_t* regCollInp);
 
 #endif

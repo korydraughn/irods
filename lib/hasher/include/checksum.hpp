@@ -11,21 +11,19 @@
 #include "objInfo.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #define SHA256_CHKSUM_PREFIX "sha2:"
-int verifyChksumLocFile( char *fileName, const char *myChksum, char *chksumStr );
+    int verifyChksumLocFile(char* fileName, const char* myChksum, char* chksumStr);
 
-int
-chksumLocFile( const char *fileName, char *chksumStr, const char* );
-int
-hashToStr( unsigned char *digest, char *digestStr );
-int
-rcChksumLocFile( char *fileName, char *chksumFlag, keyValPair_t *condInput, const char* );
+    int chksumLocFile(const char* fileName, char* chksumStr, const char*);
+    int hashToStr(unsigned char* digest, char* digestStr);
+    int rcChksumLocFile(char* fileName, char* chksumFlag, keyValPair_t* condInput, const char*);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	/* CHECKSUM_HPP_ */
+#endif /* CHECKSUM_HPP_ */

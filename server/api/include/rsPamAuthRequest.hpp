@@ -3,7 +3,9 @@
 
 #include "pamAuthRequest.h"
 
-int rsPamAuthRequest( rsComm_t *rsComm, pamAuthRequestInp_t *pamAuthRequestInp, pamAuthRequestOut_t **pamAuthRequestOut );
-int _rsPamAuthRequest( rsComm_t *rsComm, pamAuthRequestInp_t *pamAuthRequestInp, pamAuthRequestOut_t **pamAuthRequestOut );
+int rsPamAuthRequest(rsComm_t* rsComm, pamAuthRequestInp_t* pamAuthRequestInp, pamAuthRequestOut_t** pamAuthRequestOut);
+int _rsPamAuthRequest(rsComm_t* rsComm,
+                      pamAuthRequestInp_t* pamAuthRequestInp,
+                      pamAuthRequestOut_t** pamAuthRequestOut);
 
 #endif

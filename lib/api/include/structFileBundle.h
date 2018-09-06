@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "structFileExtAndReg.h"
 
-int rcStructFileBundle( rcComm_t *conn, structFileExtAndRegInp_t *structFileBundleInp );
+int rcStructFileBundle(rcComm_t* conn, structFileExtAndRegInp_t* structFileBundleInp);
 
 #endif

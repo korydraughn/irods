@@ -9,22 +9,23 @@
 
 // Define signal handlers for irods
 
-extern "C" {
-
+extern "C"
+{
     /// @brief Signal handler for seg faults
-    static void segv_handler(
-        int signal ) {
+    static void segv_handler(int signal)
+    {
         std::cerr << "Caught signal [" << signal << "]. Dumping stacktrace and exiting" << std::endl;
         std::cerr << irods::stacktrace().dump();
         exit(signal);
     }
 
-    void register_handlers( void ) {
+    void register_handlers(void)
+    {
         struct sigaction action;
         memset(&action, 0, sizeof(action));
         action.sa_handler = segv_handler;
-        sigaction( SIGSEGV, &action, 0 );
-        sigaction( SIGABRT, &action, 0 );
-        sigaction( SIGINT, &action, 0 );
+        sigaction(SIGSEGV, &action, 0);
+        sigaction(SIGABRT, &action, 0);
+        sigaction(SIGINT, &action, 0);
     }
 }

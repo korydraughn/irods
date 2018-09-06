@@ -2,9 +2,9 @@
  */
 
 #ifndef TO_REGION_PROTO_HPP
-#define TO_REGION_PROTO_HPP
+#    define TO_REGION_PROTO_HPP
 
-typedef const void *( RegionCopyFuncType )( const void *, Region *, Hashtable * );
+typedef const void*(RegionCopyFuncType)(const void*, Region*, Hashtable*);
 
 #endif
 
@@ -12,9 +12,7 @@ typedef const void *( RegionCopyFuncType )( const void *, Region *, Hashtable * 
 
 #define RE_STRUCT_FUNC(T) CONCAT(regionCp, T)
 
-#define RE_STRUCT_FUNC_PROTO(T) \
-    T *RE_STRUCT_FUNC(T)(T *ptr, Region *r, Hashtable *objectMap)
+#define RE_STRUCT_FUNC_PROTO(T) T* RE_STRUCT_FUNC(T)(T * ptr, Region * r, Hashtable * objectMap)
 
-#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn) \
-	T *RE_STRUCT_FUNC(T)(T *ptr, Region *r, RegionCopyFuncType *cpfn, Hashtable *objectMap)
-
+#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn)                                                                          \
+    T* RE_STRUCT_FUNC(T)(T * ptr, Region * r, RegionCopyFuncType * cpfn, Hashtable * objectMap)

@@ -4,124 +4,81 @@
 #include "rodsErrorTable.h"
 #include "rodsDef.h"
 
-
-namespace irods {
-
-    template< typename INP_T, typename OUT_T >
-    int server_api_call(
-        int          _api_index,
-        rsComm_t *   _comm,
-        INP_T  *     _input,
-        bytesBuf_t * _input_buffer,
-        OUT_T **     _output,
-        bytesBuf_t * _output_buffer ) {
+namespace irods
+{
+    template <typename INP_T, typename OUT_T>
+    int server_api_call(int _api_index,
+                        rsComm_t* _comm,
+                        INP_T* _input,
+                        bytesBuf_t* _input_buffer,
+                        OUT_T** _output,
+                        bytesBuf_t* _output_buffer)
+    {
         api_entry_table& table = get_server_api_table();
-        bool has_entry = table.has_entry( _api_index );
-        if ( !has_entry ) {
+        bool has_entry = table.has_entry(_api_index);
+        if (!has_entry) {
             return SYS_UNMATCHED_API_NUM;
         }
 
         return table[_api_index].get()->call_wrapper(
-                   table[_api_index].get(),
-                   _comm,
-                   _input,
-                   _input_buffer,
-                   _output,
-                   _output_buffer );
+            table[_api_index].get(), _comm, _input, _input_buffer, _output, _output_buffer);
     }
 
-    template< typename INP_T, typename OUT_T >
-    int server_api_call(
-        int        _api_index,
-        rsComm_t * _comm,
-        INP_T *    _input,
-        OUT_T **   _output ) {
+    template <typename INP_T, typename OUT_T>
+    int server_api_call(int _api_index, rsComm_t* _comm, INP_T* _input, OUT_T** _output)
+    {
         api_entry_table& table = get_server_api_table();
-        bool has_entry = table.has_entry( _api_index );
-        if ( !has_entry ) {
+        bool has_entry = table.has_entry(_api_index);
+        if (!has_entry) {
             return SYS_UNMATCHED_API_NUM;
         }
 
-        return table[_api_index]->call_wrapper(
-                   table[_api_index].get(),
-                   _comm,
-                   _input,
-                   _output );
+        return table[_api_index]->call_wrapper(table[_api_index].get(), _comm, _input, _output);
     }
 
-    template< typename INP_T, typename OUT_T >
-    int server_api_call(
-        int          _api_index,
-        rsComm_t *   _comm,
-        INP_T *      _input,
-        bytesBuf_t * _input_buffer,
-        OUT_T **     _output ) {
+    template <typename INP_T, typename OUT_T>
+    int server_api_call(int _api_index, rsComm_t* _comm, INP_T* _input, bytesBuf_t* _input_buffer, OUT_T** _output)
+    {
         api_entry_table& table = get_server_api_table();
-        bool has_entry = table.has_entry( _api_index );
-        if ( !has_entry ) {
+        bool has_entry = table.has_entry(_api_index);
+        if (!has_entry) {
             return SYS_UNMATCHED_API_NUM;
         }
-        return table[_api_index]->call_wrapper(
-                   table[_api_index].get(),
-                   _comm,
-                   _input,
-                   _input_buffer,
-                   _output );
+        return table[_api_index]->call_wrapper(table[_api_index].get(), _comm, _input, _input_buffer, _output);
     }
 
-    template< typename INP_T >
-    int server_api_call(
-        int          _api_index,
-        rsComm_t *   _comm,
-        INP_T *      _input,
-        bytesBuf_t * _input_buffer ) {
+    template <typename INP_T>
+    int server_api_call(int _api_index, rsComm_t* _comm, INP_T* _input, bytesBuf_t* _input_buffer)
+    {
         api_entry_table& table = get_server_api_table();
-        bool has_entry = table.has_entry( _api_index );
-        if ( !has_entry ) {
+        bool has_entry = table.has_entry(_api_index);
+        if (!has_entry) {
             return SYS_UNMATCHED_API_NUM;
         }
-        return table[_api_index]->call_wrapper(
-                   table[_api_index].get(),
-                   _comm,
-                   _input,
-                   _input_buffer );
+        return table[_api_index]->call_wrapper(table[_api_index].get(), _comm, _input, _input_buffer);
     }
 
-    template< typename INP_T, typename OUT_T >
-    int server_api_call(
-        int          _api_index,
-        rsComm_t *   _comm,
-        INP_T *      _input,
-        OUT_T **     _output,
-        bytesBuf_t * _output_buffer ) {
+    template <typename INP_T, typename OUT_T>
+    int server_api_call(int _api_index, rsComm_t* _comm, INP_T* _input, OUT_T** _output, bytesBuf_t* _output_buffer)
+    {
         api_entry_table& table = get_server_api_table();
-        bool has_entry = table.has_entry( _api_index );
-        if ( !has_entry ) {
+        bool has_entry = table.has_entry(_api_index);
+        if (!has_entry) {
             return SYS_UNMATCHED_API_NUM;
         }
-        return table[_api_index]->call_wrapper(
-                   table[_api_index].get(),
-                   _comm,
-                   _input,
-                   _output,
-                   _output_buffer );
+        return table[_api_index]->call_wrapper(table[_api_index].get(), _comm, _input, _output, _output_buffer);
     }
 
-    template< typename INP_T >
-    int server_api_call(
-        int        _api_index,
-        rsComm_t * _comm,
-        INP_T *    _input ) {
+    template <typename INP_T>
+    int server_api_call(int _api_index, rsComm_t* _comm, INP_T* _input)
+    {
         api_entry_table& table = get_server_api_table();
-        bool has_entry = table.has_entry( _api_index );
-        if ( !has_entry ) {
+        bool has_entry = table.has_entry(_api_index);
+        if (!has_entry) {
             return SYS_UNMATCHED_API_NUM;
         }
-        return table[_api_index]->call_wrapper(
-                   table[_api_index].get(),
-                   _comm,
-                   _input );
+        return table[_api_index]->call_wrapper(table[_api_index].get(), _comm, _input);
     }
 
-}; // namespace irods
+};     // namespace irods
 #endif // IRODS_SERVER_API_CALL_HPP__

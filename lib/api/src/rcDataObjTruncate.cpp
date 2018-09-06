@@ -36,7 +36,7 @@
  * \n dataObjInp.dataSize = 12345;
  * \n status = rcDataObjTruncate (conn, &dataObjInp);
  * \n if (status < 0) {
-* \n .... handle the error
+ * \n .... handle the error
  * \n }
  *
  * \param[in] conn - A rcComm_t connection handle to the server.
@@ -50,13 +50,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcDataObjTruncate( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
+int rcDataObjTruncate(rcComm_t* conn, dataObjInp_t* dataObjInp)
+{
     int status;
-    status = procApiRequest( conn, DATA_OBJ_TRUNCATE_AN, dataObjInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, DATA_OBJ_TRUNCATE_AN, dataObjInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

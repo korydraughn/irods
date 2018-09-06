@@ -4,24 +4,21 @@
 /* base64.h - header file for base64.c
  */
 
-
-
 #ifndef BASE64_H__
 #define BASE64_H__
 
 #include "rodsDef.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-int base64_encode( const unsigned char *in,  unsigned long inlen,
-                   unsigned char *out, unsigned long *outlen );
-int base64_decode( const unsigned char *in,  unsigned long inlen,
-                   unsigned char *out, unsigned long *outlen );
+    int base64_encode(const unsigned char* in, unsigned long inlen, unsigned char* out, unsigned long* outlen);
+    int base64_decode(const unsigned char* in, unsigned long inlen, unsigned char* out, unsigned long* outlen);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	// BASE64_H__
+#endif // BASE64_H__

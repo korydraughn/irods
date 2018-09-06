@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileChmod( rcComm_t *conn, fileChmodInp_t *fileChmodInp ) {
+ **/
+int rcFileChmod(rcComm_t* conn, fileChmodInp_t* fileChmodInp)
+{
     int status;
-    status = procApiRequest( conn, FILE_CHMOD_AN,  fileChmodInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, FILE_CHMOD_AN, fileChmodInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

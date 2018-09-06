@@ -5,10 +5,10 @@
 #include "objInfo.h"
 #include "fileRead.h"
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcStreamRead( rcComm_t *conn, fileReadInp_t *streamReadInp, bytesBuf_t *streamReadOutBBuf );
+    int
+    rcStreamRead(rcComm_t* conn, fileReadInp_t* streamReadInp, bytesBuf_t* streamReadOutBBuf);
 
 #endif

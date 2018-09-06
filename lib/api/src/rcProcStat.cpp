@@ -52,13 +52,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcProcStat( rcComm_t *conn, procStatInp_t *procStatInp,
-            genQueryOut_t **procStatOut ) {
+ **/
+int rcProcStat(rcComm_t* conn, procStatInp_t* procStatInp, genQueryOut_t** procStatOut)
+{
     int status;
-    status = procApiRequest( conn, PROC_STAT_AN, procStatInp,
-                             NULL, ( void ** ) procStatOut, NULL );
+    status = procApiRequest(conn, PROC_STAT_AN, procStatInp, NULL, (void**) procStatOut, NULL);
 
     return status;
 }

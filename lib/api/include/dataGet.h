@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "dataObjInpOut.h"
 
-int rcDataGet( rcComm_t *conn, dataOprInp_t *dataGetInp, portalOprOut_t **portalOprOut );
+int rcDataGet(rcComm_t* conn, dataOprInp_t* dataGetInp, portalOprOut_t** portalOprOut);
 
 #endif

@@ -19,6 +19,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcCollCreate( rcComm_t *conn, collInp_t *collCreateInp );
+    int
+    rcCollCreate(rcComm_t* conn, collInp_t* collCreateInp);
 
 #endif

@@ -3,6 +3,6 @@
 
 #include "rcConnect.h"
 
-int rcOprComplete( rcComm_t *conn, int retval );
+int rcOprComplete(rcComm_t* conn, int retval);
 
 #endif

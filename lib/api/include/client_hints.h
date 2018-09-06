@@ -4,10 +4,10 @@
 #include "rodsDef.h"
 #include "rcConnect.h"
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcClientHints(rcComm_t* server_comm_ptr, bytesBuf_t** json_response);
+    int
+    rcClientHints(rcComm_t* server_comm_ptr, bytesBuf_t** json_response);
 
 #endif

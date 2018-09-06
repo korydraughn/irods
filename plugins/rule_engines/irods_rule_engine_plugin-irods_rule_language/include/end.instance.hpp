@@ -48,43 +48,43 @@
 #undef RE_STRUCT_GENERIC_END
 
 #ifdef RE_STRUCT_FUNC_PROTO
-#undef RE_STRUCT_FUNC_PROTO
+#    undef RE_STRUCT_FUNC_PROTO
 #endif
 
 #ifdef RE_STRUCT_GENERIC_FUNC_PROTO
-#undef RE_STRUCT_GENERIC_FUNC_PROTO
+#    undef RE_STRUCT_GENERIC_FUNC_PROTO
 #endif
 
 #ifdef RE_STRUCT_FUNC
-#undef RE_STRUCT_FUNC
+#    undef RE_STRUCT_FUNC
 #endif
 
 #ifdef RE_STRUCT_FUNC_TYPE
-#undef RE_STRUCT_FUNC_TYPE
+#    undef RE_STRUCT_FUNC_TYPE
 #endif
 
 #ifdef TRAVERSE_BEGIN
-#undef TRAVERSE_BEGIN
+#    undef TRAVERSE_BEGIN
 #endif
 
 #ifdef TRAVERSE_END
-#undef TRAVERSE_END
+#    undef TRAVERSE_END
 #endif
 
 #ifdef TRAVERSE_PTR
-#undef TRAVERSE_PTR
+#    undef TRAVERSE_PTR
 #endif
 
 #ifdef TRAVERSE_PTR_TAPP
-#undef TRAVERSE_PTR_TAPP
+#    undef TRAVERSE_PTR_TAPP
 #endif
 
 #ifdef TRAVERSE_ARRAY_BEGIN
-#undef TRAVERSE_ARRAY_BEGIN
+#    undef TRAVERSE_ARRAY_BEGIN
 #endif
 
 #ifdef TRAVERSE_ARRAY_END
-#undef TRAVERSE_ARRAY_END
+#    undef TRAVERSE_ARRAY_END
 #endif
 
 /*#ifdef KEY_SIZE
@@ -96,5 +96,5 @@
 #endif
 */
 #ifdef GET_VAR_ARRAY_LEN
-#undef GET_VAR_ARRAY_LEN
+#    undef GET_VAR_ARRAY_LEN
 #endif

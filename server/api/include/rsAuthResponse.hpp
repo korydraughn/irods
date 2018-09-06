@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "authResponse.h"
 
-int rsAuthResponse( rsComm_t *rsComm, authResponseInp_t *authResponseInp );
-int chkProxyUserPriv( rsComm_t *rsComm, int proxyUserPriv );
+int rsAuthResponse(rsComm_t* rsComm, authResponseInp_t* authResponseInp);
+int chkProxyUserPriv(rsComm_t* rsComm, int proxyUserPriv);
 
 #endif

@@ -87,62 +87,64 @@
  * \sa none
  **/
 
-int
-rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
+int rcDataObjGet(rcComm_t* conn, dataObjInp_t* dataObjInp, char* locFilePath)
+{
 #ifndef windows_platform
     struct stat statbuf;
 #else
     struct irodsntstat statbuf;
 #endif
 
-    if ( strcmp( locFilePath, STDOUT_FILE_NAME ) == 0 ) {
+    if (strcmp(locFilePath, STDOUT_FILE_NAME) == 0) {
         /* no parallel I/O if pipe to stdout */
         dataObjInp->numThreads = NO_THREADING;
     }
 #ifndef windows_platform
-    else if ( stat( locFilePath, &statbuf ) >= 0 )
+    else if (stat(locFilePath, &statbuf) >= 0)
 #else
-    else if ( iRODSNt_stat( locFilePath, &statbuf ) >= 0 )
+    else if (iRODSNt_stat(locFilePath, &statbuf) >= 0)
 #endif
     {
         /* local file exists */
-        if ( getValByKey( &dataObjInp->condInput, FORCE_FLAG_KW ) == NULL ) {
+        if (getValByKey(&dataObjInp->condInput, FORCE_FLAG_KW) == NULL) {
             return OVERWRITE_WITHOUT_FORCE_FLAG;
         }
     }
 
-    portalOprOut_t *portalOprOut = NULL;
+    portalOprOut_t* portalOprOut = NULL;
     bytesBuf_t dataObjOutBBuf;
-    int status = _rcDataObjGet( conn, dataObjInp, &portalOprOut, &dataObjOutBBuf );
+    int status = _rcDataObjGet(conn, dataObjInp, &portalOprOut, &dataObjOutBBuf);
 
-    if ( status < 0 ) {
-        free( portalOprOut );
+    if (status < 0) {
+        free(portalOprOut);
         return status;
     }
 
-    if ( status == 0 || dataObjOutBBuf.len > 0 ) {
+    if (status == 0 || dataObjOutBBuf.len > 0) {
         /* data included */
-        status = getIncludeFile( conn, &dataObjOutBBuf, locFilePath );
-        free( dataObjOutBBuf.buf );
+        status = getIncludeFile(conn, &dataObjOutBBuf, locFilePath);
+        free(dataObjOutBBuf.buf);
     }
-    else if ( !portalOprOut ) {
-        rodsLog( LOG_ERROR, "_rcDataObjGet returned a %d status code, but left portalOprOut null.", status );
+    else if (!portalOprOut) {
+        rodsLog(LOG_ERROR, "_rcDataObjGet returned a %d status code, but left portalOprOut null.", status);
         return SYS_INVALID_PORTAL_OPR;
     }
-    else if ( getUdpPortFromPortList( &portalOprOut->portList ) != 0 ) {
+    else if (getUdpPortFromPortList(&portalOprOut->portList) != 0) {
         int veryVerbose;
         /* rbudp transfer */
         /* some sanity check */
-        if ( portalOprOut->numThreads != 1 ) {
-            rcOprComplete( conn, SYS_INVALID_PORTAL_OPR );
-            free( portalOprOut );
+        if (portalOprOut->numThreads != 1) {
+            rcOprComplete(conn, SYS_INVALID_PORTAL_OPR);
+            free(portalOprOut);
             return SYS_INVALID_PORTAL_OPR;
         }
         conn->transStat.numThreads = portalOprOut->numThreads;
-        if ( getValByKey( &dataObjInp->condInput, VERY_VERBOSE_KW ) != NULL ) {
-            printf( "From server: NumThreads=%d, addr:%s, port:%d, cookie=%d\n",
-                    portalOprOut->numThreads, portalOprOut->portList.hostAddr,
-                    portalOprOut->portList.portNum, portalOprOut->portList.cookie );
+        if (getValByKey(&dataObjInp->condInput, VERY_VERBOSE_KW) != NULL) {
+            printf("From server: NumThreads=%d, addr:%s, port:%d, cookie=%d\n",
+                   portalOprOut->numThreads,
+                   portalOprOut->portList.hostAddr,
+                   portalOprOut->portList.portNum,
+                   portalOprOut->portList.cookie);
             veryVerbose = 2;
         }
         else {
@@ -153,121 +155,108 @@ rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
         // if a secret has been negotiated then we must be using
         // encryption.  given that RBUDP is not supported in an
         // encrypted capacity this is considered an error
-        if ( irods::CS_NEG_USE_SSL == conn->negotiation_results ) {
-            rodsLog(
-                LOG_ERROR,
-                "getFileToPortal: Encryption is not supported with RBUDP" );
+        if (irods::CS_NEG_USE_SSL == conn->negotiation_results) {
+            rodsLog(LOG_ERROR, "getFileToPortal: Encryption is not supported with RBUDP");
             return SYS_INVALID_PORTAL_OPR;
-
         }
 
-        status = getFileToPortalRbudp(
-                     portalOprOut,
-                     locFilePath, 0,
-                     veryVerbose, 0 );
+        status = getFileToPortalRbudp(portalOprOut, locFilePath, 0, veryVerbose, 0);
 
         /* just send a complete msg */
-        if ( status < 0 ) {
-            rcOprComplete( conn, status );
-
+        if (status < 0) {
+            rcOprComplete(conn, status);
         }
         else {
-            status = rcOprComplete( conn, portalOprOut->l1descInx );
+            status = rcOprComplete(conn, portalOprOut->l1descInx);
         }
     }
     else {
-
-        if ( portalOprOut->numThreads <= 0 ) {
-            status = getFile( conn, portalOprOut->l1descInx,
-                              locFilePath, dataObjInp->objPath, dataObjInp->dataSize );
+        if (portalOprOut->numThreads <= 0) {
+            status = getFile(conn, portalOprOut->l1descInx, locFilePath, dataObjInp->objPath, dataObjInp->dataSize);
         }
         else {
-            if ( getValByKey( &dataObjInp->condInput, VERY_VERBOSE_KW ) != NULL ) {
-                printf( "From server: NumThreads=%d, addr:%s, port:%d, cookie=%d\n",
-                        portalOprOut->numThreads, portalOprOut->portList.hostAddr,
-                        portalOprOut->portList.portNum, portalOprOut->portList.cookie );
+            if (getValByKey(&dataObjInp->condInput, VERY_VERBOSE_KW) != NULL) {
+                printf("From server: NumThreads=%d, addr:%s, port:%d, cookie=%d\n",
+                       portalOprOut->numThreads,
+                       portalOprOut->portList.hostAddr,
+                       portalOprOut->portList.portNum,
+                       portalOprOut->portList.cookie);
             }
 
             /* some sanity check */
             rodsEnv env;
-            getRodsEnv( &env );
-            if ( portalOprOut->numThreads >= 20 * env.irodsDefaultNumberTransferThreads ) {
-                rcOprComplete( conn, SYS_INVALID_PORTAL_OPR );
-                free( portalOprOut );
+            getRodsEnv(&env);
+            if (portalOprOut->numThreads >= 20 * env.irodsDefaultNumberTransferThreads) {
+                rcOprComplete(conn, SYS_INVALID_PORTAL_OPR);
+                free(portalOprOut);
                 return SYS_INVALID_PORTAL_OPR;
             }
 
             conn->transStat.numThreads = portalOprOut->numThreads;
-            status = getFileFromPortal( conn, portalOprOut, locFilePath,
-                                        dataObjInp->objPath, dataObjInp->dataSize );
+            status = getFileFromPortal(conn, portalOprOut, locFilePath, dataObjInp->objPath, dataObjInp->dataSize);
         }
         /* just send a complete msg */
-        if ( status < 0 ) {
-            rcOprComplete( conn, status );
+        if (status < 0) {
+            rcOprComplete(conn, status);
         }
         else {
-            status = rcOprComplete( conn, portalOprOut->l1descInx );
+            status = rcOprComplete(conn, portalOprOut->l1descInx);
         }
     }
 
-    if ( status >= 0 && conn->fileRestart.info.numSeg > 0 ) { /* file restart */
-        clearLfRestartFile( &conn->fileRestart );
+    if (status >= 0 && conn->fileRestart.info.numSeg > 0) { /* file restart */
+        clearLfRestartFile(&conn->fileRestart);
     }
 
-    if ( getValByKey( &dataObjInp->condInput, VERIFY_CHKSUM_KW ) != NULL ) {
-        if ( portalOprOut == NULL || strlen( portalOprOut->chksum ) == 0 ) {
-            rodsLog( LOG_ERROR,
-                     "rcDataObjGet: VERIFY_CHKSUM_KW set but no checksum from server" );
+    if (getValByKey(&dataObjInp->condInput, VERIFY_CHKSUM_KW) != NULL) {
+        if (portalOprOut == NULL || strlen(portalOprOut->chksum) == 0) {
+            rodsLog(LOG_ERROR, "rcDataObjGet: VERIFY_CHKSUM_KW set but no checksum from server");
         }
         else {
-
-            status = verifyChksumLocFile( locFilePath, portalOprOut->chksum, NULL );
-            if ( status == USER_CHKSUM_MISMATCH ) {
-                rodsLogError( LOG_ERROR, status,
-                              "rcDataObjGet: checksum mismatch error for %s, status = %d",
-                              locFilePath, status );
-                if ( portalOprOut != NULL ) {
-                    free( portalOprOut );
+            status = verifyChksumLocFile(locFilePath, portalOprOut->chksum, NULL);
+            if (status == USER_CHKSUM_MISMATCH) {
+                rodsLogError(LOG_ERROR,
+                             status,
+                             "rcDataObjGet: checksum mismatch error for %s, status = %d",
+                             locFilePath,
+                             status);
+                if (portalOprOut != NULL) {
+                    free(portalOprOut);
                 }
                 return status;
             }
-            else if ( status < 0 ) {
-                rodsLogError( LOG_ERROR, status,
-                              "rcDataObjGet: chksumLocFile error for %s, status = %d",
-                              locFilePath, status );
-                if ( portalOprOut != NULL ) {
-                    free( portalOprOut );
+            else if (status < 0) {
+                rodsLogError(
+                    LOG_ERROR, status, "rcDataObjGet: chksumLocFile error for %s, status = %d", locFilePath, status);
+                if (portalOprOut != NULL) {
+                    free(portalOprOut);
                 }
                 return status;
             }
-
         }
     }
-    free( portalOprOut );
+    free(portalOprOut);
 
     return status;
 }
 
-int
-_rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp,
-               portalOprOut_t **portalOprOut, bytesBuf_t *dataObjOutBBuf ) {
+int _rcDataObjGet(rcComm_t* conn, dataObjInp_t* dataObjInp, portalOprOut_t** portalOprOut, bytesBuf_t* dataObjOutBBuf)
+{
     int status;
 
     *portalOprOut = NULL;
 
-    memset( &conn->transStat, 0, sizeof( transStat_t ) );
+    memset(&conn->transStat, 0, sizeof(transStat_t));
 
-    memset( dataObjOutBBuf, 0, sizeof( bytesBuf_t ) );
+    memset(dataObjOutBBuf, 0, sizeof(bytesBuf_t));
 
     dataObjInp->oprType = GET_OPR;
 
-    status = procApiRequest( conn, DATA_OBJ_GET_AN,  dataObjInp, NULL,
-                             ( void ** ) portalOprOut, dataObjOutBBuf );
+    status = procApiRequest(conn, DATA_OBJ_GET_AN, dataObjInp, NULL, (void**) portalOprOut, dataObjOutBBuf);
 
-    if ( *portalOprOut != NULL && ( *portalOprOut )->l1descInx < 0 ) {
-        status = ( *portalOprOut )->l1descInx;
+    if (*portalOprOut != NULL && (*portalOprOut)->l1descInx < 0) {
+        status = (*portalOprOut)->l1descInx;
     }
 
     return status;
 }
-

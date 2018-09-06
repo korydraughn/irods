@@ -4,10 +4,10 @@
 #include "rcConnect.h"
 #include "fileStageToCache.h"
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileSyncToArch( rcComm_t *conn, fileStageSyncInp_t *fileSyncToArchInp, fileSyncOut_t** );
+    int
+    rcFileSyncToArch(rcComm_t* conn, fileStageSyncInp_t* fileSyncToArchInp, fileSyncOut_t**);
 
 #endif

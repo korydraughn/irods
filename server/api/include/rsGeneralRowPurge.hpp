@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "generalRowPurge.h"
 
-int rsGeneralRowPurge( rsComm_t *rsComm, generalRowPurgeInp_t *generalRowPurgeInp );
-int _rsGeneralRowPurge( rsComm_t *rsComm, generalRowPurgeInp_t *generalRowPurgeInp );
+int rsGeneralRowPurge(rsComm_t* rsComm, generalRowPurgeInp_t* generalRowPurgeInp);
+int _rsGeneralRowPurge(rsComm_t* rsComm, generalRowPurgeInp_t* generalRowPurgeInp);
 
 #endif

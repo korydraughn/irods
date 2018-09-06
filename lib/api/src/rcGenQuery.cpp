@@ -13,34 +13,34 @@
 
 /* this is a debug routine; it just prints the genQueryInp
    structure */
-int
-printGenQI( genQueryInp_t *genQueryInp ) {
+int printGenQI(genQueryInp_t* genQueryInp)
+{
     int i, len;
     int *ip1, *ip2;
-    char *cp;
-    char **cpp;
+    char* cp;
+    char** cpp;
 
-    printf( "maxRows=%d\n", genQueryInp->maxRows );
+    printf("maxRows=%d\n", genQueryInp->maxRows);
 
     len = genQueryInp->selectInp.len;
-    printf( "sel len=%d\n", len );
+    printf("sel len=%d\n", len);
     ip1 = genQueryInp->selectInp.inx;
     ip2 = genQueryInp->selectInp.value;
-    for ( i = 0; i < len; i++ ) {
-        printf( "sel inx [%d]=%d\n", i, *ip1 );
-        printf( "sel val [%d]=%d\n", i, *ip2 );
+    for (i = 0; i < len; i++) {
+        printf("sel inx [%d]=%d\n", i, *ip1);
+        printf("sel val [%d]=%d\n", i, *ip2);
         ip1++;
         ip2++;
     }
 
     len = genQueryInp->sqlCondInp.len;
-    printf( "sqlCond len=%d\n", len );
+    printf("sqlCond len=%d\n", len);
     ip1 = genQueryInp->sqlCondInp.inx;
     cpp = genQueryInp->sqlCondInp.value;
     cp = *cpp;
-    for ( i = 0; i < len; i++ ) {
-        printf( "sel inx [%d]=%d\n", i, *ip1 );
-        printf( "sel val [%d]=:%s:\n", i, cp );
+    for (i = 0; i < len; i++) {
+        printf("sel inx [%d]=%d\n", i, *ip1);
+        printf("sel val [%d]=:%s:\n", i, cp);
         ip1++;
         cpp++;
         cp = *cpp;
@@ -83,16 +83,13 @@ printGenQI( genQueryInp_t *genQueryInp ) {
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcGenQuery( rcComm_t *conn, genQueryInp_t *genQueryInp,
-            genQueryOut_t **genQueryOut ) {
+int rcGenQuery(rcComm_t* conn, genQueryInp_t* genQueryInp, genQueryOut_t** genQueryOut)
+{
     int status;
     /*    printGenQI(genQueryInp); */
-    status = procApiRequest( conn, GEN_QUERY_AN,  genQueryInp, NULL,
-                             ( void ** )genQueryOut, NULL );
+    status = procApiRequest(conn, GEN_QUERY_AN, genQueryInp, NULL, (void**) genQueryOut, NULL);
 
     return status;
 }
-

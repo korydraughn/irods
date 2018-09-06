@@ -4,7 +4,6 @@
 #include "rcConnect.h"
 #include "miscUtil.h"
 
-
 /* rcReadCollection - Read a iRODS collection. rcOpenCollection must be
  *    called first.
  * Input -
@@ -19,6 +18,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcReadCollection( rcComm_t *conn, int handleInxInp, collEnt_t **collEnt );
+    int
+    rcReadCollection(rcComm_t* conn, int handleInxInp, collEnt_t** collEnt);
 
 #endif

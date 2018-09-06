@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcSendXmsg( rcComm_t *conn, sendXmsgInp_t *sendXmsgInp );
+    int
+    rcSendXmsg(rcComm_t* conn, sendXmsgInp_t* sendXmsgInp);
 
 #endif

@@ -35,6 +35,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjCreateAndStat( rcComm_t *conn, dataObjInp_t *dataObjInp, openStat_t **openStat );
+    int
+    rcDataObjCreateAndStat(rcComm_t* conn, dataObjInp_t* dataObjInp, openStat_t** openStat);
 
 #endif

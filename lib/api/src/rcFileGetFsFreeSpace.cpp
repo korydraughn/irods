@@ -3,7 +3,8 @@
 #include "apiNumber.h"
 
 /**
- * \fn rcFileGetFsFreeSpace( rcComm_t *conn, fileGetFsFreeSpaceInp_t *fileGetFsFreeSpaceInp, fileGetFsFreeSpaceOut_t **fileGetFsFreeSpaceOut )
+ * \fn rcFileGetFsFreeSpace( rcComm_t *conn, fileGetFsFreeSpaceInp_t *fileGetFsFreeSpaceInp, fileGetFsFreeSpaceOut_t
+ ***fileGetFsFreeSpaceOut )
  *
  * \brief Gets filesystem free space.
  *
@@ -19,14 +20,14 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileGetFsFreeSpace( rcComm_t *conn,
-                      fileGetFsFreeSpaceInp_t *fileGetFsFreeSpaceInp,
-                      fileGetFsFreeSpaceOut_t **fileGetFsFreeSpaceOut ) {
+ **/
+int rcFileGetFsFreeSpace(rcComm_t* conn,
+                         fileGetFsFreeSpaceInp_t* fileGetFsFreeSpaceInp,
+                         fileGetFsFreeSpaceOut_t** fileGetFsFreeSpaceOut)
+{
     int status;
-    status = procApiRequest( conn, FILE_GET_FS_FREE_SPACE_AN,
-                             fileGetFsFreeSpaceInp, NULL, ( void ** ) fileGetFsFreeSpaceOut, NULL );
+    status = procApiRequest(
+        conn, FILE_GET_FS_FREE_SPACE_AN, fileGetFsFreeSpaceInp, NULL, (void**) fileGetFsFreeSpaceOut, NULL);
 
     return status;
 }

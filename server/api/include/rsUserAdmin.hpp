@@ -3,7 +3,7 @@
 
 #include "userAdmin.h"
 
-int rsUserAdmin( rsComm_t *rsComm, userAdminInp_t *userAdminInp );
-int _rsUserAdmin( rsComm_t *rsComm, userAdminInp_t *userAdminInp );
+int rsUserAdmin(rsComm_t* rsComm, userAdminInp_t* userAdminInp);
+int _rsUserAdmin(rsComm_t* rsComm, userAdminInp_t* userAdminInp);
 
 #endif

@@ -24,23 +24,23 @@ J. Kercheval Tue, 03/12/1991 22:24:49 Released as V1.1 to Public Domain
 Wildcard Pattern Matching
 */
 #ifndef BOOLEAN
-# define BOOLEAN int
-# define TRUE 1
-# define FALSE 0
+#    define BOOLEAN int
+#    define TRUE 1
+#    define FALSE 0
 #endif
 /* match defines */
-#define MATCH_PATTERN 6/* bad pattern */
-#define MATCH_LITERAL 5/* match failure on literal match */
-#define MATCH_RANGE 4/* match failure on [..] construct */
-#define MATCH_ABORT 3/* premature end of text string */
-#define MATCH_END 2/* premature end of pattern string */
-#define MATCH_VALID 1/* valid match */
+#define MATCH_PATTERN 6 /* bad pattern */
+#define MATCH_LITERAL 5 /* match failure on literal match */
+#define MATCH_RANGE 4   /* match failure on [..] construct */
+#define MATCH_ABORT 3   /* premature end of text string */
+#define MATCH_END 2     /* premature end of pattern string */
+#define MATCH_VALID 1   /* valid match */
 /* pattern defines */
-#define PATTERN_VALID 0/* valid pattern */
-#define PATTERN_ESC -1/* literal escape at end of pattern */
-#define PATTERN_RANGE -2/* malformed range in [..] construct */
-#define PATTERN_CLOSE -3/* no end bracket in [..] construct */
-#define PATTERN_EMPTY -4/* [..] construct is empty */
+#define PATTERN_VALID 0  /* valid pattern */
+#define PATTERN_ESC -1   /* literal escape at end of pattern */
+#define PATTERN_RANGE -2 /* malformed range in [..] construct */
+#define PATTERN_CLOSE -3 /* no end bracket in [..] construct */
+#define PATTERN_EMPTY -4 /* [..] construct is empty */
 /*----------------------------------------------------------------------------
 *
 * Match the pattern PATTERN against the string TEXT;
@@ -75,14 +75,14 @@ Wildcard Pattern Matching
 * and match the character exactly, precede it with a `\'.
 *
 ----------------------------------------------------------------------------*/
-BOOLEAN match( char *pattern, char *text );
-int matche( char *pattern, char *text );
+BOOLEAN match(char* pattern, char* text);
+int matche(char* pattern, char* text);
 /*----------------------------------------------------------------------------
 *
 * Return TRUE if PATTERN has any special wildcard characters
 *
 ----------------------------------------------------------------------------*/
-BOOLEAN is_pattern( char *pattern );
+BOOLEAN is_pattern(char* pattern);
 /*----------------------------------------------------------------------------
 *
 * Return TRUE if PATTERN has is a well formed regular expression according
@@ -99,6 +99,5 @@ BOOLEAN is_pattern( char *pattern );
 *PATTERN_EMPTY - [..] construct is empty (ie [])
 *
 ----------------------------------------------------------------------------*/
-BOOLEAN is_valid_pattern( char *pattern, int *error_type );
+BOOLEAN is_valid_pattern(char* pattern, int* error_type);
 #endif /* MATCH__H */
-

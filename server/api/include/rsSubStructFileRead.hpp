@@ -4,8 +4,15 @@
 #include "rodsConnect.h"
 #include "subStructFileRead.h"
 
-int rsSubStructFileRead( rsComm_t *rsComm, subStructFileFdOprInp_t *subStructFileReadInp, bytesBuf_t *subStructFileReadOutBBuf );
-int _rsSubStructFileRead( rsComm_t *rsComm, subStructFileFdOprInp_t *subStructFileReadInp, bytesBuf_t *subStructFileReadOutBBuf );
-int remoteSubStructFileRead( rsComm_t *rsComm, subStructFileFdOprInp_t *subStructFileReadInp, bytesBuf_t *subStructFileReadOutBBuf, rodsServerHost_t *rodsServerHost );
+int rsSubStructFileRead(rsComm_t* rsComm,
+                        subStructFileFdOprInp_t* subStructFileReadInp,
+                        bytesBuf_t* subStructFileReadOutBBuf);
+int _rsSubStructFileRead(rsComm_t* rsComm,
+                         subStructFileFdOprInp_t* subStructFileReadInp,
+                         bytesBuf_t* subStructFileReadOutBBuf);
+int remoteSubStructFileRead(rsComm_t* rsComm,
+                            subStructFileFdOprInp_t* subStructFileReadInp,
+                            bytesBuf_t* subStructFileReadOutBBuf,
+                            rodsServerHost_t* rodsServerHost);
 
 #endif

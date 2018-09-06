@@ -3,11 +3,10 @@
 
 #include "objDesc.hpp"
 
-namespace irods {
+namespace irods
+{
+    l1desc_t& get_l1desc(int);
 
-    l1desc_t& get_l1desc( int );
-
-}; // namespace irds
+}; // namespace irods
 
 #endif // __IRODS_GET_L1DESC_HPP__
-

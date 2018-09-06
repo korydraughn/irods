@@ -5,8 +5,11 @@
 #include "rodsDef.h"
 #include "rodsConnect.h"
 
-int rsSubStructFileGet( rsComm_t *rsComm, subFile_t *subFile, bytesBuf_t *subFileGetOutBBuf );
-int _rsSubStructFileGet( rsComm_t *rsComm, subFile_t *subFile, bytesBuf_t *subFileGetOutBBuf );
-int remoteSubStructFileGet( rsComm_t *rsComm, subFile_t *subFile, bytesBuf_t *subFileGetOutBBuf, rodsServerHost_t *rodsServerHost );
+int rsSubStructFileGet(rsComm_t* rsComm, subFile_t* subFile, bytesBuf_t* subFileGetOutBBuf);
+int _rsSubStructFileGet(rsComm_t* rsComm, subFile_t* subFile, bytesBuf_t* subFileGetOutBBuf);
+int remoteSubStructFileGet(rsComm_t* rsComm,
+                           subFile_t* subFile,
+                           bytesBuf_t* subFileGetOutBBuf,
+                           rodsServerHost_t* rodsServerHost);
 
 #endif

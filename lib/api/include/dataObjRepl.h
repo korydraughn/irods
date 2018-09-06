@@ -5,7 +5,6 @@
 #include "dataObjInpOut.h"
 #include "objInfo.h"
 
-
 /* prototype for the client call */
 /* rcDataObjRepl - Replicate an iRODS data object.
  * Input -
@@ -27,7 +26,8 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjRepl( rcComm_t *conn, dataObjInp_t *dataObjInp );
-int _rcDataObjRepl( rcComm_t *conn, dataObjInp_t *dataObjInp, transferStat_t **transferStat );
+    int
+    rcDataObjRepl(rcComm_t* conn, dataObjInp_t* dataObjInp);
+int _rcDataObjRepl(rcComm_t* conn, dataObjInp_t* dataObjInp, transferStat_t** transferStat);
 
 #endif

@@ -5,7 +5,6 @@
 #include "dataObjInpOut.h"
 #include "rcConnect.h"
 
-
 /* rcCloseCollection - Close a iRODS collection.
  * Input -
  *   rcComm_t *conn - The client connection handle.
@@ -17,6 +16,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcCloseCollection( rcComm_t *conn, int handleInxInp );
+    int
+    rcCloseCollection(rcComm_t* conn, int handleInxInp);
 
 #endif

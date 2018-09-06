@@ -5,7 +5,6 @@
 #include "objInfo.h"
 #include "rodsDef.h"
 
-
-int rcSubStructFilePut( rcComm_t *conn, subFile_t *subFile, bytesBuf_t *subFilePutOutBBuf );
+int rcSubStructFilePut(rcComm_t* conn, subFile_t* subFile, bytesBuf_t* subFilePutOutBBuf);
 
 #endif

@@ -3,6 +3,6 @@
 
 #include "authCheck.h"
 
-int rsAuthCheck( rsComm_t *rsComm, authCheckInp_t *authCheckInp, authCheckOut_t **authCheckOut );
+int rsAuthCheck(rsComm_t* rsComm, authCheckInp_t* authCheckInp, authCheckOut_t** authCheckOut);
 
 #endif

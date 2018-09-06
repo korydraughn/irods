@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "objInfo.h"
 
-int rcSubStructFileUnlink( rcComm_t *conn, subFile_t *subFile );
+int rcSubStructFileUnlink(rcComm_t* conn, subFile_t* subFile);
 
 #endif

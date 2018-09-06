@@ -24,7 +24,8 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjPhymv( rcComm_t *conn, dataObjInp_t *dataObjInp );
-int _rcDataObjPhymv( rcComm_t *conn, dataObjInp_t *dataObjInp, transferStat_t **transferStat );
+    int
+    rcDataObjPhymv(rcComm_t* conn, dataObjInp_t* dataObjInp);
+int _rcDataObjPhymv(rcComm_t* conn, dataObjInp_t* dataObjInp, transferStat_t** transferStat);
 
 #endif

@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "getTempPassword.h"
 
-int rsGetTempPassword( rsComm_t *rsComm, getTempPasswordOut_t **getTempPasswordOut );
-int _rsGetTempPassword( rsComm_t *rsComm, getTempPasswordOut_t **getTempPasswordOut );
+int rsGetTempPassword(rsComm_t* rsComm, getTempPasswordOut_t** getTempPasswordOut);
+int _rsGetTempPassword(rsComm_t* rsComm, getTempPasswordOut_t** getTempPasswordOut);
 
 #endif

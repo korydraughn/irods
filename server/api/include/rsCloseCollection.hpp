@@ -5,6 +5,6 @@
 #include "dataObjInpOut.h"
 #include "rcConnect.h"
 
-int rsCloseCollection( rsComm_t *rsComm, int *handleInxInp );
+int rsCloseCollection(rsComm_t* rsComm, int* handleInxInp);
 
 #endif

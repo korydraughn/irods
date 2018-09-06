@@ -10,24 +10,19 @@
 #include "rodsPath.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-int
-scanObj( rcComm_t *conn, rodsArguments_t *myRodsArgs, rodsPathInp_t *rodsPathInp, const char *hostname );
-int
-scanObjDir( rcComm_t *conn, rodsArguments_t *myRodsArgs, const char *inpPath, const char *hostname );
-int
-scanObjCol( rcComm_t *conn, rodsArguments_t *myRodsArgs, const char *inpPath );
-int
-statPhysFile( rcComm_t *conn, genQueryOut_t *genQueryOut );
-int
-chkObjExist( rcComm_t *conn, const char *inpPath, const char *hostname );
-int
-checkIsMount( rcComm_t *conn, const char *inpPath );
+    int scanObj(rcComm_t* conn, rodsArguments_t* myRodsArgs, rodsPathInp_t* rodsPathInp, const char* hostname);
+    int scanObjDir(rcComm_t* conn, rodsArguments_t* myRodsArgs, const char* inpPath, const char* hostname);
+    int scanObjCol(rcComm_t* conn, rodsArguments_t* myRodsArgs, const char* inpPath);
+    int statPhysFile(rcComm_t* conn, genQueryOut_t* genQueryOut);
+    int chkObjExist(rcComm_t* conn, const char* inpPath, const char* hostname);
+    int checkIsMount(rcComm_t* conn, const char* inpPath);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // SCAN_UTIL_H__
+#endif // SCAN_UTIL_H__

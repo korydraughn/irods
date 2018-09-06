@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "sslStart.h"
 
-int rsSslStart( rsComm_t *rsComm, sslStartInp_t *sslStartInp );
+int rsSslStart(rsComm_t* rsComm, sslStartInp_t* sslStartInp);
 
 #endif

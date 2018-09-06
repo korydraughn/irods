@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcL3FileGetSingleBuf( rcComm_t *conn, int l1descInx, bytesBuf_t *dataObjOutBBuf );
+    int
+    rcL3FileGetSingleBuf(rcComm_t* conn, int l1descInx, bytesBuf_t* dataObjOutBBuf);
 
 #endif

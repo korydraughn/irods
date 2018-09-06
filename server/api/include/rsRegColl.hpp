@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "dataObjInpOut.h"
 
-int rsRegColl( rsComm_t *rsComm, collInp_t *regCollInp );
-int _rsRegColl( rsComm_t *rsComm, collInp_t *regCollInp );
+int rsRegColl(rsComm_t* rsComm, collInp_t* regCollInp);
+int _rsRegColl(rsComm_t* rsComm, collInp_t* regCollInp);
 
 #endif

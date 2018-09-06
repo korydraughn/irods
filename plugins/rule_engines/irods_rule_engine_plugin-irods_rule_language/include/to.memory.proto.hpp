@@ -2,9 +2,9 @@
  */
 
 #ifndef TO_MEMORY_PROTO_HPP
-#define TO_MEMORY_PROTO_HPP
+#    define TO_MEMORY_PROTO_HPP
 
-typedef const void *( MemCopyFuncType )( const void *, Hashtable * );
+typedef const void*(MemCopyFuncType)(const void*, Hashtable*);
 
 #endif
 
@@ -12,9 +12,7 @@ typedef const void *( MemCopyFuncType )( const void *, Hashtable * );
 
 #define RE_STRUCT_FUNC_TYPE MemCopyFuncType
 
-#define RE_STRUCT_FUNC_PROTO(T) \
-    T *RE_STRUCT_FUNC(T)(T *ptr, Hashtable *objectMap)
+#define RE_STRUCT_FUNC_PROTO(T) T* RE_STRUCT_FUNC(T)(T * ptr, Hashtable * objectMap)
 
-#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn) \
-	T *RE_STRUCT_FUNC(T)(T *ptr, MemCopyFuncType *cpfn, Hashtable *objectMap)
-
+#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn)                                                                          \
+    T* RE_STRUCT_FUNC(T)(T * ptr, MemCopyFuncType * cpfn, Hashtable * objectMap)

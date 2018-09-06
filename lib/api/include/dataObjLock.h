@@ -6,15 +6,14 @@
 #include "dataObjInpOut.h"
 
 // lock type definition
-#define READ_LOCK_TYPE   "readLockType"
-#define WRITE_LOCK_TYPE  "writeLockType"
-#define UNLOCK_TYPE      "unlockType"
+#define READ_LOCK_TYPE "readLockType"
+#define WRITE_LOCK_TYPE "writeLockType"
+#define UNLOCK_TYPE "unlockType"
 
 // lock command definition
-#define SET_LOCK_CMD      "setLockCmd"
+#define SET_LOCK_CMD "setLockCmd"
 #define SET_LOCK_WAIT_CMD "setLockWaitCmd"
-#define GET_LOCK_CMD      "getLockCmd"
-
+#define GET_LOCK_CMD "getLockCmd"
 
 /* prototype for the client call */
 /* rcDataObjLock - Lock a iRODS data object.
@@ -29,11 +28,12 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjLock( rcComm_t *conn, dataObjInp_t *dataObjInp );
+    int
+    rcDataObjLock(rcComm_t* conn, dataObjInp_t* dataObjInp);
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjUnlock( rcComm_t *conn, dataObjInp_t *dataObjInp );
-
+    int
+    rcDataObjUnlock(rcComm_t* conn, dataObjInp_t* dataObjInp);
 
 #endif

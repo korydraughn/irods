@@ -16,8 +16,10 @@
 typedef std::vector<irods::hierarchy_parser> child_list_t;
 typedef std::list<irods::object_oper> object_list_t;
 // define this so we sort children from highest vote to lowest
-struct child_comp {
-    bool operator()( float _lhs, float _rhs ) const {
+struct child_comp
+{
+    bool operator()(float _lhs, float _rhs) const
+    {
         return _lhs > _rhs;
     }
 };

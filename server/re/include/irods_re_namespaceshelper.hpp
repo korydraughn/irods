@@ -8,10 +8,12 @@
 #include <vector>
 #include <string>
 
-class NamespacesHelper {
+class NamespacesHelper
+{
 public:
     static NamespacesHelper* Instance();
     std::vector<std::string> getNamespaces();
+
 protected:
 private:
     NamespacesHelper(){};

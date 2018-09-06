@@ -5,12 +5,13 @@
 
 #include "rodsDef.h"
 
-typedef struct {
+typedef struct
+{
     char rodsUserName[NAME_LEN];
     char rodsHost[NAME_LEN];
-    int  rodsPort;
+    int rodsPort;
     char xmsgHost[NAME_LEN];
-    int  xmsgPort;
+    int xmsgPort;
     char rodsHome[MAX_NAME_LEN];
     char rodsCwd[MAX_NAME_LEN];
     char rodsAuthScheme[NAME_LEN];
@@ -19,20 +20,20 @@ typedef struct {
     int rodsLogLevel;
     char rodsAuthFile[LONG_NAME_LEN];
     char rodsDebug[NAME_LEN];
-    char rodsClientServerPolicy[ LONG_NAME_LEN ];
-    char rodsClientServerNegotiation[ LONG_NAME_LEN ];
+    char rodsClientServerPolicy[LONG_NAME_LEN];
+    char rodsClientServerNegotiation[LONG_NAME_LEN];
 
     // =-=-=-=-=-=-=-
     // client side options for encryption
-    int  rodsEncryptionKeySize;
-    int  rodsEncryptionSaltSize;
-    int  rodsEncryptionNumHashRounds;
-    char rodsEncryptionAlgorithm[ HEADER_TYPE_LEN ];
+    int rodsEncryptionKeySize;
+    int rodsEncryptionSaltSize;
+    int rodsEncryptionNumHashRounds;
+    char rodsEncryptionAlgorithm[HEADER_TYPE_LEN];
 
     // =-=-=-=-=-=-=-
     // client side options for hashing
-    char rodsDefaultHashScheme[ NAME_LEN ];
-    char rodsMatchHashPolicy[ NAME_LEN ];
+    char rodsDefaultHashScheme[NAME_LEN];
+    char rodsMatchHashPolicy[NAME_LEN];
 
     // =-=-=-=-=-=-=-
     // leagcy ssl environment variables
@@ -46,9 +47,9 @@ typedef struct {
     // =-=-=-=-=-=-=-
     // control plane parameters
     char irodsCtrlPlaneKey[MAX_NAME_LEN];
-    int  irodsCtrlPlanePort;
-    int  irodsCtrlPlaneEncryptionNumHashRounds;
-    char irodsCtrlPlaneEncryptionAlgorithm[ HEADER_TYPE_LEN ];
+    int irodsCtrlPlanePort;
+    int irodsCtrlPlaneEncryptionNumHashRounds;
+    char irodsCtrlPlaneEncryptionAlgorithm[HEADER_TYPE_LEN];
 
     // =-=-=-=-=-=-=-
     // advanced settings
@@ -63,21 +64,21 @@ typedef struct {
 } rodsEnv;
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-int getRodsEnv( rodsEnv *myRodsEnv );
+    int getRodsEnv(rodsEnv* myRodsEnv);
 
-char *getRodsEnvFileName();
-char *getRodsEnvAuthFileName();
+    char* getRodsEnvFileName();
+    char* getRodsEnvAuthFileName();
 
-int printRodsEnv( FILE* );
+    int printRodsEnv(FILE*);
 
 #ifdef __cplusplus
 
-void _getRodsEnv( rodsEnv &myRodsEnv );
-void _reloadRodsEnv( rodsEnv &myRodsEnv );
-
+    void _getRodsEnv(rodsEnv& myRodsEnv);
+    void _reloadRodsEnv(rodsEnv& myRodsEnv);
 }
 #endif
-#endif	// GET_RODS_ENV_H__
+#endif // GET_RODS_ENV_H__

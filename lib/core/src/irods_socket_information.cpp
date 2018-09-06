@@ -10,11 +10,11 @@
 #include "rodsErrorTable.h"
 #include "irods_exception.hpp"
 
-
-std::string socket_fd_to_remote_address(const int fd) {
+std::string socket_fd_to_remote_address(const int fd)
+{
     struct sockaddr_storage addr;
     socklen_t addr_size = sizeof(addr);
-    const int getpeername_result = getpeername(fd, (struct sockaddr *)&addr, &addr_size); // 0 or -1 and errno
+    const int getpeername_result = getpeername(fd, (struct sockaddr*) &addr, &addr_size); // 0 or -1 and errno
     if (getpeername_result != 0) {
         if (errno == ENOTCONN) {
             return "";
@@ -24,22 +24,24 @@ std::string socket_fd_to_remote_address(const int fd) {
 
     char ipstr[INET6_ADDRSTRLEN] = {};
     if (addr.ss_family == AF_INET) {
-        struct sockaddr_in *s = (struct sockaddr_in *)&addr;
+        struct sockaddr_in* s = (struct sockaddr_in*) &addr;
         inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
-    } else if (addr.ss_family == AF_INET6) {
-        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
+    }
+    else if (addr.ss_family == AF_INET6) {
+        struct sockaddr_in6* s = (struct sockaddr_in6*) &addr;
         inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof(ipstr));
     }
 
     return ipstr;
 }
 
-std::vector<int> get_open_socket_file_descriptors(void) {
+std::vector<int> get_open_socket_file_descriptors(void)
+{
     std::vector<int> ret;
     try {
         const boost::filesystem::directory_iterator end;
         boost::filesystem::directory_iterator it("/proc/self/fd");
-        for ( ; it != end; ++it) {
+        for (; it != end; ++it) {
             if (boost::filesystem::is_symlink(it->path())) {
                 boost::filesystem::path symlink_contents = boost::filesystem::read_symlink(it->path());
                 if (!symlink_contents.string().compare(0, 8, "socket:[")) {
@@ -47,7 +49,8 @@ std::vector<int> get_open_socket_file_descriptors(void) {
                 }
             }
         }
-    } catch (const boost::filesystem::filesystem_error& e) {
+    }
+    catch (const boost::filesystem::filesystem_error& e) {
         THROW(SYS_INTERNAL_ERR, boost::format("boost::filesystem error [%s]") % e.what());
     }
 

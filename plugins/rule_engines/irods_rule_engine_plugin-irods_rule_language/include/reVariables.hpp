@@ -106,5 +106,4 @@ rulevardef_t RuleVarTable[] = {
 
 int NumOfRuleVar = sizeof(RuleVarTable) / sizeof(rulevardef_t);
 ********************/
-#endif	/* RE_VARIABLES_H */
-
+#endif /* RE_VARIABLES_H */

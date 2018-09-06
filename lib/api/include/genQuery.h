@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGenQuery( rcComm_t *conn, genQueryInp_t *genQueryInp, genQueryOut_t **genQueryOut );
+    int
+    rcGenQuery(rcComm_t* conn, genQueryInp_t* genQueryInp, genQueryOut_t** genQueryOut);
 
 #endif

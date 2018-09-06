@@ -83,72 +83,77 @@ typedef struct RuleExecInfo {
 /***** for more details.                      *****/
 /***** IMPORTANT    IMPORTANT    IMPORTANT    *****/
 
-struct reDebugStack {
-    char *step;
+struct reDebugStack
+{
+    char* step;
     int label;
 };
 
-typedef struct {
+typedef struct
+{
     int MaxNumOfRules;
-    char    *ruleBase[MAX_NUM_OF_RULES];
-    char    *action[MAX_NUM_OF_RULES];
-    char    *ruleHead[MAX_NUM_OF_RULES];
-    char    *ruleCondition[MAX_NUM_OF_RULES];
-    char    *ruleAction[MAX_NUM_OF_RULES];
-    char    *ruleRecovery[MAX_NUM_OF_RULES];
-    long int      ruleId[MAX_NUM_OF_RULES];
+    char* ruleBase[MAX_NUM_OF_RULES];
+    char* action[MAX_NUM_OF_RULES];
+    char* ruleHead[MAX_NUM_OF_RULES];
+    char* ruleCondition[MAX_NUM_OF_RULES];
+    char* ruleAction[MAX_NUM_OF_RULES];
+    char* ruleRecovery[MAX_NUM_OF_RULES];
+    long int ruleId[MAX_NUM_OF_RULES];
 } ruleStruct_t;
 
-typedef struct {
+typedef struct
+{
     int MaxNumOfDVars;
-    char *varName[MAX_NUM_OF_DVARS];
-    char *action[MAX_NUM_OF_DVARS];
-    char *var2CMap[MAX_NUM_OF_DVARS];
-    long int   varId[MAX_NUM_OF_DVARS];
+    char* varName[MAX_NUM_OF_DVARS];
+    char* action[MAX_NUM_OF_DVARS];
+    char* var2CMap[MAX_NUM_OF_DVARS];
+    long int varId[MAX_NUM_OF_DVARS];
 } rulevardef_t;
 
 typedef rulevardef_t dvmStruct_t;
 
-typedef struct {
+typedef struct
+{
     int MaxNumOfFMaps;
-    char *funcName[MAX_NUM_OF_FMAPS];
-    char *func2CMap[MAX_NUM_OF_FMAPS];
-    long int  fmapId[MAX_NUM_OF_FMAPS];
+    char* funcName[MAX_NUM_OF_FMAPS];
+    char* func2CMap[MAX_NUM_OF_FMAPS];
+    long int fmapId[MAX_NUM_OF_FMAPS];
 } rulefmapdef_t;
 
 typedef rulefmapdef_t fnmapStruct_t;
 
-typedef struct {
+typedef struct
+{
     int MaxNumOfMsrvcs;
-    long int   msrvcId[MAX_NUM_OF_MSRVCS];
-    char    *moduleName[MAX_NUM_OF_MSRVCS];
-    char    *msrvcName[MAX_NUM_OF_MSRVCS];
-    char    *msrvcSignature[MAX_NUM_OF_MSRVCS];
-    char    *msrvcVersion[MAX_NUM_OF_MSRVCS];
-    char    *msrvcHost[MAX_NUM_OF_MSRVCS];
-    char    *msrvcLocation[MAX_NUM_OF_MSRVCS];
-    char    *msrvcLanguage[MAX_NUM_OF_MSRVCS];
-    char    *msrvcTypeName[MAX_NUM_OF_MSRVCS];
-    long int   msrvcStatus[MAX_NUM_OF_MSRVCS];
+    long int msrvcId[MAX_NUM_OF_MSRVCS];
+    char* moduleName[MAX_NUM_OF_MSRVCS];
+    char* msrvcName[MAX_NUM_OF_MSRVCS];
+    char* msrvcSignature[MAX_NUM_OF_MSRVCS];
+    char* msrvcVersion[MAX_NUM_OF_MSRVCS];
+    char* msrvcHost[MAX_NUM_OF_MSRVCS];
+    char* msrvcLocation[MAX_NUM_OF_MSRVCS];
+    char* msrvcLanguage[MAX_NUM_OF_MSRVCS];
+    char* msrvcTypeName[MAX_NUM_OF_MSRVCS];
+    long int msrvcStatus[MAX_NUM_OF_MSRVCS];
 } msrvcStruct_t;
 
 extern ruleStruct_t coreRuleStrct;
 extern rulevardef_t coreRuleVarDef;
 extern rulefmapdef_t coreRuleFuncMapDef;
-extern  msrvcStruct_t coreMsrvcStruct;
+extern msrvcStruct_t coreMsrvcStruct;
 extern ruleStruct_t appRuleStrct;
 extern rulevardef_t appRuleVarDef;
 extern rulefmapdef_t appRuleFuncMapDef;
-extern  msrvcStruct_t appMsrvcStruct;
+extern msrvcStruct_t appMsrvcStruct;
 extern int reTestFlag;
 extern int reLoopBackFlag;
 extern int GlobalREDebugFlag;
 extern int GlobalREAuditFlag;
-extern char *reDebugStackFull[REDEBUG_STACK_SIZE_FULL];
+extern char* reDebugStackFull[REDEBUG_STACK_SIZE_FULL];
 extern struct reDebugStack reDebugStackCurr[REDEBUG_STACK_SIZE_CURR];
 extern int reDebugStackFullPtr;
 extern int reDebugStackCurrPtr;
 
 //#include "reFuncDefs.hpp"
 #include "reHelpers1.hpp"
-#endif  /* RE_GLOBALS_EXTERN_H */
+#endif /* RE_GLOBALS_EXTERN_H */

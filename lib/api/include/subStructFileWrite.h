@@ -5,6 +5,8 @@
 #include "rodsDef.h"
 #include "subStructFileRead.h"
 
-int rcSubStructFileWrite( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileWriteInp, bytesBuf_t *subStructFileWriteOutBBuf );
+int rcSubStructFileWrite(rcComm_t* conn,
+                         subStructFileFdOprInp_t* subStructFileWriteInp,
+                         bytesBuf_t* subStructFileWriteOutBBuf);
 
 #endif

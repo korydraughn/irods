@@ -4,8 +4,8 @@
 #include "rodsConnect.h"
 #include "objInfo.h"
 
-int rsSubStructFileOpendir( rsComm_t *rsComm, subFile_t *subFile );
-int _rsSubStructFileOpendir( rsComm_t *rsComm, subFile_t *subFile );
-int remoteSubStructFileOpendir( rsComm_t *rsComm, subFile_t *subFile, rodsServerHost_t *rodsServerHost );
+int rsSubStructFileOpendir(rsComm_t* rsComm, subFile_t* subFile);
+int _rsSubStructFileOpendir(rsComm_t* rsComm, subFile_t* subFile);
+int remoteSubStructFileOpendir(rsComm_t* rsComm, subFile_t* subFile, rodsServerHost_t* rodsServerHost);
 
 #endif

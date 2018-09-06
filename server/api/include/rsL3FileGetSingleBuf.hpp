@@ -4,6 +4,6 @@
 #include "rodsDef.h"
 #include "rcConnect.h"
 
-int rsL3FileGetSingleBuf( rsComm_t *rsComm, int *l1descInx, bytesBuf_t *dataObjOutBBuf );
+int rsL3FileGetSingleBuf(rsComm_t* rsComm, int* l1descInx, bytesBuf_t* dataObjOutBBuf);
 
 #endif

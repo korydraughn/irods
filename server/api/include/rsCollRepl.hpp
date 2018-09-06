@@ -5,6 +5,6 @@
 #include "dataObjInpOut.h"
 #include "rcConnect.h"
 
-int rsCollRepl( rsComm_t *rsComm, collInp_t *collReplInp, collOprStat_t **collOprStat );
+int rsCollRepl(rsComm_t* rsComm, collInp_t* collReplInp, collOprStat_t** collOprStat);
 
 #endif

@@ -27,12 +27,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcOprComplete( rcComm_t *conn, int retval ) {
+ **/
+int rcOprComplete(rcComm_t* conn, int retval)
+{
     int status;
-    status = procApiRequest( conn, OPR_COMPLETE_AN, ( void ** )( static_cast< void * >( &retval ) ), NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, OPR_COMPLETE_AN, (void**) (static_cast<void*>(&retval)), NULL, (void**) NULL, NULL);
 
     return status;
 }

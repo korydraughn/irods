@@ -19,15 +19,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileRead( rcComm_t *conn, fileReadInp_t *fileReadInp,
-            bytesBuf_t *fileReadOutBBuf ) {
+ **/
+int rcFileRead(rcComm_t* conn, fileReadInp_t* fileReadInp, bytesBuf_t* fileReadOutBBuf)
+{
     int status;
 
-    status = procApiRequest( conn, FILE_READ_AN, fileReadInp,
-                             NULL, ( void ** ) NULL, fileReadOutBBuf );
+    status = procApiRequest(conn, FILE_READ_AN, fileReadInp, NULL, (void**) NULL, fileReadOutBBuf);
 
     return status;
 }
-

@@ -4,7 +4,8 @@
 #include "rcConnect.h"
 #include "rodsDef.h"
 
-typedef struct {
+typedef struct
+{
     char ruleExecId[NAME_LEN];
 } ruleExecDelInp_t;
 
@@ -13,6 +14,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcRuleExecDel( rcComm_t *conn, ruleExecDelInp_t *ruleExecDelInp );
+    int
+    rcRuleExecDel(rcComm_t* conn, ruleExecDelInp_t* ruleExecDelInp);
 
 #endif

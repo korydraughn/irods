@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "dataObjInpOut.h"
 
-int rsGetHostForPut( rsComm_t *rsComm, dataObjInp_t *dataObjInp, char **outHost );
+int rsGetHostForPut(rsComm_t* rsComm, dataObjInp_t* dataObjInp, char** outHost);
 
 #endif

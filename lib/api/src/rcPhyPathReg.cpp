@@ -67,12 +67,10 @@
  * \sa none
 **/
 
-int
-rcPhyPathReg( rcComm_t *conn, dataObjInp_t *phyPathRegInp ) {
+int rcPhyPathReg(rcComm_t* conn, dataObjInp_t* phyPathRegInp)
+{
     int status;
-    status = procApiRequest( conn, PHY_PATH_REG_AN,  phyPathRegInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, PHY_PATH_REG_AN, phyPathRegInp, NULL, (void**) NULL, NULL);
 
     return status;
 }
-

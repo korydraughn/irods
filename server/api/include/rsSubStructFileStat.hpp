@@ -5,8 +5,11 @@
 #include "objInfo.h"
 #include "rodsType.h"
 
-int rsSubStructFileStat( rsComm_t *rsComm, subFile_t *subFile, rodsStat_t **subStructFileStatOut );
-int _rsSubStructFileStat( rsComm_t *rsComm, subFile_t *subFile, rodsStat_t **subStructFileStatOut );
-int remoteSubStructFileStat( rsComm_t *rsComm, subFile_t *subFile, rodsStat_t **subStructFileStatOut, rodsServerHost_t *rodsServerHost );
+int rsSubStructFileStat(rsComm_t* rsComm, subFile_t* subFile, rodsStat_t** subStructFileStatOut);
+int _rsSubStructFileStat(rsComm_t* rsComm, subFile_t* subFile, rodsStat_t** subStructFileStatOut);
+int remoteSubStructFileStat(rsComm_t* rsComm,
+                            subFile_t* subFile,
+                            rodsStat_t** subStructFileStatOut,
+                            rodsServerHost_t* rodsServerHost);
 
 #endif

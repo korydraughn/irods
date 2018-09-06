@@ -3,9 +3,9 @@
 
 #include "objStat.h"
 
-int rsObjStat( rsComm_t *rsComm, dataObjInp_t *dataObjInp, rodsObjStat_t **rodsObjStatOut );
-int _rsObjStat( rsComm_t *rsComm, dataObjInp_t *dataObjInp, rodsObjStat_t **rodsObjStatOut );
-int _rsObjStat( rsComm_t *rsComm, dataObjInp_t *dataObjInp, rodsObjStat_t **rodsObjStatOut );
-int dataObjStat( rsComm_t *rsComm, dataObjInp_t *dataObjInp, rodsObjStat_t **rodsObjStatOut );
+int rsObjStat(rsComm_t* rsComm, dataObjInp_t* dataObjInp, rodsObjStat_t** rodsObjStatOut);
+int _rsObjStat(rsComm_t* rsComm, dataObjInp_t* dataObjInp, rodsObjStat_t** rodsObjStatOut);
+int _rsObjStat(rsComm_t* rsComm, dataObjInp_t* dataObjInp, rodsObjStat_t** rodsObjStatOut);
+int dataObjStat(rsComm_t* rsComm, dataObjInp_t* dataObjInp, rodsObjStat_t** rodsObjStatOut);
 
 #endif

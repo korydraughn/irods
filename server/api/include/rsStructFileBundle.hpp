@@ -4,8 +4,10 @@
 #include "rodsConnect.h"
 #include "structFileExtAndReg.h"
 
-int rsStructFileBundle( rsComm_t *rsComm, structFileExtAndRegInp_t *structFileBundleInp );
-int _rsStructFileBundle( rsComm_t *rsComm, structFileExtAndRegInp_t *structFileBundleInp );
-int remoteStructFileBundle( rsComm_t *rsComm, structFileExtAndRegInp_t *structFileBundleInp, rodsServerHost_t *rodsServerHost );
+int rsStructFileBundle(rsComm_t* rsComm, structFileExtAndRegInp_t* structFileBundleInp);
+int _rsStructFileBundle(rsComm_t* rsComm, structFileExtAndRegInp_t* structFileBundleInp);
+int remoteStructFileBundle(rsComm_t* rsComm,
+                           structFileExtAndRegInp_t* structFileBundleInp,
+                           rodsServerHost_t* rodsServerHost);
 
 #endif

@@ -5,6 +5,6 @@
 #include "objInfo.h"
 #include "rodsType.h"
 
-int rcSubStructFileStat( rcComm_t *conn, subFile_t *subFile, rodsStat_t **subStructFileStatOut );
+int rcSubStructFileStat(rcComm_t* conn, subFile_t* subFile, rodsStat_t** subStructFileStatOut);
 
 #endif

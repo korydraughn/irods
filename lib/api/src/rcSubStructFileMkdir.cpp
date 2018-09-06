@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcSubStructFileMkdir( rcComm_t *conn, subFile_t *subFile ) {
+ **/
+int rcSubStructFileMkdir(rcComm_t* conn, subFile_t* subFile)
+{
     int status;
-    status = procApiRequest( conn, SUB_STRUCT_FILE_MKDIR_AN, subFile, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, SUB_STRUCT_FILE_MKDIR_AN, subFile, NULL, (void**) NULL, NULL);
 
     return status;
 }

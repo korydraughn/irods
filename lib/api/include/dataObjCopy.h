@@ -22,7 +22,8 @@
  * \sa none
  */
 
-typedef struct DataObjCopyInp {
+typedef struct DataObjCopyInp
+{
     dataObjInp_t srcDataObjInp;
     dataObjInp_t destDataObjInp;
 } dataObjCopyInp_t;
@@ -56,7 +57,8 @@ typedef struct DataObjCopyInp {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjCopy( rcComm_t *conn, dataObjCopyInp_t *dataObjCopyInp );
-int _rcDataObjCopy( rcComm_t *conn, dataObjCopyInp_t *dataObjCopyInp, transferStat_t **transferStat );
+    int
+    rcDataObjCopy(rcComm_t* conn, dataObjCopyInp_t* dataObjCopyInp);
+int _rcDataObjCopy(rcComm_t* conn, dataObjCopyInp_t* dataObjCopyInp, transferStat_t** transferStat);
 
 #endif

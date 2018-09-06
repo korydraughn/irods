@@ -4,6 +4,8 @@
 #include "rcConnect.h"
 #include "authPluginRequest.h"
 
-int rsAuthPluginRequest(rsComm_t* server_comm_ptr, authPluginReqInp_t* incoming_struct_with_scheme, authPluginReqOut_t** response_from_agent);
+int rsAuthPluginRequest(rsComm_t* server_comm_ptr,
+                        authPluginReqInp_t* incoming_struct_with_scheme,
+                        authPluginReqOut_t** response_from_agent);
 
 #endif

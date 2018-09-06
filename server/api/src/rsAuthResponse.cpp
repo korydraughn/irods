@@ -21,17 +21,16 @@
 #include "authCheck.h"
 #include "miscServerFunct.hpp"
 
-int rsAuthResponse(
-    rsComm_t*          _comm,
-    authResponseInp_t* _resp ) {
+int rsAuthResponse(rsComm_t* _comm, authResponseInp_t* _resp)
+{
     // =-=-=-=-=-=-=-
     // check our incoming params
-    if ( !_comm ) {
-        rodsLog( LOG_ERROR, "rsAuthRequest - null comm pointer" );
+    if (!_comm) {
+        rodsLog(LOG_ERROR, "rsAuthRequest - null comm pointer");
         return SYS_INVALID_INPUT_PARAM;
     }
-    if ( !_resp ) {
-        rodsLog( LOG_ERROR, "rsAuthRequest - null auth response pointer" );
+    if (!_resp) {
+        rodsLog(LOG_ERROR, "rsAuthRequest - null auth response pointer");
         return SYS_INVALID_INPUT_PARAM;
     }
 
@@ -40,39 +39,39 @@ int rsAuthResponse(
     // if it is not empty use that as our auth scheme
     // native is the default scheme otherwise
     irods::pluggable_auth_scheme& plug_a = irods::pluggable_auth_scheme::get_instance();
-    std::string auth_scheme = plug_a.get( );
-    if ( auth_scheme.empty() ) {
+    std::string auth_scheme = plug_a.get();
+    if (auth_scheme.empty()) {
         auth_scheme = irods::AUTH_NATIVE_SCHEME;
     }
 
     // =-=-=-=-=-=-=-
     // empty out the scheme for good measure
-    plug_a.set( "" );
+    plug_a.set("");
 
     // =-=-=-=-=-=-=-
     // construct an auth object given the scheme
     irods::auth_object_ptr auth_obj;
-    irods::error ret = irods::auth_factory( auth_scheme, &_comm->rError, auth_obj );
-    if ( !ret.ok() ) {
-        irods::log( PASS( ret ) );
+    irods::error ret = irods::auth_factory(auth_scheme, &_comm->rError, auth_obj);
+    if (!ret.ok()) {
+        irods::log(PASS(ret));
         return ret.code();
     }
 
     // =-=-=-=-=-=-=-
     // resolve an auth plugin given the auth object
     irods::plugin_ptr ptr;
-    ret = auth_obj->resolve( irods::AUTH_INTERFACE, ptr );
-    if ( !ret.ok() ) {
-        irods::log( PASS( ret ) );
+    ret = auth_obj->resolve(irods::AUTH_INTERFACE, ptr);
+    if (!ret.ok()) {
+        irods::log(PASS(ret));
         return ret.code();
     }
-    irods::auth_ptr auth_plugin = boost::dynamic_pointer_cast< irods::auth >( ptr );
+    irods::auth_ptr auth_plugin = boost::dynamic_pointer_cast<irods::auth>(ptr);
 
     // =-=-=-=-=-=-=-
     // call client side init - 'establish creds'
-    ret = auth_plugin->call < authResponseInp_t* > ( _comm, irods::AUTH_AGENT_AUTH_RESPONSE, auth_obj, _resp );
-    if ( !ret.ok() ) {
-        irods::log( PASS( ret ) );
+    ret = auth_plugin->call<authResponseInp_t*>(_comm, irods::AUTH_AGENT_AUTH_RESPONSE, auth_obj, _resp);
+    if (!ret.ok()) {
+        irods::log(PASS(ret));
         return ret.code();
     }
 
@@ -80,29 +79,27 @@ int rsAuthResponse(
     // win!
     return 0;
 
-
 } // rsAuthResponse
 
-int
-chkProxyUserPriv( rsComm_t *rsComm, int proxyUserPriv ) {
-    if ( strcmp( rsComm->proxyUser.userName, rsComm->clientUser.userName )
-            == 0 ) {
+int chkProxyUserPriv(rsComm_t* rsComm, int proxyUserPriv)
+{
+    if (strcmp(rsComm->proxyUser.userName, rsComm->clientUser.userName) == 0) {
         return 0;
     }
 
     /* remote privileged user can only do things on behalf of users from
      * the same zone */
-    if ( proxyUserPriv >= LOCAL_PRIV_USER_AUTH ||
-            ( proxyUserPriv >= REMOTE_PRIV_USER_AUTH &&
-              strcmp( rsComm->proxyUser.rodsZone, rsComm->clientUser.rodsZone ) == 0 ) ) {
+    if (proxyUserPriv >= LOCAL_PRIV_USER_AUTH ||
+        (proxyUserPriv >= REMOTE_PRIV_USER_AUTH &&
+         strcmp(rsComm->proxyUser.rodsZone, rsComm->clientUser.rodsZone) == 0)) {
         return 0;
     }
     else {
-        rodsLog( LOG_ERROR,
-                 "rsAuthResponse: proxyuser %s with %d no priv to auth clientUser %s",
-                 rsComm->proxyUser.userName,
-                 proxyUserPriv,
-                 rsComm->clientUser.userName );
+        rodsLog(LOG_ERROR,
+                "rsAuthResponse: proxyuser %s with %d no priv to auth clientUser %s",
+                rsComm->proxyUser.userName,
+                proxyUserPriv,
+                rsComm->clientUser.userName);
         return SYS_PROXYUSER_NO_PRIV;
     }
 }

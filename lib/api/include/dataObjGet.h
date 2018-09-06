@@ -5,7 +5,6 @@
 #include "rodsDef.h"
 #include "dataObjInpOut.h"
 
-
 /* prototype for the client call */
 /* rcDataObjGet - Get (download) a iRODS data object.
  * Input -
@@ -26,7 +25,8 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath );
-int _rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, portalOprOut_t **portalOprOut, bytesBuf_t *dataObjOutBBuf );
+    int
+    rcDataObjGet(rcComm_t* conn, dataObjInp_t* dataObjInp, char* locFilePath);
+int _rcDataObjGet(rcComm_t* conn, dataObjInp_t* dataObjInp, portalOprOut_t** portalOprOut, bytesBuf_t* dataObjOutBBuf);
 
 #endif

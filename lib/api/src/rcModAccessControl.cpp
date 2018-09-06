@@ -34,12 +34,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcModAccessControl( rcComm_t *conn, modAccessControlInp_t *modAccessControlInp ) {
+ **/
+int rcModAccessControl(rcComm_t* conn, modAccessControlInp_t* modAccessControlInp)
+{
     int status;
-    status = procApiRequest( conn, MOD_ACCESS_CONTROL_AN,  modAccessControlInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, MOD_ACCESS_CONTROL_AN, modAccessControlInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

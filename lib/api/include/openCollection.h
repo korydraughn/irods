@@ -19,6 +19,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcOpenCollection( rcComm_t *conn, collInp_t *openCollInp );
+    int
+    rcOpenCollection(rcComm_t* conn, collInp_t* openCollInp);
 
 #endif

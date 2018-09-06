@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGeneralUpdate( rcComm_t *conn, generalUpdateInp_t *generalUpdateInp );
+    int
+    rcGeneralUpdate(rcComm_t* conn, generalUpdateInp_t* generalUpdateInp);
 
 #endif

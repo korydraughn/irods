@@ -5,8 +5,11 @@
 #include "objInfo.h"
 #include "rodsDef.h"
 
-int rsSubStructFilePut( rsComm_t *rsComm, subFile_t *subFile, bytesBuf_t *subFilePutOutBBuf );
-int _rsSubStructFilePut( rsComm_t *rsComm, subFile_t *subFile, bytesBuf_t *subFilePutOutBBuf );
-int remoteSubStructFilePut( rsComm_t *rsComm, subFile_t *subFile, bytesBuf_t *subFilePutOutBBuf, rodsServerHost_t *rodsServerHost );
+int rsSubStructFilePut(rsComm_t* rsComm, subFile_t* subFile, bytesBuf_t* subFilePutOutBBuf);
+int _rsSubStructFilePut(rsComm_t* rsComm, subFile_t* subFile, bytesBuf_t* subFilePutOutBBuf);
+int remoteSubStructFilePut(rsComm_t* rsComm,
+                           subFile_t* subFile,
+                           bytesBuf_t* subFilePutOutBBuf,
+                           rodsServerHost_t* rodsServerHost);
 
 #endif

@@ -10,23 +10,16 @@
 #include "rodsPath.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-int
-rmtrashUtil( rcComm_t *conn, rodsArguments_t *myRodsArgs,
-             rodsPathInp_t *rodsPathInp );
-int
-rmtrashDataObjUtil( rcComm_t *conn, char *srcPath,
-                    rodsArguments_t *rodsArgs, dataObjInp_t *dataObjInp );
-int
-initCondForRmtrash( rodsArguments_t *rodsArgs, dataObjInp_t* dataObjInp,
-                    collInp_t *collInp );
-int
-rmtrashCollUtil( rcComm_t *conn, char *srcColl,
-                 rodsArguments_t *rodsArgs, collInp_t *collInp );
+    int rmtrashUtil(rcComm_t* conn, rodsArguments_t* myRodsArgs, rodsPathInp_t* rodsPathInp);
+    int rmtrashDataObjUtil(rcComm_t* conn, char* srcPath, rodsArguments_t* rodsArgs, dataObjInp_t* dataObjInp);
+    int initCondForRmtrash(rodsArguments_t* rodsArgs, dataObjInp_t* dataObjInp, collInp_t* collInp);
+    int rmtrashCollUtil(rcComm_t* conn, char* srcColl, rodsArguments_t* rodsArgs, collInp_t* collInp);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	// RMTRASH_UTIL_H__
+#endif // RMTRASH_UTIL_H__

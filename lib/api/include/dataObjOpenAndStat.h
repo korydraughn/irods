@@ -5,7 +5,8 @@
 #include "rcConnect.h"
 #include "dataObjInpOut.h"
 
-typedef struct OpenStat {
+typedef struct OpenStat
+{
     rodsLong_t dataSize;
     char dataType[NAME_LEN];
     char dataMode[SHORT_STR_LEN];
@@ -14,7 +15,9 @@ typedef struct OpenStat {
     int rescTypeInx;
     int replNum;
 } openStat_t;
-#define OpenStat_PI "double dataSize; str dataType[NAME_LEN]; str dataMode[SHORT_STR_LEN]; int l3descInx; int replStatus; int rescTypeInx; int replNum;"
+#define OpenStat_PI                                                                                                    \
+    "double dataSize; str dataType[NAME_LEN]; str dataMode[SHORT_STR_LEN]; int l3descInx; int replStatus; int "        \
+    "rescTypeInx; int replNum;"
 
 /* prototype for the client call */
 /* rcDataObjOpenAndStat - Open And Stat a iRODS data object. This is the same
@@ -45,6 +48,7 @@ typedef struct OpenStat {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjOpenAndStat( rcComm_t *conn, dataObjInp_t *dataObjInp, openStat_t **openStat );
+    int
+    rcDataObjOpenAndStat(rcComm_t* conn, dataObjInp_t* dataObjInp, openStat_t** openStat);
 
 #endif

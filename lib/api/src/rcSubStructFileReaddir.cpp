@@ -3,7 +3,8 @@
 #include "apiNumber.h"
 
 /**
- * \fn rcSubStructFileReaddir( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileReaddirInp, rodsDirent_t **rodsDirent )
+ * \fn rcSubStructFileReaddir( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileReaddirInp, rodsDirent_t
+ ***rodsDirent )
  *
  * \brief Read a subdirectory within a structured file object.
  *
@@ -19,13 +20,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcSubStructFileReaddir( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileReaddirInp,
-                        rodsDirent_t **rodsDirent ) {
+ **/
+int rcSubStructFileReaddir(rcComm_t* conn, subStructFileFdOprInp_t* subStructFileReaddirInp, rodsDirent_t** rodsDirent)
+{
     int status;
-    status = procApiRequest( conn, SUB_STRUCT_FILE_READDIR_AN, subStructFileReaddirInp, NULL,
-                             ( void ** ) rodsDirent, NULL );
+    status = procApiRequest(conn, SUB_STRUCT_FILE_READDIR_AN, subStructFileReaddirInp, NULL, (void**) rodsDirent, NULL);
 
     return status;
 }

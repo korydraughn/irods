@@ -7,57 +7,53 @@
 
 #include <iostream>
 
-namespace irods {
-
-// =-=-=-=-=-=-=-
+namespace irods
+{
+    // =-=-=-=-=-=-=-
     /**
      * \author Jason M. Coposky
      * \brief
      *
      **/
-    class network : public plugin_base {
-        public:
-            // =-=-=-=-=-=-=-
-            // public - ctor
-            network(
-                    const std::string& _inst,
-                    const std::string& _ctx ) :
-                plugin_base(
-                        _inst,
-                        _ctx ) {
-                } // ctor
+    class network : public plugin_base
+    {
+    public:
+        // =-=-=-=-=-=-=-
+        // public - ctor
+        network(const std::string& _inst, const std::string& _ctx)
+            : plugin_base(_inst, _ctx)
+        {
+        } // ctor
 
-            // =-=-=-=-=-=-=-
-            // public - dtor
-            virtual ~network( ) {
-            } // dtor
+        // =-=-=-=-=-=-=-
+        // public - dtor
+        virtual ~network()
+        {
+        } // dtor
 
-            // =-=-=-=-=-=-=-
-            // public - cctor
-            network(const network& _rhs) :
-                plugin_base( _rhs ) {
-                } // cctor
+        // =-=-=-=-=-=-=-
+        // public - cctor
+        network(const network& _rhs)
+            : plugin_base(_rhs)
+        {
+        } // cctor
 
-            // =-=-=-=-=-=-=-
-            // public - assignment
-            network& operator=(
-                    const network& _rhs ) {
-                if ( &_rhs == this ) {
-                    return *this;
-                }
-
-                plugin_base::operator=( _rhs );
-
+        // =-=-=-=-=-=-=-
+        // public - assignment
+        network& operator=(const network& _rhs)
+        {
+            if (&_rhs == this) {
                 return *this;
+            }
 
-            } // operator=
+            plugin_base::operator=(_rhs);
+
+            return *this;
+
+        } // operator=
 
     }; // class network
 
 }; // namespace irods
 
-
 #endif // ___IRODS_NETWORK_PLUGIN_HPP__
-
-
-

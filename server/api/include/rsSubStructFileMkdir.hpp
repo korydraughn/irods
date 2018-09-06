@@ -4,8 +4,8 @@
 #include "rodsConnect.h"
 #include "objInfo.h"
 
-int rsSubStructFileMkdir( rsComm_t *rsComm, subFile_t *subFile );
-int _rsSubStructFileMkdir( rsComm_t *rsComm, subFile_t *subFile );
-int remoteSubStructFileMkdir( rsComm_t *rsComm, subFile_t *subFile, rodsServerHost_t *rodsServerHost );
+int rsSubStructFileMkdir(rsComm_t* rsComm, subFile_t* subFile);
+int _rsSubStructFileMkdir(rsComm_t* rsComm, subFile_t* subFile);
+int remoteSubStructFileMkdir(rsComm_t* rsComm, subFile_t* subFile, rodsServerHost_t* rodsServerHost);
 
 #endif

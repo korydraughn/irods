@@ -3,7 +3,8 @@
 
 #include "rcConnect.h"
 
-typedef struct {
+typedef struct
+{
     int fileInx;
 } fileClosedirInp_t;
 #define fileClosedirInp_PI "int fileInx;"
@@ -11,6 +12,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileClosedir( rcComm_t *conn, fileClosedirInp_t *fileClosedirInp );
+    int
+    rcFileClosedir(rcComm_t* conn, fileClosedirInp_t* fileClosedirInp);
 
 #endif

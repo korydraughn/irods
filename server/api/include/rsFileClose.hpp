@@ -4,8 +4,8 @@
 #include "rodsConnect.h"
 #include "fileClose.h"
 
-int rsFileClose( rsComm_t *rsComm, fileCloseInp_t *fileCloseInp );
-int _rsFileClose( rsComm_t *rsComm, fileCloseInp_t *fileCloseInp );
-int remoteFileClose( rsComm_t *rsComm, fileCloseInp_t *fileCloseInp, rodsServerHost_t *rodsServerHost );
+int rsFileClose(rsComm_t* rsComm, fileCloseInp_t* fileCloseInp);
+int _rsFileClose(rsComm_t* rsComm, fileCloseInp_t* fileCloseInp);
+int remoteFileClose(rsComm_t* rsComm, fileCloseInp_t* fileCloseInp, rodsServerHost_t* rodsServerHost);
 
 #endif

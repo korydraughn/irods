@@ -5,13 +5,8 @@
 #include "objStat.h"
 #include "structFileExtAndReg.h"
 
-int rsStructFileExtAndReg(
-    rsComm_t *rsComm,
-    structFileExtAndRegInp_t *structFileExtAndRegInp );
+int rsStructFileExtAndReg(rsComm_t* rsComm, structFileExtAndRegInp_t* structFileExtAndRegInp);
 
-int chkCollForExtAndReg(
-    rsComm_t *rsComm,
-    char *collection,
-    rodsObjStat_t **rodsObjStatOut );
+int chkCollForExtAndReg(rsComm_t* rsComm, char* collection, rodsObjStat_t** rodsObjStatOut);
 
 #endif

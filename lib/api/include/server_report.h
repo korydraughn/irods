@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcServerReport(rcComm_t* server_comm_ptr, bytesBuf_t** json_response);
+    int
+    rcServerReport(rcComm_t* server_comm_ptr, bytesBuf_t** json_response);
 
 #endif

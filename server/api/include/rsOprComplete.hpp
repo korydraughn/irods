@@ -3,6 +3,6 @@
 
 #include "rodsConnect.h"
 
-int rsOprComplete( rsComm_t *rsComm, int *retval );
+int rsOprComplete(rsComm_t* rsComm, int* retval);
 
 #endif

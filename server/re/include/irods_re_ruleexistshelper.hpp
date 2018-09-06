@@ -8,14 +8,16 @@
 
 #include "boost/regex.hpp"
 
-class RuleExistsHelper {
+class RuleExistsHelper
+{
 public:
     static RuleExistsHelper* Instance();
-    void registerRuleRegex( const std::string& _regex );
-    bool checkOperation( const std::string& _op_name );
-    bool checkPrePep( const std::string& _ns, const std::string& _op_name );
-    bool checkPostPep( const std::string& _ns, const std::string& _op_name );
-    bool checkDynPeps( const std::string& _ns, const std::string& _op_name );
+    void registerRuleRegex(const std::string& _regex);
+    bool checkOperation(const std::string& _op_name);
+    bool checkPrePep(const std::string& _ns, const std::string& _op_name);
+    bool checkPostPep(const std::string& _ns, const std::string& _op_name);
+    bool checkDynPeps(const std::string& _ns, const std::string& _op_name);
+
 protected:
 private:
     RuleExistsHelper(){};

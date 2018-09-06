@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "objInfo.h"
 
-int rcSubStructFileTruncate( rcComm_t *conn, subFile_t *subStructFileTruncateInp );
+int rcSubStructFileTruncate(rcComm_t* conn, subFile_t* subStructFileTruncateInp);
 
 #endif

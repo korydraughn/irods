@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcFileStageToCache( rcComm_t *conn, fileStageSyncInp_t *fileStageToCacheInp ) {
+ **/
+int rcFileStageToCache(rcComm_t* conn, fileStageSyncInp_t* fileStageToCacheInp)
+{
     int status;
-    status = procApiRequest( conn, FILE_STAGE_TO_CACHE_AN,
-                             fileStageToCacheInp, NULL, ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, FILE_STAGE_TO_CACHE_AN, fileStageToCacheInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

@@ -4,7 +4,11 @@
 #include "rcConnect.h"
 #include "getTempPasswordForOther.h"
 
-int rsGetTempPasswordForOther( rsComm_t *rsComm, getTempPasswordForOtherInp_t *getTempPasswordForOtherInp, getTempPasswordForOtherOut_t **getTempPasswordForOtherOut );
-int _rsGetTempPasswordForOther( rsComm_t *rsComm, getTempPasswordForOtherInp_t *getTempPasswordForOtherInp, getTempPasswordForOtherOut_t **getTempPasswordForOtherOut );
+int rsGetTempPasswordForOther(rsComm_t* rsComm,
+                              getTempPasswordForOtherInp_t* getTempPasswordForOtherInp,
+                              getTempPasswordForOtherOut_t** getTempPasswordForOtherOut);
+int _rsGetTempPasswordForOther(rsComm_t* rsComm,
+                               getTempPasswordForOtherInp_t* getTempPasswordForOtherInp,
+                               getTempPasswordForOtherOut_t** getTempPasswordForOtherOut);
 
 #endif

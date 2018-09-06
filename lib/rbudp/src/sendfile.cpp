@@ -22,32 +22,32 @@
 
 #include "QUANTAnet_rbudpSender_c.h"
 
-int
-main( int argc, char **argv ) {
+int main(int argc, char** argv)
+{
     int sendRate;
-    rbudpSender_t *rbudpSender;
+    rbudpSender_t* rbudpSender;
 
-    if ( argc < 4 ) {
-        printf( "Usage: sendfile <receiver> <sending rate (Kbps)> <MTU>\n" );
-        exit( 1 );
+    if (argc < 4) {
+        printf("Usage: sendfile <receiver> <sending rate (Kbps)> <MTU>\n");
+        exit(1);
     }
 
-    sendRate = atoi( argv[2] );
+    sendRate = atoi(argv[2]);
     // QUANTAnet_rbudpSender_c *mysender = new QUANTAnet_rbudpSender_c (38000);
-    rbudpSender = malloc( sizeof( rbudpSender_t ) );
-    memset( rbudpSender, 0, sizeof( rbudpSender_t ) );
+    rbudpSender = malloc(sizeof(rbudpSender_t));
+    memset(rbudpSender, 0, sizeof(rbudpSender_t));
 
     // the constructor
-    QUANTAnet_rbudpSender_c( rbudpSender, SEND_PORT );
+    QUANTAnet_rbudpSender_c(rbudpSender, SEND_PORT);
 
     // mysender->init (argv[1]);
-    initSender( rbudpSender, argv[1] );
+    initSender(rbudpSender, argv[1]);
 
-    QUANTAnet_rbudpBase_c( &rbudpSender->rbudpBase );
+    QUANTAnet_rbudpBase_c(&rbudpSender->rbudpBase);
     // mysender->sendfile (sendRate, atoi (argv[3]));
-    rbSendfile( rbudpSender, sendRate, atoi( argv[3] ), ( char * ) 0 );
+    rbSendfile(rbudpSender, sendRate, atoi(argv[3]), (char*) 0);
 
     // mysender->close ();
-    sendClose( rbudpSender );
+    sendClose(rbudpSender);
     return 1;
 }

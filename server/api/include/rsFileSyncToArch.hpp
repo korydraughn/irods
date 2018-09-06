@@ -4,9 +4,15 @@
 #include "rodsConnect.h"
 #include "fileStageToCache.h"
 
-int rsFileSyncToArch( rsComm_t *rsComm, fileStageSyncInp_t *fileSyncToArchInp, fileSyncOut_t** );
-int rsFileSyncToArchByHost( rsComm_t *rsComm, fileStageSyncInp_t *fileSyncToArchInp, fileSyncOut_t**, rodsServerHost_t *rodsServerHost );
-int _rsFileSyncToArch( rsComm_t *rsComm, fileStageSyncInp_t *fileSyncToArchInp, fileSyncOut_t** );
-int remoteFileSyncToArch( rsComm_t *rsComm, fileStageSyncInp_t *fileSyncToArchInp, fileSyncOut_t**, rodsServerHost_t *rodsServerHost );
+int rsFileSyncToArch(rsComm_t* rsComm, fileStageSyncInp_t* fileSyncToArchInp, fileSyncOut_t**);
+int rsFileSyncToArchByHost(rsComm_t* rsComm,
+                           fileStageSyncInp_t* fileSyncToArchInp,
+                           fileSyncOut_t**,
+                           rodsServerHost_t* rodsServerHost);
+int _rsFileSyncToArch(rsComm_t* rsComm, fileStageSyncInp_t* fileSyncToArchInp, fileSyncOut_t**);
+int remoteFileSyncToArch(rsComm_t* rsComm,
+                         fileStageSyncInp_t* fileSyncToArchInp,
+                         fileSyncOut_t**,
+                         rodsServerHost_t* rodsServerHost);
 
 #endif

@@ -2,7 +2,7 @@
  */
 
 #ifndef FUNCTIONS_HPP
-#define	FUNCTIONS_HPP
+#define FUNCTIONS_HPP
 
 #include "irods_hashtable.h"
 #include "region.h"
@@ -10,23 +10,25 @@
 #include "debug.hpp"
 
 #ifdef DEBUG
-#include "re.hpp"
+#    include "re.hpp"
 #endif
 
-typedef struct reIterableData {
-    char *varName;
-    Res *res;
-    void *itrSpecData;
-    Res *errorRes;
-    Node **subtrees;
-    Node *node;
-    ruleExecInfo_t *rei;
+typedef struct reIterableData
+{
+    char* varName;
+    Res* res;
+    void* itrSpecData;
+    Res* errorRes;
+    Node** subtrees;
+    Node* node;
+    ruleExecInfo_t* rei;
     int reiSaveFlag;
-    Env *env;
+    Env* env;
     rError_t* errmsg;
 } ReIterableData;
 
-typedef enum reIterableType {
+typedef enum reIterableType
+{
     RE_ITERABLE_COMMA_STRING,
     RE_ITERABLE_STRING_ARRAY,
     RE_ITERABLE_INT_ARRAY,
@@ -38,41 +40,40 @@ typedef enum reIterableType {
     RE_NOT_ITERABLE,
 } ReIterableType;
 
-typedef struct reIterable {
-    void ( *init )( ReIterableData *itrSpecData, Region *r );
-    int ( *hasNext )( ReIterableData *itrSpecData, Region *r );
-    Res *( *next )( ReIterableData *itrSpecData, Region *r );
-    void ( *finalize )( ReIterableData *itrSpecData, Region *r );
+typedef struct reIterable
+{
+    void (*init)(ReIterableData* itrSpecData, Region* r);
+    int (*hasNext)(ReIterableData* itrSpecData, Region* r);
+    Res* (*next)(ReIterableData* itrSpecData, Region* r);
+    void (*finalize)(ReIterableData* itrSpecData, Region* r);
 } ReIterable;
 
-typedef struct reIterableTableRow {
+typedef struct reIterableTableRow
+{
     ReIterableType nodeType;
     ReIterable reIterable;
 } ReIterableTableRow;
 
-ReIterableData *newReIterableData(
-    char *varName,
-    Res *res,
-    Node **subtrees,
-    Node *node,
-    ruleExecInfo_t *rei,
-    int reiSaveFlag,
-    Env *env,
-    rError_t* errmsg
-);
-void deleteReIterableData( ReIterableData *itrData );
+ReIterableData* newReIterableData(char* varName,
+                                  Res* res,
+                                  Node** subtrees,
+                                  Node* node,
+                                  ruleExecInfo_t* rei,
+                                  int reiSaveFlag,
+                                  Env* env,
+                                  rError_t* errmsg);
+void deleteReIterableData(ReIterableData* itrData);
 
-void getSystemFunctions( Hashtable *ft, Region *r );
+void getSystemFunctions(Hashtable* ft, Region* r);
 
-Res* eval( char *expr, Env *env, ruleExecInfo_t *rei, int saveREI, rError_t *errmsg, Region *r );
+Res* eval(char* expr, Env* env, ruleExecInfo_t* rei, int saveREI, rError_t* errmsg, Region* r);
 
-int getParamIOType( char *iotypes, int index );
+int getParamIOType(char* iotypes, int index);
 
-FunctionDesc *getFuncDescFromChain( int n, FunctionDesc *fDesc );
-Node *construct( char *fn, Node **args, int argc, Node* constype, Region *r );
-Node *deconstruct( Node **args, int proj );
-char* matchWholeString( char *buf );
-char *wildCardToRegex( char *buf );
+FunctionDesc* getFuncDescFromChain(int n, FunctionDesc* fDesc);
+Node* construct(char* fn, Node** args, int argc, Node* constype, Region* r);
+Node* deconstruct(Node** args, int proj);
+char* matchWholeString(char* buf);
+char* wildCardToRegex(char* buf);
 
-#endif	/* FUNCTIONS_H */
-
+#endif /* FUNCTIONS_H */

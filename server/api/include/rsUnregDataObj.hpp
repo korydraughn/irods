@@ -3,7 +3,7 @@
 
 #include "unregDataObj.h"
 
-int rsUnregDataObj( rsComm_t *rsComm, unregDataObj_t *unregDataObjInp );
-int _rsUnregDataObj( rsComm_t *rsComm, unregDataObj_t *unregDataObjInp );
+int rsUnregDataObj(rsComm_t* rsComm, unregDataObj_t* unregDataObjInp);
+int _rsUnregDataObj(rsComm_t* rsComm, unregDataObj_t* unregDataObjInp);
 
 #endif

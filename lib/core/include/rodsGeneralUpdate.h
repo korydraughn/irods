@@ -5,7 +5,6 @@
    (insert or delete) input.
  */
 
-
 #ifndef RODS_GENERAL_UPDATE_H__
 #define RODS_GENERAL_UPDATE_H__
 
@@ -24,10 +23,10 @@
 #define UPDATE_NOW_TIME "update_now_time"
 
 #define GeneralUpdateInp_PI "int type; struct InxValPair_PI;"
-typedef struct GeneralUpdateInp {
-    int type;  /* GEN_UPDATE_INSERT or DELETE */
-    inxValPair_t values;  /* Column IDs (from rodsGenQuery.h) and values */
+typedef struct GeneralUpdateInp
+{
+    int type;            /* GEN_UPDATE_INSERT or DELETE */
+    inxValPair_t values; /* Column IDs (from rodsGenQuery.h) and values */
 } generalUpdateInp_t;
 
-
-#endif	// RODS_GENERAL_UPDATE_H__
+#endif // RODS_GENERAL_UPDATE_H__

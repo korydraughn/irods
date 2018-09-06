@@ -17,7 +17,7 @@
  * \remark none
  *
  * \note none
-*
+ *
  * \param[in] conn - A rcComm_t connection handle to the server.
  * \param[in] l1descInx
  * \param[out] dataObjInBBuf
@@ -28,15 +28,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcL3FilePutSingleBuf( rcComm_t *conn, int l1descInx,
-                      bytesBuf_t *dataObjInBBuf ) {
+ **/
+int rcL3FilePutSingleBuf(rcComm_t* conn, int l1descInx, bytesBuf_t* dataObjInBBuf)
+{
     int status;
-    status = procApiRequest( conn, L3_FILE_PUT_SINGLE_BUF_AN,
-                             &l1descInx, dataObjInBBuf, ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, L3_FILE_PUT_SINGLE_BUF_AN, &l1descInx, dataObjInBBuf, (void**) NULL, NULL);
 
     return status;
 }
-
-

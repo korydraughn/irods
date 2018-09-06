@@ -4,7 +4,6 @@
 #include "rcConnect.h"
 #include "objInfo.h"
 
-
 /* rcRegDataObj - Register a iRODS dataObject.
  * Input -
  *   rcComm_t *conn - The client connection handle.
@@ -18,6 +17,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcRegDataObj( rcComm_t *conn, dataObjInfo_t *dataObjInfo, dataObjInfo_t **outDataObjInfo );
+    int
+    rcRegDataObj(rcComm_t* conn, dataObjInfo_t* dataObjInfo, dataObjInfo_t** outDataObjInfo);
 
 #endif

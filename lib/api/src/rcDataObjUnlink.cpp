@@ -57,13 +57,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcDataObjUnlink( rcComm_t *conn, dataObjInp_t *dataObjUnlinkInp ) {
+int rcDataObjUnlink(rcComm_t* conn, dataObjInp_t* dataObjUnlinkInp)
+{
     int status;
-    status = procApiRequest( conn, DATA_OBJ_UNLINK_AN,  dataObjUnlinkInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, DATA_OBJ_UNLINK_AN, dataObjUnlinkInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

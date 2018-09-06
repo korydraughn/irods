@@ -11,8 +11,6 @@
 
 #include "icatStruct.hpp"
 
-
-extern icatSessionStruct  icatSess;
-
+extern icatSessionStruct icatSess;
 
 #endif /* ICAT_GLOBALS_EXTERN_H*/

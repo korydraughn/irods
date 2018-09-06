@@ -19,6 +19,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjClose( rcComm_t *conn, openedDataObjInp_t *dataObjCloseInp );
+    int
+    rcDataObjClose(rcComm_t* conn, openedDataObjInp_t* dataObjCloseInp);
 
 #endif

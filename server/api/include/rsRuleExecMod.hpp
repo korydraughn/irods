@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "ruleExecMod.h"
 
-int rsRuleExecMod( rsComm_t *rsComm, ruleExecModInp_t *ruleExecModInp );
-int _rsRuleExecMod( rsComm_t *rsComm, ruleExecModInp_t *ruleExecModInp );
+int rsRuleExecMod(rsComm_t* rsComm, ruleExecModInp_t* ruleExecModInp);
+int _rsRuleExecMod(rsComm_t* rsComm, ruleExecModInp_t* ruleExecModInp);
 
 #endif

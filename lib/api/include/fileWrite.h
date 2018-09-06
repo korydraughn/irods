@@ -4,7 +4,8 @@
 #include "rcConnect.h"
 #include "rodsDef.h"
 
-typedef struct {
+typedef struct
+{
     int fileInx;
     int len;
 } fileWriteInp_t;
@@ -14,6 +15,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileWrite( rcComm_t *conn, const fileWriteInp_t *fileWriteInp, const bytesBuf_t *fileWriteInpBBuf );
+    int
+    rcFileWrite(rcComm_t* conn, const fileWriteInp_t* fileWriteInp, const bytesBuf_t* fileWriteInpBBuf);
 
 #endif

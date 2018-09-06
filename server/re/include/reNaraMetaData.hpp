@@ -4,8 +4,6 @@
 /* reNaraMetaData.h - header file for reNaraMetaData.c
  */
 
-
-
 #ifndef RE_NARA_META_DATA_HPP
 #define RE_NARA_META_DATA_HPP
 
@@ -15,8 +13,7 @@
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"
 
-#define NARA_META_DATA_FILE	"naraMetaData.txt"
-int
-msiExtractNaraMetadata( ruleExecInfo_t *rei );
+#define NARA_META_DATA_FILE "naraMetaData.txt"
+int msiExtractNaraMetadata(ruleExecInfo_t* rei);
 
-#endif	/* RE_NARA_META_DATA_H */
+#endif /* RE_NARA_META_DATA_H */

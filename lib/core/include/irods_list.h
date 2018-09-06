@@ -5,34 +5,37 @@
 #include "region.h"
 
 typedef struct listNode ListNode;
-struct listNode {
-    ListNode *next;
-    void *value;
+struct listNode
+{
+    ListNode* next;
+    void* value;
 };
 
-typedef struct list {
+typedef struct list
+{
     int size;
-    ListNode *head;
-    ListNode *tail;
+    ListNode* head;
+    ListNode* tail;
 } List;
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-List *newList( Region *r );
-List *newListNoRegion();
-ListNode *newListNode( void *value, Region *r );
-ListNode *newListNodeNoRegion( void *value );
+    List* newList(Region* r);
+    List* newListNoRegion();
+    ListNode* newListNode(void* value, Region* r);
+    ListNode* newListNodeNoRegion(void* value);
 
-void listRemoveNoRegion2( List *l, void *v );
-void listAppendNoRegion( List *list, void *value );
-void listAppend( List *list, void *value, Region *r );
+    void listRemoveNoRegion2(List* l, void* v);
+    void listAppendNoRegion(List* list, void* value);
+    void listAppend(List* list, void* value, Region* r);
 
-void listAppendToNode( List *list, ListNode *node, void *value, Region *r );
-void listRemove( List *list, ListNode *node );
-void listRemoveNoRegion( List *list, ListNode *node );
-void deleteListNoRegion( List *list );
-void clearListNoRegion( List *list );
+    void listAppendToNode(List* list, ListNode* node, void* value, Region* r);
+    void listRemove(List* list, ListNode* node);
+    void listRemoveNoRegion(List* list, ListNode* node);
+    void deleteListNoRegion(List* list);
+    void clearListNoRegion(List* list);
 
 #ifdef __cplusplus
 }

@@ -84,22 +84,21 @@
  * \sa none
 **/
 
-int
-rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
+int rcDataObjRsync(rcComm_t* conn, dataObjInp_t* dataObjInp)
+{
     int status;
-    msParamArray_t *outParamArray = NULL;
-    char *locFilePath;
+    msParamArray_t* outParamArray = NULL;
+    char* locFilePath;
 
-    status = _rcDataObjRsync( conn, dataObjInp, &outParamArray );
+    status = _rcDataObjRsync(conn, dataObjInp, &outParamArray);
 
-    if ( status == SYS_SVR_TO_CLI_PUT_ACTION ) {
-        if ( ( locFilePath = getValByKey( &dataObjInp->condInput,
-                                          RSYNC_DEST_PATH_KW ) ) == NULL ) {
+    if (status == SYS_SVR_TO_CLI_PUT_ACTION) {
+        if ((locFilePath = getValByKey(&dataObjInp->condInput, RSYNC_DEST_PATH_KW)) == NULL) {
             return USER_INPUT_PATH_ERR;
         }
         else {
-            status = rcDataObjPut( conn, dataObjInp, locFilePath );
-            if ( status >= 0 ) {
+            status = rcDataObjPut(conn, dataObjInp, locFilePath);
+            if (status >= 0) {
                 return SYS_RSYNC_TARGET_MODIFIED;
             }
             else {
@@ -107,14 +106,13 @@ rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
             }
         }
     }
-    else if ( status == SYS_SVR_TO_CLI_GET_ACTION ) {
-        if ( ( locFilePath = getValByKey( &dataObjInp->condInput,
-                                          RSYNC_DEST_PATH_KW ) ) == NULL ) {
+    else if (status == SYS_SVR_TO_CLI_GET_ACTION) {
+        if ((locFilePath = getValByKey(&dataObjInp->condInput, RSYNC_DEST_PATH_KW)) == NULL) {
             return USER_INPUT_PATH_ERR;
         }
         else {
-            status = rcDataObjGet( conn, dataObjInp, locFilePath );
-            if ( status >= 0 ) {
+            status = rcDataObjGet(conn, dataObjInp, locFilePath);
+            if (status >= 0) {
                 return SYS_RSYNC_TARGET_MODIFIED;
             }
             else {
@@ -124,102 +122,93 @@ rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
     }
 
     /* below is for backward compatibility */
-    while ( status == SYS_SVR_TO_CLI_MSI_REQUEST && outParamArray != NULL ) {
+    while (status == SYS_SVR_TO_CLI_MSI_REQUEST && outParamArray != NULL) {
         /* it is a server request */
-        msParam_t *myMsParam;
-        dataObjInp_t *dataObjInp = NULL;
+        msParam_t* myMsParam;
+        dataObjInp_t* dataObjInp = NULL;
         int l1descInx;
 
-        myMsParam = getMsParamByLabel( outParamArray, CL_ZONE_OPR_INX );
-        if ( myMsParam == NULL ) {
+        myMsParam = getMsParamByLabel(outParamArray, CL_ZONE_OPR_INX);
+        if (myMsParam == NULL) {
             l1descInx = -1;
         }
         else {
-            l1descInx = *( int* ) myMsParam->inOutStruct;
+            l1descInx = *(int*) myMsParam->inOutStruct;
         }
 
-        if ( ( myMsParam = getMsParamByLabel( outParamArray, CL_PUT_ACTION ) )
-                != NULL ) {
-
-            dataObjInp = ( dataObjInp_t * ) myMsParam->inOutStruct;
-            if ( ( locFilePath = getValByKey( &dataObjInp->condInput,
-                                              RSYNC_DEST_PATH_KW ) ) == NULL ) {
-                if ( l1descInx >= 0 ) {
-                    rcOprComplete( conn, l1descInx );
+        if ((myMsParam = getMsParamByLabel(outParamArray, CL_PUT_ACTION)) != NULL) {
+            dataObjInp = (dataObjInp_t*) myMsParam->inOutStruct;
+            if ((locFilePath = getValByKey(&dataObjInp->condInput, RSYNC_DEST_PATH_KW)) == NULL) {
+                if (l1descInx >= 0) {
+                    rcOprComplete(conn, l1descInx);
                 }
                 else {
-                    rcOprComplete( conn, USER_FILE_DOES_NOT_EXIST );
+                    rcOprComplete(conn, USER_FILE_DOES_NOT_EXIST);
                 }
             }
             else {
-                status = rcDataObjPut( conn, dataObjInp, locFilePath );
-                if ( l1descInx >= 0 ) {
-                    rcOprComplete( conn, l1descInx );
+                status = rcDataObjPut(conn, dataObjInp, locFilePath);
+                if (l1descInx >= 0) {
+                    rcOprComplete(conn, l1descInx);
                 }
                 else {
-                    rcOprComplete( conn, status );
+                    rcOprComplete(conn, status);
                 }
             }
         }
-        else if ( ( myMsParam = getMsParamByLabel( outParamArray,
-                                CL_GET_ACTION ) ) != NULL ) {
-            dataObjInp = ( dataObjInp_t * ) myMsParam->inOutStruct;
-            if ( ( locFilePath = getValByKey( &dataObjInp->condInput,
-                                              RSYNC_DEST_PATH_KW ) ) == NULL ) {
-                if ( l1descInx >= 0 ) {
-                    rcOprComplete( conn, l1descInx );
+        else if ((myMsParam = getMsParamByLabel(outParamArray, CL_GET_ACTION)) != NULL) {
+            dataObjInp = (dataObjInp_t*) myMsParam->inOutStruct;
+            if ((locFilePath = getValByKey(&dataObjInp->condInput, RSYNC_DEST_PATH_KW)) == NULL) {
+                if (l1descInx >= 0) {
+                    rcOprComplete(conn, l1descInx);
                 }
                 else {
-                    rcOprComplete( conn, USER_FILE_DOES_NOT_EXIST );
+                    rcOprComplete(conn, USER_FILE_DOES_NOT_EXIST);
                 }
             }
             else {
-                status = rcDataObjGet( conn, dataObjInp, locFilePath );
-                if ( l1descInx >= 0 ) {
-                    rcOprComplete( conn, l1descInx );
+                status = rcDataObjGet(conn, dataObjInp, locFilePath);
+                if (l1descInx >= 0) {
+                    rcOprComplete(conn, l1descInx);
                 }
                 else {
-                    rcOprComplete( conn, status );
+                    rcOprComplete(conn, status);
                 }
             }
         }
         else {
-            if ( l1descInx >= 0 ) {
-                rcOprComplete( conn, l1descInx );
+            if (l1descInx >= 0) {
+                rcOprComplete(conn, l1descInx);
             }
             else {
-                rcOprComplete( conn, SYS_SVR_TO_CLI_MSI_NO_EXIST );
+                rcOprComplete(conn, SYS_SVR_TO_CLI_MSI_NO_EXIST);
             }
         }
-        if ( dataObjInp != NULL ) {
-            clearKeyVal( &dataObjInp->condInput );
+        if (dataObjInp != NULL) {
+            clearKeyVal(&dataObjInp->condInput);
         }
         /* free outParamArray */
-        clearMsParamArray( outParamArray, 1 );
-        free( outParamArray );
+        clearMsParamArray(outParamArray, 1);
+        free(outParamArray);
         outParamArray = NULL;
 
         /* read the reply from the eariler call */
 
-        status = branchReadAndProcApiReply( conn, DATA_OBJ_RSYNC_AN,
-                                            ( void ** )( static_cast< void * >( &outParamArray ) ), NULL );
-        if ( status < 0 ) {
-            rodsLogError( LOG_DEBUG, status,
-                          "rcDataObjRsync: readAndProcApiReply failed. status = %d",
-                          status );
+        status =
+            branchReadAndProcApiReply(conn, DATA_OBJ_RSYNC_AN, (void**) (static_cast<void*>(&outParamArray)), NULL);
+        if (status < 0) {
+            rodsLogError(LOG_DEBUG, status, "rcDataObjRsync: readAndProcApiReply failed. status = %d", status);
         }
     }
 
     return status;
 }
 
-int
-_rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp,
-                 msParamArray_t **outParamArray ) {
+int _rcDataObjRsync(rcComm_t* conn, dataObjInp_t* dataObjInp, msParamArray_t** outParamArray)
+{
     int status;
 
-    status = procApiRequest( conn, DATA_OBJ_RSYNC_AN, dataObjInp, NULL,
-                             ( void ** )outParamArray, NULL );
+    status = procApiRequest(conn, DATA_OBJ_RSYNC_AN, dataObjInp, NULL, (void**) outParamArray, NULL);
 
     return status;
 }

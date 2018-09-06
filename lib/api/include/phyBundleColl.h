@@ -8,29 +8,32 @@
 #include "miscUtil.h"
 #include "structFileExtAndReg.h"
 
-#define BUNDLE_RESC       "bundleResc"
-#define TAR_BUNDLE_TYPE   "tar bundle"
-#define BUNDLE_STR        "bundle"
+#define BUNDLE_RESC "bundleResc"
+#define TAR_BUNDLE_TYPE "tar bundle"
+#define BUNDLE_STR "bundle"
 #define BUNDLE_RESC_CLASS "bundle"
 
-#define MAX_BUNDLE_SIZE    4 // 4 G
-#define MAX_SUB_FILE_CNT   5120
+#define MAX_BUNDLE_SIZE 4 // 4 G
+#define MAX_SUB_FILE_CNT 5120
 
-typedef struct BunReplCache {
-    rodsLong_t  dataId;
-    char objPath[MAX_NAME_LEN];      // optional for ADMIN_KW
+typedef struct BunReplCache
+{
+    rodsLong_t dataId;
+    char objPath[MAX_NAME_LEN]; // optional for ADMIN_KW
     char chksumStr[NAME_LEN];
     int srcReplNum;
-    struct BunReplCache *next;
+    struct BunReplCache* next;
 } bunReplCache_t;
 
-typedef struct BunReplCacheHeader {
+typedef struct BunReplCacheHeader
+{
     int numSubFiles;
     rodsLong_t totSubFileSize;
-    bunReplCache_t *bunReplCacheHead;
+    bunReplCache_t* bunReplCacheHead;
 } bunReplCacheHeader_t;
 
-typedef struct CurSubFileCond {
+typedef struct CurSubFileCond
+{
     char collName[MAX_NAME_LEN];
     char dataName[MAX_NAME_LEN];
     rodsLong_t dataId;
@@ -41,10 +44,10 @@ typedef struct CurSubFileCond {
     int bundled;
 } curSubFileCond_t;
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcPhyBundleColl( rcComm_t *conn, structFileExtAndRegInp_t *phyBundleCollInp );
+    int
+    rcPhyBundleColl(rcComm_t* conn, structFileExtAndRegInp_t* phyBundleCollInp);
 
 #endif

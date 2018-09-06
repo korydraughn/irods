@@ -2,15 +2,12 @@
  */
 
 #ifndef KEY_PROTO_HPP
-#define KEY_PROTO_HPP
+#    define KEY_PROTO_HPP
 
-#define KEY_SIZE 1024
+#    define KEY_SIZE 1024
 
 #endif
 
-#define RE_STRUCT_FUNC_PROTO(T) \
-    void CONCAT(key, T)(T *node, char key[KEY_SIZE])
+#define RE_STRUCT_FUNC_PROTO(T) void CONCAT(key, T)(T * node, char key[KEY_SIZE])
 
-#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn) \
-    RE_STRUCT_FUNC_PROTO(T)
-
+#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn) RE_STRUCT_FUNC_PROTO(T)

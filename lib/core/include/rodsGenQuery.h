@@ -5,15 +5,13 @@
  * and results
  */
 
-
-
 #ifndef RODS_GEN_QUERY_H__
 #define RODS_GEN_QUERY_H__
 
 #include "objInfo.h"
 
-#define MAX_SQL_ATTR    50
-#define MAX_SQL_ROWS   256
+#define MAX_SQL_ATTR 50
+#define MAX_SQL_ROWS 256
 
 /* In genQueryInp_t, selectInp is a int index, int value pair. The index
  * represents the attribute index.
@@ -21,34 +19,35 @@
  * represents the attribute index.
  */
 
-typedef struct GenQueryInp {
-    int maxRows;             /* max number of rows to return, if 0
-                                close out the SQL statement call (i.e. instead
-                                of getting more rows until it is finished). */
-    int continueInx;         /* if non-zero, this is the value returned in
-                                the genQueryOut structure and the current
-                                call is to get more rows.  In this case, the
-                                selectInp & sqlCondInp arguments are ignored.*/
-    int rowOffset;           /* if positive, return rows starting with
-                                this index (skip earlier ones), 0-origin  */
-    int options;             /* Bits for special options, currently:
-                                If RETURN_TOTAL_ROW_COUNT is set, the total
-                                number of available rows will be returned
-                                in totalRowCount (causes a little overhead
-                                so only request it if needed).  If rowOffset
-                                is also used, totalRowCount will include
-                                the skipped rows.
-                                If NO_DISTINCT is set, the normal 'distinct'
-                                keyword is not included in the SQL query.
-                                If QUOTA_QUERY is set, do the special quota
-                                query.
-                                If AUTO_CLOSE is set, close out the statement
-                                even if more rows are available.  -1 is
-                                returned as the continueInx if there were
-                                (possibly) additional rows available.
-                                If UPPER_CASE_WHERE is set, make the 'where'
-                                columns upper case.
-                             */
+typedef struct GenQueryInp
+{
+    int maxRows;     /* max number of rows to return, if 0
+                        close out the SQL statement call (i.e. instead
+                        of getting more rows until it is finished). */
+    int continueInx; /* if non-zero, this is the value returned in
+                        the genQueryOut structure and the current
+                        call is to get more rows.  In this case, the
+                        selectInp & sqlCondInp arguments are ignored.*/
+    int rowOffset;   /* if positive, return rows starting with
+                        this index (skip earlier ones), 0-origin  */
+    int options;     /* Bits for special options, currently:
+                        If RETURN_TOTAL_ROW_COUNT is set, the total
+                        number of available rows will be returned
+                        in totalRowCount (causes a little overhead
+                        so only request it if needed).  If rowOffset
+                        is also used, totalRowCount will include
+                        the skipped rows.
+                        If NO_DISTINCT is set, the normal 'distinct'
+                        keyword is not included in the SQL query.
+                        If QUOTA_QUERY is set, do the special quota
+                        query.
+                        If AUTO_CLOSE is set, close out the statement
+                        even if more rows are available.  -1 is
+                        returned as the continueInx if there were
+                        (possibly) additional rows available.
+                        If UPPER_CASE_WHERE is set, make the 'where'
+                        columns upper case.
+                     */
     keyValPair_t condInput;
     inxIvalPair_t selectInp; /* 1st int array is columns to return (select),
                                 2nd int array has bits for special options:
@@ -57,14 +56,15 @@ typedef struct GenQueryInp {
                                 2nd array has strings for the conditions. */
 } genQueryInp_t;
 
-
-typedef struct SqlResult {
-    int attriInx;        /* attribute index */
-    int len;             /* strlen of each attribute */
-    char *value;         /* char array of [rowCnt][len] */
+typedef struct SqlResult
+{
+    int attriInx; /* attribute index */
+    int len;      /* strlen of each attribute */
+    char* value;  /* char array of [rowCnt][len] */
 } sqlResult_t;
 
-typedef struct GenQueryOut {
+typedef struct GenQueryOut
+{
     int rowCnt;
     int attriCnt;
     int continueInx;
@@ -86,9 +86,8 @@ primary ordering column.
 #define RETURN_TOTAL_ROW_COUNT 0x20
 #define NO_DISTINCT 0x40
 #define QUOTA_QUERY 0x80
-#define AUTO_CLOSE  0x100
-#define UPPER_CASE_WHERE  0x200
-
+#define AUTO_CLOSE 0x100
+#define UPPER_CASE_WHERE 0x200
 
 /*
   These are some operations (functions) that can be applied to columns
@@ -105,13 +104,11 @@ primary ordering column.
 #define SELECT_AVG 5
 #define SELECT_COUNT 6
 
-
 /*
   For the integer values below (the COL_* defines), up to 10,000 is reserved
   the core tables The type can be determined by comparing with this value.
  */
 #define MAX_CORE_TABLE_VALUE 10000
-
 
 /*
   These are the Table Column names used with the GenQuery.  Also see
@@ -148,7 +145,7 @@ primary ordering column.
 #define COL_R_LOC 306
 #define COL_R_VAULT_PATH 307
 #define COL_R_FREE_SPACE 308
-#define COL_R_RESC_INFO  309
+#define COL_R_RESC_INFO 309
 #define COL_R_RESC_COMMENT 310
 #define COL_R_CREATE_TIME 311
 #define COL_R_MODIFY_TIME 312
@@ -214,7 +211,6 @@ primary ordering column.
 #define COL_META_COLL_CREATE_TIME 614
 #define COL_META_COLL_MODIFY_TIME 615
 
-
 #define COL_META_NAMESPACE_COLL 620
 #define COL_META_NAMESPACE_DATA 621
 #define COL_META_NAMESPACE_RESC 622
@@ -223,7 +219,6 @@ primary ordering column.
 #define COL_META_NAMESPACE_RULE 625
 #define COL_META_NAMESPACE_MSRVC 626
 #define COL_META_NAMESPACE_MET2 627
-
 
 #define COL_META_RESC_ATTR_NAME 630
 #define COL_META_RESC_ATTR_VALUE 631
@@ -267,7 +262,6 @@ primary ordering column.
 #define COL_META_MET2_CREATE_TIME 684
 #define COL_META_MET2_MODIFY_TIME 685
 
-
 /* R_OBJT_ACCESS */
 #define COL_DATA_ACCESS_TYPE 700
 #define COL_DATA_ACCESS_NAME 701
@@ -280,7 +274,6 @@ primary ordering column.
 #define COL_COLL_TOKEN_NAMESPACE 712
 #define COL_COLL_ACCESS_USER_ID 713
 #define COL_COLL_ACCESS_COLL_ID 714
-
 
 #define COL_RESC_ACCESS_TYPE 720
 #define COL_RESC_ACCESS_NAME 721
@@ -306,8 +299,6 @@ primary ordering column.
 #define COL_MSRVC_ACCESS_USER_ID 753
 #define COL_MSRVC_ACCESS_MSRVC_ID 754
 
-
-
 /* R_RESC_GROUP */
 //#define COL_RESC_GROUP_RESC_ID 800	// gone in 4.1 #1472
 //#define COL_RESC_GROUP_NAME 801
@@ -321,9 +312,9 @@ primary ordering column.
 #define COL_RULE_EXEC_ID 1000
 #define COL_RULE_EXEC_NAME 1001
 #define COL_RULE_EXEC_REI_FILE_PATH 1002
-#define COL_RULE_EXEC_USER_NAME   1003
+#define COL_RULE_EXEC_USER_NAME 1003
 #define COL_RULE_EXEC_ADDRESS 1004
-#define COL_RULE_EXEC_TIME    1005
+#define COL_RULE_EXEC_TIME 1005
 #define COL_RULE_EXEC_FREQUENCY 1006
 #define COL_RULE_EXEC_PRIORITY 1007
 #define COL_RULE_EXEC_ESTIMATED_EXE_TIME 1008
@@ -341,147 +332,147 @@ primary ordering column.
 #define COL_TOKEN_COMMENT 1106
 
 /* R_OBJT_AUDIT */
-#define COL_AUDIT_OBJ_ID      1200
-#define COL_AUDIT_USER_ID     1201
-#define COL_AUDIT_ACTION_ID   1202
-#define COL_AUDIT_COMMENT     1203
+#define COL_AUDIT_OBJ_ID 1200
+#define COL_AUDIT_USER_ID 1201
+#define COL_AUDIT_ACTION_ID 1202
+#define COL_AUDIT_COMMENT 1203
 #define COL_AUDIT_CREATE_TIME 1204
 #define COL_AUDIT_MODIFY_TIME 1205
 
 /* Range of the Audit columns; used sometimes to restrict access */
 #define COL_AUDIT_RANGE_START 1200
-#define COL_AUDIT_RANGE_END   1299
+#define COL_AUDIT_RANGE_END 1299
 
 /* R_COLL_USER_MAIN (r_user_main for Collection information) */
-#define COL_COLL_USER_NAME    1300
-#define COL_COLL_USER_ZONE    1301
+#define COL_COLL_USER_NAME 1300
+#define COL_COLL_USER_ZONE 1301
 
 /* R_DATA_USER_MAIN (r_user_main for Data information specifically) */
-#define COL_DATA_USER_NAME    1310
-#define COL_DATA_USER_ZONE    1311
+#define COL_DATA_USER_NAME 1310
+#define COL_DATA_USER_ZONE 1311
 
 /* R_DATA_USER_MAIN (r_user_main for Data information specifically) */
-#define COL_RESC_USER_NAME    1320
-#define COL_RESC_USER_ZONE    1321
+#define COL_RESC_USER_NAME 1320
+#define COL_RESC_USER_ZONE 1321
 
 /* R_SERVER_LOAD */
-#define COL_SL_HOST_NAME      1400
-#define COL_SL_RESC_NAME      1401
-#define COL_SL_CPU_USED       1402
-#define COL_SL_MEM_USED       1403
-#define COL_SL_SWAP_USED      1404
-#define COL_SL_RUNQ_LOAD      1405
-#define COL_SL_DISK_SPACE     1406
-#define COL_SL_NET_INPUT      1407
-#define COL_SL_NET_OUTPUT     1408
-#define COL_SL_NET_OUTPUT     1408
-#define COL_SL_CREATE_TIME    1409
+#define COL_SL_HOST_NAME 1400
+#define COL_SL_RESC_NAME 1401
+#define COL_SL_CPU_USED 1402
+#define COL_SL_MEM_USED 1403
+#define COL_SL_SWAP_USED 1404
+#define COL_SL_RUNQ_LOAD 1405
+#define COL_SL_DISK_SPACE 1406
+#define COL_SL_NET_INPUT 1407
+#define COL_SL_NET_OUTPUT 1408
+#define COL_SL_NET_OUTPUT 1408
+#define COL_SL_CREATE_TIME 1409
 
 /* R_SERVER_LOAD_DIGEST */
-#define COL_SLD_RESC_NAME     1500
-#define COL_SLD_LOAD_FACTOR   1501
-#define COL_SLD_CREATE_TIME   1502
+#define COL_SLD_RESC_NAME 1500
+#define COL_SLD_LOAD_FACTOR 1501
+#define COL_SLD_CREATE_TIME 1502
 
 /* R_USER_AUTH (for GSI/KRB) */
 #define COL_USER_AUTH_ID 1600
-#define COL_USER_DN      1601
+#define COL_USER_DN 1601
 
 /* R_RULE_MAIN */
-#define COL_RULE_ID           1700
-#define COL_RULE_VERSION      1701
-#define COL_RULE_BASE_NAME    1702
-#define COL_RULE_NAME         1703
-#define COL_RULE_EVENT        1704
-#define COL_RULE_CONDITION    1705
-#define COL_RULE_BODY         1706
-#define COL_RULE_RECOVERY     1707
-#define COL_RULE_STATUS       1708
-#define COL_RULE_OWNER_NAME   1709
-#define COL_RULE_OWNER_ZONE   1710
-#define COL_RULE_DESCR_1      1711
-#define COL_RULE_DESCR_2      1712
-#define COL_RULE_INPUT_PARAMS      1713
-#define COL_RULE_OUTPUT_PARAMS     1714
-#define COL_RULE_DOLLAR_VARS       1715
-#define COL_RULE_ICAT_ELEMENTS     1716
-#define COL_RULE_SIDEEFFECTS       1717
-#define COL_RULE_COMMENT      1718
-#define COL_RULE_CREATE_TIME  1719
-#define COL_RULE_MODIFY_TIME  1720
+#define COL_RULE_ID 1700
+#define COL_RULE_VERSION 1701
+#define COL_RULE_BASE_NAME 1702
+#define COL_RULE_NAME 1703
+#define COL_RULE_EVENT 1704
+#define COL_RULE_CONDITION 1705
+#define COL_RULE_BODY 1706
+#define COL_RULE_RECOVERY 1707
+#define COL_RULE_STATUS 1708
+#define COL_RULE_OWNER_NAME 1709
+#define COL_RULE_OWNER_ZONE 1710
+#define COL_RULE_DESCR_1 1711
+#define COL_RULE_DESCR_2 1712
+#define COL_RULE_INPUT_PARAMS 1713
+#define COL_RULE_OUTPUT_PARAMS 1714
+#define COL_RULE_DOLLAR_VARS 1715
+#define COL_RULE_ICAT_ELEMENTS 1716
+#define COL_RULE_SIDEEFFECTS 1717
+#define COL_RULE_COMMENT 1718
+#define COL_RULE_CREATE_TIME 1719
+#define COL_RULE_MODIFY_TIME 1720
 
 /* R_RULE_BASE_MAP (for storing versions of the rules */
-#define COL_RULE_BASE_MAP_VERSION      1721
-#define COL_RULE_BASE_MAP_BASE_NAME    1722
-#define COL_RULE_BASE_MAP_OWNER_NAME   1723
-#define COL_RULE_BASE_MAP_OWNER_ZONE   1724
-#define COL_RULE_BASE_MAP_COMMENT      1725
-#define COL_RULE_BASE_MAP_CREATE_TIME  1726
-#define COL_RULE_BASE_MAP_MODIFY_TIME  1727
-#define COL_RULE_BASE_MAP_PRIORITY     1728
+#define COL_RULE_BASE_MAP_VERSION 1721
+#define COL_RULE_BASE_MAP_BASE_NAME 1722
+#define COL_RULE_BASE_MAP_OWNER_NAME 1723
+#define COL_RULE_BASE_MAP_OWNER_ZONE 1724
+#define COL_RULE_BASE_MAP_COMMENT 1725
+#define COL_RULE_BASE_MAP_CREATE_TIME 1726
+#define COL_RULE_BASE_MAP_MODIFY_TIME 1727
+#define COL_RULE_BASE_MAP_PRIORITY 1728
 
 /* R_RULE_DVM (Data Variable Mapping) */
-#define COL_DVM_ID            1800
-#define COL_DVM_VERSION       1801
-#define COL_DVM_BASE_NAME     1802
-#define COL_DVM_EXT_VAR_NAME  1803
-#define COL_DVM_CONDITION     1804
-#define COL_DVM_INT_MAP_PATH  1805
-#define COL_DVM_STATUS        1806
-#define COL_DVM_OWNER_NAME    1807
-#define COL_DVM_OWNER_ZONE    1808
-#define COL_DVM_COMMENT       1809
-#define COL_DVM_CREATE_TIME   1810
-#define COL_DVM_MODIFY_TIME   1811
+#define COL_DVM_ID 1800
+#define COL_DVM_VERSION 1801
+#define COL_DVM_BASE_NAME 1802
+#define COL_DVM_EXT_VAR_NAME 1803
+#define COL_DVM_CONDITION 1804
+#define COL_DVM_INT_MAP_PATH 1805
+#define COL_DVM_STATUS 1806
+#define COL_DVM_OWNER_NAME 1807
+#define COL_DVM_OWNER_ZONE 1808
+#define COL_DVM_COMMENT 1809
+#define COL_DVM_CREATE_TIME 1810
+#define COL_DVM_MODIFY_TIME 1811
 
 /* R_RULE_DVM_MAP (for storing versions of the rules */
-#define COL_DVM_BASE_MAP_VERSION      1812
-#define COL_DVM_BASE_MAP_BASE_NAME    1813
-#define COL_DVM_BASE_MAP_OWNER_NAME   1814
-#define COL_DVM_BASE_MAP_OWNER_ZONE   1815
-#define COL_DVM_BASE_MAP_COMMENT      1816
-#define COL_DVM_BASE_MAP_CREATE_TIME  1817
-#define COL_DVM_BASE_MAP_MODIFY_TIME  1818
+#define COL_DVM_BASE_MAP_VERSION 1812
+#define COL_DVM_BASE_MAP_BASE_NAME 1813
+#define COL_DVM_BASE_MAP_OWNER_NAME 1814
+#define COL_DVM_BASE_MAP_OWNER_ZONE 1815
+#define COL_DVM_BASE_MAP_COMMENT 1816
+#define COL_DVM_BASE_MAP_CREATE_TIME 1817
+#define COL_DVM_BASE_MAP_MODIFY_TIME 1818
 
 /* R_RULE_FNM (Function Name Mapping) */
-#define COL_FNM_ID            1900
-#define COL_FNM_VERSION       1901
-#define COL_FNM_BASE_NAME     1902
+#define COL_FNM_ID 1900
+#define COL_FNM_VERSION 1901
+#define COL_FNM_BASE_NAME 1902
 #define COL_FNM_EXT_FUNC_NAME 1903
 #define COL_FNM_INT_FUNC_NAME 1904
-#define COL_FNM_STATUS        1905
-#define COL_FNM_OWNER_NAME    1906
-#define COL_FNM_OWNER_ZONE    1907
-#define COL_FNM_COMMENT       1908
-#define COL_FNM_CREATE_TIME   1909
-#define COL_FNM_MODIFY_TIME   1910
+#define COL_FNM_STATUS 1905
+#define COL_FNM_OWNER_NAME 1906
+#define COL_FNM_OWNER_ZONE 1907
+#define COL_FNM_COMMENT 1908
+#define COL_FNM_CREATE_TIME 1909
+#define COL_FNM_MODIFY_TIME 1910
 
 /* R_RULE_FNM_MAP (for storing versions of the rules */
-#define COL_FNM_BASE_MAP_VERSION      1911
-#define COL_FNM_BASE_MAP_BASE_NAME    1912
-#define COL_FNM_BASE_MAP_OWNER_NAME   1913
-#define COL_FNM_BASE_MAP_OWNER_ZONE   1914
-#define COL_FNM_BASE_MAP_COMMENT      1915
-#define COL_FNM_BASE_MAP_CREATE_TIME  1916
-#define COL_FNM_BASE_MAP_MODIFY_TIME  1917
+#define COL_FNM_BASE_MAP_VERSION 1911
+#define COL_FNM_BASE_MAP_BASE_NAME 1912
+#define COL_FNM_BASE_MAP_OWNER_NAME 1913
+#define COL_FNM_BASE_MAP_OWNER_ZONE 1914
+#define COL_FNM_BASE_MAP_COMMENT 1915
+#define COL_FNM_BASE_MAP_CREATE_TIME 1916
+#define COL_FNM_BASE_MAP_MODIFY_TIME 1917
 
 /* R_QUOTA_MAIN */
-#define COL_QUOTA_USER_ID     2000
-#define COL_QUOTA_RESC_ID     2001
-#define COL_QUOTA_LIMIT       2002
-#define COL_QUOTA_OVER        2003
+#define COL_QUOTA_USER_ID 2000
+#define COL_QUOTA_RESC_ID 2001
+#define COL_QUOTA_LIMIT 2002
+#define COL_QUOTA_OVER 2003
 #define COL_QUOTA_MODIFY_TIME 2004
 
 /* R_QUOTA_USAGE */
-#define COL_QUOTA_USAGE_USER_ID     2010
-#define COL_QUOTA_USAGE_RESC_ID     2011
-#define COL_QUOTA_USAGE             2012
+#define COL_QUOTA_USAGE_USER_ID 2010
+#define COL_QUOTA_USAGE_RESC_ID 2011
+#define COL_QUOTA_USAGE 2012
 #define COL_QUOTA_USAGE_MODIFY_TIME 2013
 
 /* For use with quotas */
-#define COL_QUOTA_RESC_NAME  2020
-#define COL_QUOTA_USER_NAME  2021
-#define COL_QUOTA_USER_ZONE  2022
-#define COL_QUOTA_USER_TYPE  2023
+#define COL_QUOTA_RESC_NAME 2020
+#define COL_QUOTA_USER_NAME 2021
+#define COL_QUOTA_USER_ZONE 2022
+#define COL_QUOTA_USER_TYPE 2023
 
 #define COL_MSRVC_ID 2100
 #define COL_MSRVC_NAME 2101

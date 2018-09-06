@@ -5,6 +5,6 @@
 #include "objInfo.h"
 #include "fileRead.h"
 
-int rsStreamRead( rsComm_t *rsComm, fileReadInp_t *streamReadInp, bytesBuf_t *streamReadOutBBuf );
+int rsStreamRead(rsComm_t* rsComm, fileReadInp_t* streamReadInp, bytesBuf_t* streamReadOutBBuf);
 
 #endif

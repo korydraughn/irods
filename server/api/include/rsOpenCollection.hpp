@@ -4,6 +4,6 @@
 #include "rodsConnect.h"
 #include "dataObjInpOut.h"
 
-int rsOpenCollection( rsComm_t *rsComm, collInp_t *openCollInp );
+int rsOpenCollection(rsComm_t* rsComm, collInp_t* openCollInp);
 
 #endif

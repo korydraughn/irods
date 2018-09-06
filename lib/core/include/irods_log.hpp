@@ -11,11 +11,12 @@
 #include <time.h>
 #include <sys/time.h>
 
-namespace irods {
-    void log( const error& );
-    void log( int, const std::string& );
-    void log( int, const char* );
+namespace irods
+{
+    void log(const error&);
+    void log(int, const std::string&);
+    void log(int, const char*);
     void log(const irods::exception& e);
-}
+} // namespace irods
 
 #endif // __IRODS_LOG_HPP__

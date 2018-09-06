@@ -9,6 +9,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcIESClientHints(rcComm_t* server_comm_ptr, bytesBuf_t** json_response);
+    int
+    rcIESClientHints(rcComm_t* server_comm_ptr, bytesBuf_t** json_response);
 
 #endif

@@ -6,7 +6,6 @@
 #include "dataObjCopy.h"
 #include "objInfo.h"
 
-
 /* prototype for the client call */
 /* rcDataObjRename - Rename a iRODS data object or collection.
  * Input -
@@ -26,6 +25,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjRename( rcComm_t *conn, dataObjCopyInp_t *dataObjRenameInp );
+    int
+    rcDataObjRename(rcComm_t* conn, dataObjCopyInp_t* dataObjRenameInp);
 
 #endif

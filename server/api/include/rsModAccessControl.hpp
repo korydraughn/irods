@@ -4,7 +4,7 @@
 #include "rodsConnect.h"
 #include "modAccessControl.h"
 
-int rsModAccessControl( rsComm_t *rsComm, modAccessControlInp_t *modAccessControlInp );
-int _rsModAccessControl( rsComm_t *rsComm, modAccessControlInp_t *modAccessControlInp );
+int rsModAccessControl(rsComm_t* rsComm, modAccessControlInp_t* modAccessControlInp);
+int _rsModAccessControl(rsComm_t* rsComm, modAccessControlInp_t* modAccessControlInp);
 
 #endif

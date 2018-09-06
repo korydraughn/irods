@@ -1,7 +1,6 @@
 /* For copyright information please refer to files in the COPYRIGHT directory
  */
 
-
 #ifndef RECONSTANTS_HPP
 #define RECONSTANTS_HPP
 
@@ -31,7 +30,7 @@
 #define MAX_PREC 20
 #define MIN_PREC 0
 
-#define POINTER_BUF_SIZE (16*1024)
+#define POINTER_BUF_SIZE (16 * 1024)
 
 #define RULE_ENGINE_INIT_CACHE 0
 #define RULE_ENGINE_TRY_CACHE 1

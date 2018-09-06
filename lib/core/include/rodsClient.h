@@ -4,8 +4,6 @@
 /* rodsClient.h - common header file for rods client
  */
 
-
-
 #ifndef RODS_CLIENT_H__
 #define RODS_CLIENT_H__
 
@@ -13,7 +11,8 @@
 #include "apiHeaderAll.h"
 
 /* Struct used to monitor transfer progress in getUtil and putUtil functions.*/
-typedef struct TransferProgress {
+typedef struct TransferProgress
+{
     rodsLong_t bytesReceived;
     rodsLong_t bytesExpected;
     char currentFilePath[MAX_NAME_LEN];
@@ -21,4 +20,4 @@ typedef struct TransferProgress {
 
 void init_client_api_table(void);
 
-#endif  /* RODS_CLIENT_H__ */
+#endif /* RODS_CLIENT_H__ */

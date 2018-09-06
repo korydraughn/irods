@@ -3,15 +3,10 @@
 
 #include "rodsConnect.h"
 
-int
-initAndClearProcLog();
-int
-initProcLog();
-int
-logAgentProc( rsComm_t* );
-int
-readProcLog( int pid, procLog_t *procLog );
-int
-rmProcLog( int pid );
+int initAndClearProcLog();
+int initProcLog();
+int logAgentProc(rsComm_t*);
+int readProcLog(int pid, procLog_t* procLog);
+int rmProcLog(int pid);
 
-#endif //PROC_LOG_H
+#endif // PROC_LOG_H

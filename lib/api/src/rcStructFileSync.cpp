@@ -18,12 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcStructFileSync( rcComm_t *conn, structFileOprInp_t *structFileOprInp ) {
+ **/
+int rcStructFileSync(rcComm_t* conn, structFileOprInp_t* structFileOprInp)
+{
     int status;
-    status = procApiRequest( conn, STRUCT_FILE_SYNC_AN, structFileOprInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, STRUCT_FILE_SYNC_AN, structFileOprInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

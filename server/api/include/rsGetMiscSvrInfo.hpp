@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "getMiscSvrInfo.h"
 
-int rsGetMiscSvrInfo( rsComm_t *rsComm, miscSvrInfo_t **outSvrInfo );
+int rsGetMiscSvrInfo(rsComm_t* rsComm, miscSvrInfo_t** outSvrInfo);
 
 #endif

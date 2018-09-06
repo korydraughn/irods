@@ -5,6 +5,6 @@
 #include "rcConnect.h"
 #include "subStructFileRead.h"
 
-int rcSubStructFileReaddir( rcComm_t *conn, subStructFileFdOprInp_t *subStructFileReaddirInp, rodsDirent_t **rodsDirent );
+int rcSubStructFileReaddir(rcComm_t* conn, subStructFileFdOprInp_t* subStructFileReaddirInp, rodsDirent_t** rodsDirent);
 
 #endif

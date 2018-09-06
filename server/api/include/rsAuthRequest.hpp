@@ -3,8 +3,7 @@
 
 #include "authRequest.h"
 
-int rsAuthRequest( rsComm_t *rsComm, authRequestOut_t **authRequestOut );
-char * _rsAuthRequestGetChallenge();
-
+int rsAuthRequest(rsComm_t* rsComm, authRequestOut_t** authRequestOut);
+char* _rsAuthRequestGetChallenge();
 
 #endif

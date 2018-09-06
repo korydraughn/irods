@@ -37,11 +37,10 @@
  * \post none
  * \sa none
  **/
-int
-rcGeneralUpdate( rcComm_t *conn, generalUpdateInp_t *generalUpdateInp ) {
+int rcGeneralUpdate(rcComm_t* conn, generalUpdateInp_t* generalUpdateInp)
+{
     int status;
-    status = procApiRequest( conn, GENERAL_UPDATE_AN, generalUpdateInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, GENERAL_UPDATE_AN, generalUpdateInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

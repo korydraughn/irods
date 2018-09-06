@@ -36,12 +36,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcModAVUMetadata( rcComm_t *conn, modAVUMetadataInp_t *modAVUMetadataInp ) {
+ **/
+int rcModAVUMetadata(rcComm_t* conn, modAVUMetadataInp_t* modAVUMetadataInp)
+{
     int status;
-    status = procApiRequest( conn, MOD_AVU_METADATA_AN, modAVUMetadataInp,
-                             NULL, ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, MOD_AVU_METADATA_AN, modAVUMetadataInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

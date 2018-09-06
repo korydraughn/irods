@@ -5,6 +5,6 @@
 #include "dataObjClose.h"
 #include "getHostForGet.h"
 
-int rsGetHostForGet( rsComm_t *rsComm, dataObjInp_t *dataObjInp, char **outHost );
+int rsGetHostForGet(rsComm_t* rsComm, dataObjInp_t* dataObjInp, char** outHost);
 
 #endif

@@ -4,9 +4,8 @@
 #include "rodsConnect.h"
 #include "fileOpen.h"
 
-
-int rsFileTruncate( rsComm_t *rsComm, fileOpenInp_t *fileTruncateInp );
-int _rsFileTruncate( rsComm_t *rsComm, fileOpenInp_t *fileTruncateInp );
-int remoteFileTruncate( rsComm_t *rsComm, fileOpenInp_t *fileTruncateInp, rodsServerHost_t *rodsServerHost );
+int rsFileTruncate(rsComm_t* rsComm, fileOpenInp_t* fileTruncateInp);
+int _rsFileTruncate(rsComm_t* rsComm, fileOpenInp_t* fileTruncateInp);
+int remoteFileTruncate(rsComm_t* rsComm, fileOpenInp_t* fileTruncateInp, rodsServerHost_t* rodsServerHost);
 
 #endif

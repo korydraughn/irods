@@ -10,33 +10,33 @@
 #ifndef RE_DEFINES_H__
 #define RE_DEFINES_H__
 
-#define MAX_NUM_OF_RULES  2048
-#define MAX_NUM_OF_DVARS  2048
-#define MAX_NUM_OF_FMAPS  2048
+#define MAX_NUM_OF_RULES 2048
+#define MAX_NUM_OF_DVARS 2048
+#define MAX_NUM_OF_FMAPS 2048
 #define MAX_NUM_OF_MSRVCS 2048
-#define MAX_COND_LEN      MAX_NAME_LEN
-#define MAX_OPER_LEN       NAME_LEN
-#define MAX_RULE_LENGTH   MAX_NAME_LEN * 4
-#define MAX_DVAR_LENGTH   MAX_NAME_LEN * 4
-#define MAX_FMAP_LENGTH   MAX_NAME_LEN * 4
-#define MAX_ACTION_SIZE    MAX_NAME_LEN * 5
-#define MAX_ACTION_IN_RULE  100
-#define MAX_ERROR_STRING  MAX_NAME_LEN
-#define RETESTFLAG        "RETESTFLAG"
-#define RULE_SET_DEF_LENGTH  10*MAX_NAME_LEN
-#define RELOOPBACKFLAG        "RELOOPBACKFLAG"
-#define GLOBALREDEBUGFLAG  "GLOBALREDEBUGFLAG"
-#define GLOBALREAUDITFLAG  "GLOBALREAUDITFLAG"
+#define MAX_COND_LEN MAX_NAME_LEN
+#define MAX_OPER_LEN NAME_LEN
+#define MAX_RULE_LENGTH MAX_NAME_LEN * 4
+#define MAX_DVAR_LENGTH MAX_NAME_LEN * 4
+#define MAX_FMAP_LENGTH MAX_NAME_LEN * 4
+#define MAX_ACTION_SIZE MAX_NAME_LEN * 5
+#define MAX_ACTION_IN_RULE 100
+#define MAX_ERROR_STRING MAX_NAME_LEN
+#define RETESTFLAG "RETESTFLAG"
+#define RULE_SET_DEF_LENGTH 10 * MAX_NAME_LEN
+#define RELOOPBACKFLAG "RELOOPBACKFLAG"
+#define GLOBALREDEBUGFLAG "GLOBALREDEBUGFLAG"
+#define GLOBALREAUDITFLAG "GLOBALREAUDITFLAG"
 /** Flags for testing the Rule Execution **/
-#define LOG_TEST_1             1
-#define HTML_TEST_1            2
-#define COMMAND_TEST_1         3
-#define HTML_TEST_MSI          4
-#define COMMAND_TEST_MSI       5
-#define LOOP_BACK_1            1
-#define LOG_TEST_2            10
+#define LOG_TEST_1 1
+#define HTML_TEST_1 2
+#define COMMAND_TEST_1 3
+#define HTML_TEST_MSI 4
+#define COMMAND_TEST_MSI 5
+#define LOOP_BACK_1 1
+#define LOG_TEST_2 10
 
-#define REDEBUG_NEXT   1
+#define REDEBUG_NEXT 1
 #define REDEBUG_CONTINUE 2
 #define REDEBUG_STOP 3
 #define REDEBUG_STEP 4
@@ -47,7 +47,6 @@
 #define REDEBUG_STEP_OUT 22
 #define REDEBUG_STEP_CONTINUE 23
 
-
 #define REDEBUG_STACK_SIZE_FULL 2000
 #define REDEBUG_STACK_SIZE_CURR 1000
 
@@ -55,8 +54,9 @@
 
 /* Macro for the Re  Test Stub */
 
-#define RE_TEST_MACRO(msg) if(0){};
-
+#define RE_TEST_MACRO(msg)                                                                                             \
+    if (0) {                                                                                                           \
+    };
 
 /*
 #define RE_TEST_MACRO(msg)      \

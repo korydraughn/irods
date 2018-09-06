@@ -18,6 +18,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcModColl( rcComm_t *conn, collInp_t *modCollInp );
+    int
+    rcModColl(rcComm_t* conn, collInp_t* modCollInp);
 
 #endif

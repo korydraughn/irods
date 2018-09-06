@@ -4,9 +4,15 @@
 #include "rodsConnect.h"
 #include "fileGetFsFreeSpace.h"
 
-
-int rsFileGetFsFreeSpace( rsComm_t *rsComm, fileGetFsFreeSpaceInp_t *fileGetFsFreeSpaceInp, fileGetFsFreeSpaceOut_t **fileGetFsFreeSpaceOut );
-int _rsFileGetFsFreeSpace( rsComm_t *rsComm, fileGetFsFreeSpaceInp_t *fileGetFsFreeSpaceInp, fileGetFsFreeSpaceOut_t **fileGetFsFreeSpaceOut );
-int remoteFileGetFsFreeSpace( rsComm_t *rsComm, fileGetFsFreeSpaceInp_t *fileGetFsFreeSpaceInp, fileGetFsFreeSpaceOut_t **fileGetFsFreeSpaceOut, rodsServerHost_t *rodsServerHost );
+int rsFileGetFsFreeSpace(rsComm_t* rsComm,
+                         fileGetFsFreeSpaceInp_t* fileGetFsFreeSpaceInp,
+                         fileGetFsFreeSpaceOut_t** fileGetFsFreeSpaceOut);
+int _rsFileGetFsFreeSpace(rsComm_t* rsComm,
+                          fileGetFsFreeSpaceInp_t* fileGetFsFreeSpaceInp,
+                          fileGetFsFreeSpaceOut_t** fileGetFsFreeSpaceOut);
+int remoteFileGetFsFreeSpace(rsComm_t* rsComm,
+                             fileGetFsFreeSpaceInp_t* fileGetFsFreeSpaceInp,
+                             fileGetFsFreeSpaceOut_t** fileGetFsFreeSpaceOut,
+                             rodsServerHost_t* rodsServerHost);
 
 #endif

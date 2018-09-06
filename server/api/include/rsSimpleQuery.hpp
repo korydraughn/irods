@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "simpleQuery.h"
 
-int rsSimpleQuery( rsComm_t *rsComm, simpleQueryInp_t *simpleQueryInp, simpleQueryOut_t **simpleQueryOut );
-int _rsSimpleQuery( rsComm_t *rsComm, simpleQueryInp_t *simpleQueryInp, simpleQueryOut_t **simpleQueryOut );
+int rsSimpleQuery(rsComm_t* rsComm, simpleQueryInp_t* simpleQueryInp, simpleQueryOut_t** simpleQueryOut);
+int _rsSimpleQuery(rsComm_t* rsComm, simpleQueryInp_t* simpleQueryInp, simpleQueryOut_t** simpleQueryOut);
 
 #endif

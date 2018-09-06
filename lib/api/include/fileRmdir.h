@@ -5,9 +5,10 @@
 #include "rcConnect.h"
 
 // definition for flags of fileRmdirInp_t
-#define RMDIR_RECUR     0x1
+#define RMDIR_RECUR 0x1
 
-typedef struct {
+typedef struct
+{
     int flags;
     rodsHostAddr_t addr;
     char dirName[MAX_NAME_LEN];
@@ -19,6 +20,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileRmdir( rcComm_t *conn, fileRmdirInp_t *fileRmdirInp );
+    int
+    rcFileRmdir(rcComm_t* conn, fileRmdirInp_t* fileRmdirInp);
 
 #endif

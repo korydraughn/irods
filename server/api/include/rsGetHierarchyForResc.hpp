@@ -3,6 +3,8 @@
 
 #include "getHierarchyForResc.h"
 
-int rsGetHierarchyForResc(rsComm_t* server_comm_ptr, getHierarchyForRescInp_t* incoming_resc_name, getHierarchyForRescOut_t** full_hier_to_resc);
+int rsGetHierarchyForResc(rsComm_t* server_comm_ptr,
+                          getHierarchyForRescInp_t* incoming_resc_name,
+                          getHierarchyForRescOut_t** full_hier_to_resc);
 
 #endif

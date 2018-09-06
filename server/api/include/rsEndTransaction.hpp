@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "endTransaction.h"
 
-int rsEndTransaction( rsComm_t *rsComm, endTransactionInp_t *endTransactionInp );
-int _rsEndTransaction( rsComm_t *rsComm, endTransactionInp_t *endTransactionInp );
+int rsEndTransaction(rsComm_t* rsComm, endTransactionInp_t* endTransactionInp);
+int _rsEndTransaction(rsComm_t* rsComm, endTransactionInp_t* endTransactionInp);
 
 #endif

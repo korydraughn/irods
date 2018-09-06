@@ -8,7 +8,8 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcCollRepl( rcComm_t *conn, collInp_t *collReplInp, int vFlag );
-int _rcCollRepl( rcComm_t *conn, collInp_t *collReplInp, collOprStat_t **collOprStat );
+    int
+    rcCollRepl(rcComm_t* conn, collInp_t* collReplInp, int vFlag);
+int _rcCollRepl(rcComm_t* conn, collInp_t* collReplInp, collOprStat_t** collOprStat);
 
 #endif

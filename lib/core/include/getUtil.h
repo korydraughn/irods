@@ -10,26 +10,32 @@
 #include "rodsPath.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-int
-getUtil( rcComm_t **myConn, rodsEnv *myEnv, rodsArguments_t *myRodsArgs,
-         rodsPathInp_t *rodsPathInp );
-int
-getDataObjUtil( rcComm_t *conn, char *srcPath, char *targPath,
-                rodsLong_t srcSize, uint dataMode,
-                rodsArguments_t *rodsArgs, dataObjInp_t *dataObjOprInp );
+    int getUtil(rcComm_t** myConn, rodsEnv* myEnv, rodsArguments_t* myRodsArgs, rodsPathInp_t* rodsPathInp);
+    int getDataObjUtil(rcComm_t* conn,
+                       char* srcPath,
+                       char* targPath,
+                       rodsLong_t srcSize,
+                       uint dataMode,
+                       rodsArguments_t* rodsArgs,
+                       dataObjInp_t* dataObjOprInp);
 
-int
-initCondForGet( rcComm_t *conn, rodsArguments_t *rodsArgs,
-                dataObjInp_t *dataObjOprInp, rodsRestart_t *rodsRestart );
+    int initCondForGet(rcComm_t* conn,
+                       rodsArguments_t* rodsArgs,
+                       dataObjInp_t* dataObjOprInp,
+                       rodsRestart_t* rodsRestart);
 
-int
-getCollUtil( rcComm_t **myConn, char *srcColl, char *targDir,
-             rodsEnv *myRodsEnv, rodsArguments_t *rodsArgs, dataObjInp_t *dataObjOprInp,
-             rodsRestart_t *rodsRestart );
+    int getCollUtil(rcComm_t** myConn,
+                    char* srcColl,
+                    char* targDir,
+                    rodsEnv* myRodsEnv,
+                    rodsArguments_t* rodsArgs,
+                    dataObjInp_t* dataObjOprInp,
+                    rodsRestart_t* rodsRestart);
 
 #ifdef __cplusplus
 }
 #endif
-#endif	// GET_UTIL_H__
+#endif // GET_UTIL_H__

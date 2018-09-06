@@ -4,9 +4,9 @@
 #include "rcConnect.h"
 #include "dataObjInpOut.h"
 
-#define DEF_MIN_COPY_CNT        2
+#define DEF_MIN_COPY_CNT 2
 
-int rsDataObjTrim( rsComm_t *rsComm, dataObjInp_t *dataObjInp );
-int trimDataObjInfo( rsComm_t *rsComm, dataObjInfo_t *dataObjInfo );
+int rsDataObjTrim(rsComm_t* rsComm, dataObjInp_t* dataObjInp);
+int trimDataObjInfo(rsComm_t* rsComm, dataObjInfo_t* dataObjInfo);
 
 #endif

@@ -10,15 +10,14 @@
 #include "rodsPath.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-int
-bunUtil( rcComm_t *conn, rodsEnv *myRodsEnv, rodsArguments_t *myRodsArgs,
-         rodsPathInp_t *rodsPathInp );
-int
-initCondForBunOpr( rodsEnv *myRodsEnv, rodsArguments_t *rodsArgs,
-                   structFileExtAndRegInp_t *structFileExtAndRegInp );
+    int bunUtil(rcComm_t* conn, rodsEnv* myRodsEnv, rodsArguments_t* myRodsArgs, rodsPathInp_t* rodsPathInp);
+    int initCondForBunOpr(rodsEnv* myRodsEnv,
+                          rodsArguments_t* rodsArgs,
+                          structFileExtAndRegInp_t* structFileExtAndRegInp);
 #ifdef __cplusplus
 }
 #endif
-#endif	// BUN_UTIL_H__
+#endif // BUN_UTIL_H__

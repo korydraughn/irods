@@ -3,7 +3,8 @@
 
 #include "rcConnect.h"
 
-typedef struct FileCloseInp {
+typedef struct FileCloseInp
+{
     int fileInx;
     char in_pdmo[MAX_NAME_LEN];
 } fileCloseInp_t;
@@ -13,6 +14,7 @@ typedef struct FileCloseInp {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileClose( rcComm_t *conn, fileCloseInp_t *fileCloseInp );
+    int
+    rcFileClose(rcComm_t* conn, fileCloseInp_t* fileCloseInp);
 
 #endif

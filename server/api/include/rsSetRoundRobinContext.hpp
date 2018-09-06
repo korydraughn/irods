@@ -5,6 +5,6 @@
 #include "rcConnect.h"
 #include "set_round_robin_context.h"
 
-int rsSetRoundRobinContext(rsComm_t*,setRoundRobinContextInp_t*);
+int rsSetRoundRobinContext(rsComm_t*, setRoundRobinContextInp_t*);
 
 #endif

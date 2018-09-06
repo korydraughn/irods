@@ -11,7 +11,8 @@
 #define True 1
 #define False 0
 
-typedef struct {
+typedef struct
+{
     int add; // JMC - backport 4643
     int age;
     int agevalue;
@@ -23,13 +24,13 @@ typedef struct {
     int ascitime;
     int attr;
     int noattr;
-    char *attrStr;
+    char* attrStr;
     int bulk;
     int backupMode;
     int condition;
-    char *conditionString;
+    char* conditionString;
     int collection;
-    char *collectionString;
+    char* collectionString;
     int dataObjects;
     int dim;
     int dryrun;
@@ -37,86 +38,86 @@ typedef struct {
     int empty; // JMC - backport 4552
     int force;
     int file;
-    char *fileString;
+    char* fileString;
     int global;
     int rescGroup;
-    char *rescGroupString;
+    char* rescGroupString;
     int hash;
-    char *hashValue;
+    char* hashValue;
     int header;
     int help;
     int hostAddr;
-    char *hostAddrString;
+    char* hostAddrString;
     int input;
     int redirectConn;
     int checksum;
     int verifyChecksum;
     int dataType;
-    char *dataTypeString;
+    char* dataTypeString;
     int longOption;
     int link;
     int rlock; // JMC - backport 4604
     int wlock; // JMC - backport 4604
     int veryLongOption;
     int mountCollection;
-    char *mountType;
+    char* mountType;
     int replNum;
-    char *replNumValue;
+    char* replNumValue;
     int newFlag;
-    char *startTimeInxStr;
+    char* startTimeInxStr;
     int noPage;
     int number;
     int numberValue;
     int physicalPath;
-    char *physicalPathString;
+    char* physicalPathString;
     int logicalPath;
-    char *logicalPathString;
+    char* logicalPathString;
     int progressFlag;
     int option;
-    char *optionString;
+    char* optionString;
     int orphan;
     int purgeCache; // JMC - backport 4537
-    int bundle; // JMC - backport 4536
+    int bundle;     // JMC - backport 4536
     int prompt;
     int query;
-    char *queryStr;
+    char* queryStr;
     int rbudp;
     int reg;
     int recursive;
     int resource;
-    char *resourceString;
+    char* resourceString;
     int remove;
     int showFirstLine;
     int sizeFlag;
     rodsLong_t size;
     int srcResc;
-    char *srcRescString;
+    char* srcRescString;
     int subset;
     int subsetByVal;
-    char *subsetStr;
+    char* subsetStr;
     int test;
     int ticket;
-    char *ticketString;
+    char* ticketString;
     int tree;
     int ttl;
     int ttlValue;
     int reconnect;
     int user;
-    char *userString;
+    char* userString;
     int unmount;
     int verbose;
     int veryVerbose;
     int writeFlag;
     int zone;
-    char *zoneName;
+    char* zoneName;
     int verify;
     int var;
-    char *varStr;
+    char* varStr;
     int extract;
     int restart;
-    char *restartFileString;
+    char* restartFileString;
     int lfrestart;
-    char *lfrestartFileString;
+    char* lfrestartFileString;
     int version;
     int retries;
     int retriesValue;
@@ -127,10 +128,10 @@ typedef struct {
     int masterIcat;
     int silent;
     int sql;
-    int optind;  /* index into argv where non-recognized options begin */
+    int optind; /* index into argv where non-recognized options begin */
 
     int excludeFile;
-    char *excludeFileString;
+    char* excludeFileString;
 
     // =-=-=-=-=-=-=-
     // atomic metadata put &
@@ -143,12 +144,11 @@ typedef struct {
 } rodsArguments_t;
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-int
-parseCmdLineOpt( int argc, char **argv, const char *optString, int includeLong,
-                 rodsArguments_t *rodsArgs );
+    int parseCmdLineOpt(int argc, char** argv, const char* optString, int includeLong, rodsArguments_t* rodsArgs);
 
 #ifdef __cplusplus
 }

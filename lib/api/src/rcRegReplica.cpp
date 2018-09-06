@@ -18,9 +18,9 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcRegReplica( rcComm_t *conn, regReplica_t *regReplicaInp ) {
+ **/
+int rcRegReplica(rcComm_t* conn, regReplica_t* regReplicaInp)
+{
     int status;
     dataObjInfo_t *srcNext, *destNext;
 
@@ -29,8 +29,7 @@ rcRegReplica( rcComm_t *conn, regReplica_t *regReplicaInp ) {
     destNext = regReplicaInp->destDataObjInfo->next;
     regReplicaInp->srcDataObjInfo->next = NULL;
     regReplicaInp->destDataObjInfo->next = NULL;
-    status = procApiRequest( conn, REG_REPLICA_AN, regReplicaInp, NULL,
-                             ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, REG_REPLICA_AN, regReplicaInp, NULL, (void**) NULL, NULL);
     regReplicaInp->srcDataObjInfo->next = srcNext;
     regReplicaInp->destDataObjInfo->next = destNext;
 

@@ -4,8 +4,8 @@
 #include "rodsConnect.h"
 #include "rodsDef.h"
 
-int rsFileMkdir( rsComm_t *rsComm, fileMkdirInp_t *fileMkdirInp );
-int _rsFileMkdir( rsComm_t *rsComm, fileMkdirInp_t *fileMkdirInp );
-int remoteFileMkdir( rsComm_t *rsComm, fileMkdirInp_t *fileMkdirInp, rodsServerHost_t *rodsServerHost );
+int rsFileMkdir(rsComm_t* rsComm, fileMkdirInp_t* fileMkdirInp);
+int _rsFileMkdir(rsComm_t* rsComm, fileMkdirInp_t* fileMkdirInp);
+int remoteFileMkdir(rsComm_t* rsComm, fileMkdirInp_t* fileMkdirInp, rodsServerHost_t* rodsServerHost);
 
 #endif

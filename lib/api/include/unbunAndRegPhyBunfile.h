@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "dataObjInpOut.h"
 
-#define UNLINK_FILE_AGE                7200  // delete files younger than this
+#define UNLINK_FILE_AGE 7200 // delete files younger than this
 
 /* prototype for the client call */
 /* rcUnbunAndRegPhyBunfile - Unbundle a physical bundle file specified by
@@ -22,6 +22,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcUnbunAndRegPhyBunfile( rcComm_t *conn, dataObjInp_t *dataObjInp );
+    int
+    rcUnbunAndRegPhyBunfile(rcComm_t* conn, dataObjInp_t* dataObjInp);
 
 #endif

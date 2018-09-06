@@ -5,6 +5,6 @@
 #include "rcConnect.h"
 #include "bulkDataObjPut.h"
 
-int rsBulkDataObjPut(rsComm_t *rsComm, bulkOprInp_t *bulkOprInp, bytesBuf_t *bulkOprInpBBuf);
+int rsBulkDataObjPut(rsComm_t* rsComm, bulkOprInp_t* bulkOprInp, bytesBuf_t* bulkOprInpBBuf);
 
 #endif

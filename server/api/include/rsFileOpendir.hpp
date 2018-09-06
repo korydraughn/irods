@@ -4,8 +4,8 @@
 #include "rodsConnect.h"
 #include "fileOpendir.h"
 
-int rsFileOpendir( rsComm_t *rsComm, fileOpendirInp_t *fileOpendirInp );
-int _rsFileOpendir( rsComm_t *rsComm, fileOpendirInp_t *fileOpendirInp, void **dirPtr );
-int remoteFileOpendir( rsComm_t *rsComm, fileOpendirInp_t *fileOpendirInp, rodsServerHost_t *rodsServerHost );
+int rsFileOpendir(rsComm_t* rsComm, fileOpendirInp_t* fileOpendirInp);
+int _rsFileOpendir(rsComm_t* rsComm, fileOpendirInp_t* fileOpendirInp, void** dirPtr);
+int remoteFileOpendir(rsComm_t* rsComm, fileOpendirInp_t* fileOpendirInp, rodsServerHost_t* rodsServerHost);
 
 #endif

@@ -12,15 +12,17 @@
 #include "rodsDef.h"
 #include "rcConnect.h"
 
-#define TMP_PHY_BUN_DIR         "tmpPhyBunDir"
+#define TMP_PHY_BUN_DIR "tmpPhyBunDir"
 
-typedef struct {
+typedef struct
+{
     char objPath[MAX_NAME_LEN];
-    genQueryOut_t attriArray;   /* arrays of attrib - chksum */
+    genQueryOut_t attriArray; /* arrays of attrib - chksum */
     keyValPair_t condInput;   /* include chksum flag and value */
 } bulkOprInp_t;
 
-typedef struct RenamedPhyFiles {
+typedef struct RenamedPhyFiles
+{
     int count;
     char objPath[MAX_NUM_BULK_OPR_FILES][MAX_NAME_LEN];
     char origFilePath[MAX_NUM_BULK_OPR_FILES][MAX_NAME_LEN];
@@ -28,7 +30,6 @@ typedef struct RenamedPhyFiles {
 } renamedPhyFiles_t;
 
 #define BulkOprInp_PI "str objPath[MAX_NAME_LEN]; struct GenQueryOut_PI; struct KeyValPair_PI;"
-
 
 /* prototype for the client call */
 /* rcBulkDataObjPut - Bulk Put (upload) a number of local files to iRODS.
@@ -44,10 +45,10 @@ typedef struct RenamedPhyFiles {
  *   return value - The status of the operation.
  */
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcBulkDataObjPut( rcComm_t *conn, bulkOprInp_t *bulkOprInp, bytesBuf_t *bulkOprInpBBuf );
+    int
+    rcBulkDataObjPut(rcComm_t* conn, bulkOprInp_t* bulkOprInp, bytesBuf_t* bulkOprInpBBuf);
 
-#endif  // BULK_DATA_OBJ_PUT_H__
+#endif // BULK_DATA_OBJ_PUT_H__

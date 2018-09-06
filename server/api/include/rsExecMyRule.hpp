@@ -6,7 +6,10 @@
 #include "rcConnect.h"
 #include "execMyRule.h"
 
-int rsExecMyRule( rsComm_t *rsComm, execMyRuleInp_t *execMyRuleInp, msParamArray_t **outParamArray );
-int remoteExecMyRule( rsComm_t *rsComm, execMyRuleInp_t *execMyRuleInp, msParamArray_t **outParamArray, rodsServerHost_t *rodsServerHost );
+int rsExecMyRule(rsComm_t* rsComm, execMyRuleInp_t* execMyRuleInp, msParamArray_t** outParamArray);
+int remoteExecMyRule(rsComm_t* rsComm,
+                     execMyRuleInp_t* execMyRuleInp,
+                     msParamArray_t** outParamArray,
+                     rodsServerHost_t* rodsServerHost);
 
 #endif

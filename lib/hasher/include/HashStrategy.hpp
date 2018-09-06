@@ -5,18 +5,18 @@
 #include <string>
 #include <boost/any.hpp>
 
-namespace irods {
+namespace irods
+{
+    class HashStrategy
+    {
+    public:
+        virtual ~HashStrategy(){};
 
-    class HashStrategy {
-        public:
-
-            virtual ~HashStrategy() {};
-
-            virtual std::string name() const = 0;
-            virtual error init( boost::any& context ) const = 0;
-            virtual error update( const std::string&, boost::any& context ) const = 0;
-            virtual error digest( std::string& messageDigest, boost::any& context ) const = 0;
-            virtual bool isChecksum( const std::string& ) const = 0;
+        virtual std::string name() const = 0;
+        virtual error init(boost::any& context) const = 0;
+        virtual error update(const std::string&, boost::any& context) const = 0;
+        virtual error digest(std::string& messageDigest, boost::any& context) const = 0;
+        virtual bool isChecksum(const std::string&) const = 0;
     };
 }; // namespace irods
 

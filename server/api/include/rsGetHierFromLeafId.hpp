@@ -3,7 +3,6 @@
 
 #include "get_hier_from_leaf_id.h"
 
-int rsGetHierFromLeafId(rsComm_t*,get_hier_inp_t*,get_hier_out_t**);
-
+int rsGetHierFromLeafId(rsComm_t*, get_hier_inp_t*, get_hier_out_t**);
 
 #endif

@@ -15,19 +15,17 @@
 // irods includes
 #include "rcConnect.h"
 
-namespace irods {
-// =-=-=-=-=-=-=-
-// database plugin pointer type
+namespace irods
+{
+    // =-=-=-=-=-=-=-
+    // database plugin pointer type
     class database;
-    typedef boost::shared_ptr< database > database_ptr;
+    typedef boost::shared_ptr<database> database_ptr;
 
-// =-=-=-=-=-=-=-
-// fwd decl of database manager for fco resolve
+    // =-=-=-=-=-=-=-
+    // fwd decl of database manager for fco resolve
     class database_manager;
 
-}; // namespace
+}; // namespace irods
 
 #endif // __IRODS_DATABASE_TYPES_HPP__
-
-
-

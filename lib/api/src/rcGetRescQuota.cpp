@@ -28,13 +28,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcGetRescQuota( rcComm_t *conn, getRescQuotaInp_t *getRescQuotaInp,
-                rescQuota_t **rescQuota ) {
+ **/
+int rcGetRescQuota(rcComm_t* conn, getRescQuotaInp_t* getRescQuotaInp, rescQuota_t** rescQuota)
+{
     int status;
-    status = procApiRequest( conn, GET_RESC_QUOTA_AN,  getRescQuotaInp, NULL,
-                             ( void ** ) rescQuota, NULL );
+    status = procApiRequest(conn, GET_RESC_QUOTA_AN, getRescQuotaInp, NULL, (void**) rescQuota, NULL);
 
     return status;
 }

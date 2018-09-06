@@ -4,9 +4,10 @@
 #include "rcConnect.h"
 #include "dataObjClose.h"
 
-#define MAX_HOST_TO_SEARCH      10
+#define MAX_HOST_TO_SEARCH 10
 
-typedef struct {
+typedef struct
+{
     int numHost;
     int totalCount;
     int count[MAX_HOST_TO_SEARCH];
@@ -15,6 +16,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGetHostForGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char **outHost );
+    int
+    rcGetHostForGet(rcComm_t* conn, dataObjInp_t* dataObjInp, char** outHost);
 
 #endif

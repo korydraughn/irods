@@ -7,5 +7,4 @@
 std::string socket_fd_to_remote_address(const int fd);
 std::vector<int> get_open_socket_file_descriptors(void);
 
-
 #endif

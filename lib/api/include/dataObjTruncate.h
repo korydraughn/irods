@@ -19,6 +19,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjTruncate( rcComm_t *conn, dataObjInp_t *dataObjInp );
+    int
+    rcDataObjTruncate(rcComm_t* conn, dataObjInp_t* dataObjInp);
 
 #endif

@@ -8,6 +8,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcChkNVPathPerm( rcComm_t *conn, fileOpenInp_t *chkNVPathPermInp );
+    int
+    rcChkNVPathPerm(rcComm_t* conn, fileOpenInp_t* chkNVPathPermInp);
 
 #endif

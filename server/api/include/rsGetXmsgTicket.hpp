@@ -4,6 +4,6 @@
 #include "rodsConnect.h"
 #include "rodsXmsg.h"
 
-int rsGetXmsgTicket( rsComm_t *rsComm, getXmsgTicketInp_t *getXmsgTicketInp, xmsgTicketInfo_t **outXmsgTicketInfo );
+int rsGetXmsgTicket(rsComm_t* rsComm, getXmsgTicketInp_t* getXmsgTicketInp, xmsgTicketInfo_t** outXmsgTicketInfo);
 
 #endif

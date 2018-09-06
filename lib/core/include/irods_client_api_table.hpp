@@ -3,7 +3,8 @@
 
 #include "apiHandler.hpp"
 
-namespace irods {
+namespace irods
+{
     api_entry_table& get_client_api_table();
 }
 

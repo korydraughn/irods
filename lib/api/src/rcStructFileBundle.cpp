@@ -18,13 +18,11 @@
  * \pre none
  * \post none
  * \sa none
-**/
-int
-rcStructFileBundle( rcComm_t *conn,
-                    structFileExtAndRegInp_t *structFileBundleInp ) {
+ **/
+int rcStructFileBundle(rcComm_t* conn, structFileExtAndRegInp_t* structFileBundleInp)
+{
     int status;
-    status = procApiRequest( conn, STRUCT_FILE_BUNDLE_AN, structFileBundleInp,
-                             NULL, ( void ** ) NULL, NULL );
+    status = procApiRequest(conn, STRUCT_FILE_BUNDLE_AN, structFileBundleInp, NULL, (void**) NULL, NULL);
 
     return status;
 }

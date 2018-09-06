@@ -4,9 +4,10 @@
 #include "rcConnect.h"
 #include "objInfo.h"
 
-typedef struct {
-    dataObjInfo_t *dataObjInfo;
-    keyValPair_t *condInput;
+typedef struct
+{
+    dataObjInfo_t* dataObjInfo;
+    keyValPair_t* condInput;
 } unregDataObj_t;
 
 #define UnregDataObj_PI "struct *DataObjInfo_PI; struct *KeyValPair_PI;"
@@ -20,6 +21,6 @@ typedef struct {
  *   int status - status of the operation.
  */
 
-int rcUnregDataObj( rcComm_t *conn, unregDataObj_t *unregDataObjInp );
+int rcUnregDataObj(rcComm_t* conn, unregDataObj_t* unregDataObjInp);
 
 #endif

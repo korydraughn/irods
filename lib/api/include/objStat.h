@@ -5,20 +5,20 @@
 #include "rodsType.h"
 
 // rodsObjStat_t - this is similar to rodsStat_t but has minimum set of parameter that are more irods specific
-typedef struct rodsObjStat {
-    rodsLong_t          objSize;        // file size
-    objType_t           objType;        // DATA_OBJ_T or COLL_OBJ_T
-    uint                dataMode;
-    char                dataId[NAME_LEN];
-    char                chksum[NAME_LEN];
-    char                ownerName[NAME_LEN];
-    char                ownerZone[NAME_LEN];
-    char                createTime[TIME_LEN];
-    char                modifyTime[TIME_LEN];
-    specColl_t          *specColl;
-    char                rescHier[MAX_NAME_LEN];
+typedef struct rodsObjStat
+{
+    rodsLong_t objSize; // file size
+    objType_t objType;  // DATA_OBJ_T or COLL_OBJ_T
+    uint dataMode;
+    char dataId[NAME_LEN];
+    char chksum[NAME_LEN];
+    char ownerName[NAME_LEN];
+    char ownerZone[NAME_LEN];
+    char createTime[TIME_LEN];
+    char modifyTime[TIME_LEN];
+    specColl_t* specColl;
+    char rescHier[MAX_NAME_LEN];
 } rodsObjStat_t;
-
 
 /* prototype for the client call */
 /* rcObjStat - get the stat of an object specified by dataObjInp->objPath.
@@ -41,6 +41,7 @@ typedef struct rodsObjStat {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcObjStat( rcComm_t *conn, dataObjInp_t *dataObjInp, rodsObjStat_t **rodsObjStatOut );
+    int
+    rcObjStat(rcComm_t* conn, dataObjInp_t* dataObjInp, rodsObjStat_t** rodsObjStatOut);
 
 #endif

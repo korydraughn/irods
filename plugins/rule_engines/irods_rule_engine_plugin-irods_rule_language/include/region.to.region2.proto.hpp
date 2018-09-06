@@ -2,9 +2,9 @@
  */
 
 #ifndef REGION_TO_REGION2_PROTO_HPP
-#define REGION_TO_REGION2_PROTO_HPP
+#    define REGION_TO_REGION2_PROTO_HPP
 
-typedef const void *( RegionRegion2CopyFuncType )( const void *, Region *, Region * );
+typedef const void*(RegionRegion2CopyFuncType)(const void*, Region*, Region*);
 
 #endif
 
@@ -12,9 +12,7 @@ typedef const void *( RegionRegion2CopyFuncType )( const void *, Region *, Regio
 
 #define RE_STRUCT_FUNC_TYPE RegionRegion2CopyFuncType
 
-#define RE_STRUCT_FUNC_PROTO(T) \
-    T *RE_STRUCT_FUNC(T)(T *ptr, Region *oldr, Region *r)
+#define RE_STRUCT_FUNC_PROTO(T) T* RE_STRUCT_FUNC(T)(T * ptr, Region * oldr, Region * r)
 
-#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn) \
-	T *RE_STRUCT_FUNC(T)(T *ptr, Region *oldr, Region *r, RegionRegion2CopyFuncType *cpfn)
-
+#define RE_STRUCT_GENERIC_FUNC_PROTO(T, cpfn)                                                                          \
+    T* RE_STRUCT_FUNC(T)(T * ptr, Region * oldr, Region * r, RegionRegion2CopyFuncType * cpfn)

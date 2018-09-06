@@ -29,7 +29,8 @@
  * \sa none
  */
 
-typedef struct FileLseekInp {
+typedef struct FileLseekInp
+{
     int fileInx;
     rodsLong_t offset;
     int whence;
@@ -50,7 +51,8 @@ typedef struct FileLseekInp {
  * \sa none
  */
 
-typedef struct FileLseekOut {
+typedef struct FileLseekOut
+{
     rodsLong_t offset;
 } fileLseekOut_t;
 
@@ -60,6 +62,7 @@ typedef struct FileLseekOut {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileLseek( rcComm_t *conn, fileLseekInp_t *fileLseekInp, fileLseekOut_t **fileLseekOut );
+    int
+    rcFileLseek(rcComm_t* conn, fileLseekInp_t* fileLseekInp, fileLseekOut_t** fileLseekOut);
 
 #endif

@@ -4,7 +4,7 @@
 #include "rcConnect.h"
 #include "rodsGeneralUpdate.h"
 
-int rsGeneralUpdate( rsComm_t *rsComm, generalUpdateInp_t *generalUpdateInp );
-int _rsGeneralUpdate( generalUpdateInp_t *generalUpdateInp );
+int rsGeneralUpdate(rsComm_t* rsComm, generalUpdateInp_t* generalUpdateInp);
+int _rsGeneralUpdate(generalUpdateInp_t* generalUpdateInp);
 
 #endif

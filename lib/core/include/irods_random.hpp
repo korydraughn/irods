@@ -1,15 +1,16 @@
 #ifndef IRODS_RANDOM_HPP
 #define IRODS_RANDOM_HPP
 
-namespace irods {
-    void getRandomBytes( void * buf, int bytes );
+namespace irods
+{
+    void getRandomBytes(void* buf, int bytes);
 
     template <typename T>
-    T
-    getRandom() {
+    T getRandom()
+    {
         T random;
-        getRandomBytes( &random, sizeof(random) );
+        getRandomBytes(&random, sizeof(random));
         return random;
     }
-}
+} // namespace irods
 #endif // IRODS_RANDOM_HPP

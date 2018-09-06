@@ -6,7 +6,6 @@
 #include "rcConnect.h"
 #include "fileRead.h"
 
-
 /* prototype for the client call */
 /* rcDataObjRead - Read an opened iRODS data object descriptor.
  * Input -
@@ -22,6 +21,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjRead( rcComm_t *conn, openedDataObjInp_t *dataObjReadInp, bytesBuf_t *dataObjReadOutBBuf );
+    int
+    rcDataObjRead(rcComm_t* conn, openedDataObjInp_t* dataObjReadInp, bytesBuf_t* dataObjReadOutBBuf);
 
 #endif

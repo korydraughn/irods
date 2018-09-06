@@ -10,17 +10,14 @@
 #include "rodsPath.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-int
-phybunUtil( rcComm_t *conn, rodsArguments_t *myRodsArgs,
-            rodsPathInp_t *rodsPathInp );
-int
-initCondForPhybunOpr( rodsArguments_t *rodsArgs,
-                      structFileExtAndRegInp_t *phyBundleCollInp );
+    int phybunUtil(rcComm_t* conn, rodsArguments_t* myRodsArgs, rodsPathInp_t* rodsPathInp);
+    int initCondForPhybunOpr(rodsArguments_t* rodsArgs, structFileExtAndRegInp_t* phyBundleCollInp);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	// PHYBUN_UTIL_H__
+#endif // PHYBUN_UTIL_H__

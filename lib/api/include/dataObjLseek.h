@@ -6,7 +6,6 @@
 #include "rodsType.h"
 #include "fileLseek.h"
 
-
 /* prototype for the client call */
 /* rcDataObjLseek - Lseek an opened iRODS data object descriptor.
  * Input -
@@ -25,6 +24,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjLseek( rcComm_t *conn, openedDataObjInp_t *dataObjLseekInp, fileLseekOut_t **dataObjLseekOut );
+    int
+    rcDataObjLseek(rcComm_t* conn, openedDataObjInp_t* dataObjLseekInp, fileLseekOut_t** dataObjLseekOut);
 
 #endif

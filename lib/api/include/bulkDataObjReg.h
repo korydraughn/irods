@@ -6,11 +6,10 @@
 #include "rcConnect.h"
 
 /* definition for opreration type */
-#define OPR_TYPE_INX    999999
-#define OFFSET_INX      999998
-#define REGISTER_OPR    "register"
-#define MODIFY_OPR      "modify"
-
+#define OPR_TYPE_INX 999999
+#define OFFSET_INX 999998
+#define REGISTER_OPR "register"
+#define MODIFY_OPR "modify"
 
 /* rcBulkDataObjReg - Bulk Reg of iRODS data objects.
  * Input -
@@ -25,10 +24,10 @@
  *   int status - The status of the operation.
  */
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcBulkDataObjReg( rcComm_t *conn, genQueryOut_t *bulkDataObjRegInp, genQueryOut_t **bulkDataObjRegOut );
+    int
+    rcBulkDataObjReg(rcComm_t* conn, genQueryOut_t* bulkDataObjRegInp, genQueryOut_t** bulkDataObjRegOut);
 
 #endif

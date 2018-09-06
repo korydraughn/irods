@@ -4,19 +4,22 @@
 #include "irods_lookup_table.hpp"
 #include "packStruct.h"
 
-namespace irods {
-    class pack_entry {
+namespace irods
+{
+    class pack_entry
+    {
     public:
         std::string packInstruct;
     };
 
-    class pack_entry_table : public lookup_table< pack_entry > {
+    class pack_entry_table : public lookup_table<pack_entry>
+    {
     public:
-        pack_entry_table( packInstruct_t[] );
+        pack_entry_table(packInstruct_t[]);
     };
 
     irods::pack_entry_table& get_pack_table();
-    void clearInStruct_noop( void* );
-}
+    void clearInStruct_noop(void*);
+} // namespace irods
 
 #endif

@@ -22,6 +22,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjWrite( rcComm_t *conn, openedDataObjInp_t *dataObjWriteInp, bytesBuf_t *dataObjWriteInpBBuf );
+    int
+    rcDataObjWrite(rcComm_t* conn, openedDataObjInp_t* dataObjWriteInp, bytesBuf_t* dataObjWriteInpBBuf);
 
 #endif

@@ -7,13 +7,11 @@
 
 /// =-=-=-=-=-=-=-
 /// @brief C / C++ wrapper for client side threads
-struct thread_context {
-    boost::thread*              reconnThr;
-    boost::mutex*               lock;
-    boost::condition_variable*  cond;
+struct thread_context
+{
+    boost::thread* reconnThr;
+    boost::mutex* lock;
+    boost::condition_variable* cond;
 };
 
 #endif // IRODS_THREADS_HPP
-
-
-

@@ -19,7 +19,8 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcRmColl( rcComm_t *conn, collInp_t *rmCollInp, int vFlag );
-int _rcRmColl( rcComm_t *conn, collInp_t *rmCollInp, collOprStat_t **collOprStat );
+    int
+    rcRmColl(rcComm_t* conn, collInp_t* rmCollInp, int vFlag);
+int _rcRmColl(rcComm_t* conn, collInp_t* rmCollInp, collOprStat_t** collOprStat);
 
 #endif

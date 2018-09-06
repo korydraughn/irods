@@ -8,8 +8,9 @@
 #include "authenticate.h"
 #include "icatDefines.h"
 
-typedef struct {
-    char *challenge;
+typedef struct
+{
+    char* challenge;
 } authRequestOut_t;
 
 #define authRequestOut_PI "bin *challenge(CHALLENGE_LEN);"
@@ -17,6 +18,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcAuthRequest( rcComm_t *conn, authRequestOut_t **authRequestOut );
+    int
+    rcAuthRequest(rcComm_t* conn, authRequestOut_t** authRequestOut);
 
 #endif

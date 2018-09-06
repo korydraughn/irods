@@ -64,32 +64,30 @@
  * \sa none
 **/
 
-int
-rcDataObjPhymv( rcComm_t *conn, dataObjInp_t *dataObjInp ) {
+int rcDataObjPhymv(rcComm_t* conn, dataObjInp_t* dataObjInp)
+{
     int status;
-    transferStat_t *transferStat = NULL;
+    transferStat_t* transferStat = NULL;
 
-    memset( &conn->transStat, 0, sizeof( transferStat_t ) );
+    memset(&conn->transStat, 0, sizeof(transferStat_t));
 
     dataObjInp->oprType = PHYMV_OPR;
 
-    status = _rcDataObjPhymv( conn, dataObjInp, &transferStat );
+    status = _rcDataObjPhymv(conn, dataObjInp, &transferStat);
 
-    if ( status >= 0 && transferStat != NULL ) {
-        conn->transStat = *( transferStat );
+    if (status >= 0 && transferStat != NULL) {
+        conn->transStat = *(transferStat);
     }
-    if ( transferStat != NULL ) {
-        free( transferStat );
+    if (transferStat != NULL) {
+        free(transferStat);
     }
     return status;
 }
 
-int
-_rcDataObjPhymv( rcComm_t *conn, dataObjInp_t *dataObjInp,
-                 transferStat_t **transferStat ) {
+int _rcDataObjPhymv(rcComm_t* conn, dataObjInp_t* dataObjInp, transferStat_t** transferStat)
+{
     int status;
 
-    status = procApiRequest( conn, DATA_OBJ_PHYMV_AN,  dataObjInp, NULL,
-                             ( void ** ) transferStat, NULL );
+    status = procApiRequest(conn, DATA_OBJ_PHYMV_AN, dataObjInp, NULL, (void**) transferStat, NULL);
     return status;
 }

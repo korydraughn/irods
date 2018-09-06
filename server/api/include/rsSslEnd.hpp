@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "sslEnd.h"
 
-int rsSslEnd( rsComm_t *rsComm, sslEndInp_t *sslEndInp );
+int rsSslEnd(rsComm_t* rsComm, sslEndInp_t* sslEndInp);
 
 #endif

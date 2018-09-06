@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "rodsXmsg.h"
 
-int rsSendXmsg( rsComm_t *rsComm, sendXmsgInp_t *sendXmsgInp );
+int rsSendXmsg(rsComm_t* rsComm, sendXmsgInp_t* sendXmsgInp);
 
 #endif

@@ -4,12 +4,12 @@
 #include "rcConnect.h"
 #include "objInfo.h"
 
-typedef struct {
-    dataObjInfo_t *dataObjInfo;
-    keyValPair_t *regParam;
+typedef struct
+{
+    dataObjInfo_t* dataObjInfo;
+    keyValPair_t* regParam;
 } modDataObjMeta_t;
 #define ModDataObjMeta_PI "struct *DataObjInfo_PI; struct *KeyValPair_PI;"
-
 
 /* rcModDataObjMeta - Modify the metadata of a iRODS dataObject.
  * Input -
@@ -22,6 +22,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcModDataObjMeta( rcComm_t *conn, modDataObjMeta_t *modDataObjMetaInp );
+    int
+    rcModDataObjMeta(rcComm_t* conn, modDataObjMeta_t* modDataObjMetaInp);
 
 #endif

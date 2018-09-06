@@ -11,8 +11,8 @@
 #include "objInfo.h"
 
 /* definition for phyOpenFlag */
-#define DO_PHYOPEN      0
-#define DO_NOT_PHYOPEN  1
+#define DO_PHYOPEN 0
+#define DO_NOT_PHYOPEN 1
 #define PHYOPEN_BY_SIZE 2
 
 /* prototype for the client call */
@@ -40,10 +40,10 @@
  *   int l1descInx - an integer descriptor.
  */
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjOpen( rcComm_t *conn, dataObjInp_t *dataObjInp );
+    int
+    rcDataObjOpen(rcComm_t* conn, dataObjInp_t* dataObjInp);
 
 #endif

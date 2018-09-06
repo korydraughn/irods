@@ -4,11 +4,12 @@
 #include "rcConnect.h"
 #include "authenticate.h"
 
-typedef struct {
+typedef struct
+{
     char stringToHashWith[MAX_PASSWORD_LEN];
 } getTempPasswordOut_t;
 #define getTempPasswordOut_PI "str stringToHashWith[MAX_PASSWORD_LEN];"
 
-int rcGetTempPassword( rcComm_t *conn, getTempPasswordOut_t **getTempPasswordOut );
+int rcGetTempPassword(rcComm_t* conn, getTempPasswordOut_t** getTempPasswordOut);
 
 #endif

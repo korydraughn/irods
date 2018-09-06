@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileTruncate( rcComm_t *conn, fileOpenInp_t *fileTruncateInp );
+    int
+    rcFileTruncate(rcComm_t* conn, fileOpenInp_t* fileTruncateInp);
 
 #endif

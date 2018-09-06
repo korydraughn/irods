@@ -4,30 +4,26 @@
 /* irodsReServer.h - header file for irodsReServer
  */
 
-
-
 #ifndef RE_SERVER_HPP
 #define RE_SERVER_HPP
 
 #include "rods.h"
-#include "rcGlobalExtern.h"     /* client global */
+#include "rcGlobalExtern.h" /* client global */
 #include "rsLog.hpp"
 #include "rodsLog.h"
 #include "sockComm.h"
 #include "getRodsEnv.h"
 #include "rcConnect.h"
 
-#define RE_SERVER_SLEEP_TIME    30
-#define RE_SERVER_EXEC_TIME     120
+#define RE_SERVER_SLEEP_TIME 30
+#define RE_SERVER_EXEC_TIME 120
 
 uint CoreIrbTimeStamp = 0;
 
 /* definition for flagval flags */
 
-#define v_FLAG  0x1
+#define v_FLAG 0x1
 
-void
-reServerMain( char* logDir );
-int
-reSvrSleep( );
-#endif	/* RE_SERVER_H */
+void reServerMain(char* logDir);
+int reSvrSleep();
+#endif /* RE_SERVER_H */

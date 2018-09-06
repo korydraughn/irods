@@ -81,35 +81,33 @@
  * \sa none
 **/
 
-int
-rcDataObjCopy( rcComm_t *conn, dataObjCopyInp_t *dataObjCopyInp ) {
+int rcDataObjCopy(rcComm_t* conn, dataObjCopyInp_t* dataObjCopyInp)
+{
     int status;
-    transferStat_t *transferStat = NULL;
+    transferStat_t* transferStat = NULL;
 
-    memset( &conn->transStat, 0, sizeof( transferStat_t ) );
+    memset(&conn->transStat, 0, sizeof(transferStat_t));
 
     dataObjCopyInp->srcDataObjInp.oprType = COPY_SRC;
     dataObjCopyInp->destDataObjInp.oprType = COPY_DEST;
 
-    status = _rcDataObjCopy( conn, dataObjCopyInp, &transferStat );
+    status = _rcDataObjCopy(conn, dataObjCopyInp, &transferStat);
 
-    if ( status >= 0 && transferStat != NULL ) {
-        conn->transStat = *( transferStat );
+    if (status >= 0 && transferStat != NULL) {
+        conn->transStat = *(transferStat);
     }
-    if ( transferStat != NULL ) {
-        free( transferStat );
+    if (transferStat != NULL) {
+        free(transferStat);
     }
 
     return status;
 }
 
-int
-_rcDataObjCopy( rcComm_t *conn, dataObjCopyInp_t *dataObjCopyInp,
-                transferStat_t **transferStat ) {
+int _rcDataObjCopy(rcComm_t* conn, dataObjCopyInp_t* dataObjCopyInp, transferStat_t** transferStat)
+{
     int status;
 
-    status = procApiRequest( conn, DATA_OBJ_COPY_AN,  dataObjCopyInp, NULL,
-                             ( void ** ) transferStat, NULL );
+    status = procApiRequest(conn, DATA_OBJ_COPY_AN, dataObjCopyInp, NULL, (void**) transferStat, NULL);
 
     return status;
 }

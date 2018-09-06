@@ -4,6 +4,6 @@
 #include "rcConnect.h"
 #include "miscUtil.h"
 
-int rsReadCollection( rsComm_t *rsComm, int *handleInxInp, collEnt_t **collEnt );
+int rsReadCollection(rsComm_t* rsComm, int* handleInxInp, collEnt_t** collEnt);
 
 #endif

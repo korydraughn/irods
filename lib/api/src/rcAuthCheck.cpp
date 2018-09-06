@@ -31,14 +31,12 @@
  * \pre none
  * \post none
  * \sa none
-**/
+ **/
 
-int
-rcAuthCheck( rcComm_t *conn, authCheckInp_t *authCheckInp,
-             authCheckOut_t **authCheckOut ) {
+int rcAuthCheck(rcComm_t* conn, authCheckInp_t* authCheckInp, authCheckOut_t** authCheckOut)
+{
     int status;
-    status = procApiRequest( conn, AUTH_CHECK_AN,  authCheckInp, NULL,
-                             ( void ** ) authCheckOut, NULL );
+    status = procApiRequest(conn, AUTH_CHECK_AN, authCheckInp, NULL, (void**) authCheckOut, NULL);
 
     return status;
 }

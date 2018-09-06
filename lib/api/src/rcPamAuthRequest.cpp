@@ -5,12 +5,10 @@
 #include "procApiRequest.h"
 #include "apiNumber.h"
 
-int
-rcPamAuthRequest( rcComm_t *conn, pamAuthRequestInp_t *pamAuthRequestInp,
-                  pamAuthRequestOut_t **pamAuthRequestOut ) {
+int rcPamAuthRequest(rcComm_t* conn, pamAuthRequestInp_t* pamAuthRequestInp, pamAuthRequestOut_t** pamAuthRequestOut)
+{
     int status;
-    status = procApiRequest( conn, PAM_AUTH_REQUEST_AN,  pamAuthRequestInp, NULL,
-                             ( void ** ) pamAuthRequestOut, NULL );
+    status = procApiRequest(conn, PAM_AUTH_REQUEST_AN, pamAuthRequestInp, NULL, (void**) pamAuthRequestOut, NULL);
 
     return status;
 }

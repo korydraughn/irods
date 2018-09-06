@@ -7,24 +7,28 @@
 #include <string>
 #include <boost/any.hpp>
 
-namespace irods {
+namespace irods
+{
+    const std::string STRICT_HASH_POLICY("strict");
+    const std::string COMPATIBLE_HASH_POLICY("compatible");
 
-    const std::string STRICT_HASH_POLICY( "strict" );
-    const std::string COMPATIBLE_HASH_POLICY( "compatible" );
+    class Hasher
+    {
+    public:
+        Hasher()
+            : _strategy(NULL)
+        {
+        }
 
-    class Hasher {
-        public:
-            Hasher() : _strategy( NULL ) {}
+        error init(const HashStrategy*);
+        error update(const std::string&);
+        error digest(std::string& messageDigest);
 
-            error init( const HashStrategy* );
-            error update( const std::string& );
-            error digest( std::string& messageDigest );
-
-        private:
-            const HashStrategy* _strategy;
-            boost::any          _context;
-            error               _stored_error;
-            std::string         _stored_digest;
+    private:
+        const HashStrategy* _strategy;
+        boost::any _context;
+        error _stored_error;
+        std::string _stored_digest;
     };
 
 }; // namespace irods
