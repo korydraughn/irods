@@ -44,11 +44,8 @@
 #include "api_plugin_number.h"
 #include "get_file_descriptor_info.h"
 #include "rsGlobalExtern.hpp" // Declares resc_mgr
-#include "connection_pool.hpp"
 #include "transport/transport.hpp"
 #include "irods_logger.hpp"
-#include "irods_query.hpp"
-#include "filesystem/path.hpp"
 #include "irods_server_api_call.hpp"
 
 #include "json.hpp"
@@ -300,53 +297,10 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return false;
             }
 
-            // TODO Fetch file descriptor information and resolve the
+            // Fetch file descriptor information and resolve the
             // resource to the hostname/ip of the leaf resource server.
 
             using log = irods::experimental::log;
-
-#if 0
-            std::string target_hostname;
-
-            namespace fs = irods::experimental::filesystem;
-
-            fs::path path = input.objPath;
-            std::string sql = "select DATA_RESC_NAME, COLL_NAME, DATA_NAME, DATA_PATH where COLL_NAME = '";
-            sql += path.parent_path().string();
-            sql += "' and DATA_NAME = '";
-            sql += path.object_name().string();
-            sql += "'";
-
-            for (auto&& row : irods::query{comm_, sql}) {
-                log::server::info("Extracting resource name ...");
-                auto target_resc = row[0];
-
-                log::server::info("Extracting logical path ...");
-                logical_path_ = (fs::path{row[1]} / row[2]).string();
-
-                log::server::info("Extracting physical path ...");
-                physical_path_ = row[3];
-
-                irods::resource_ptr resc_ptr;
-                if (const auto err = resc_mgr.resolve(target_resc, resc_ptr); !err.ok()) {
-                    throw std::runtime_error{"Cannot resolve resource name to host [ec => " +
-                                             std::to_string(err.code()) + ']'};
-                }
-
-                if (const auto err = resc_ptr->get_property(irods::RESOURCE_LOCATION, target_hostname);
-                    !err.ok())
-                {
-                    throw std::runtime_error{"Cannot resolve resource name to hostname [ec => " +
-                                             std::to_string(err.code()) + ']'};
-                }
-
-                log::server::info({{"log_message", "File Descriptor Info"},
-                                   {"logical_path", logical_path_},
-                                   {"physical_path", physical_path_},
-                                   {"resource", target_resc},
-                                   {"target_hostname", target_hostname}});
-            }
-#else
             using json = nlohmann::json;
 
             std::string json_input = R"_({"fd": )_";
@@ -355,34 +309,31 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             log::server::info({{"JSON_INPUT", json_input}});
 
-            //irods::connection_pool cpool{1, "kdd-ws", 1247, "rods", "tempZone", 600};
-            //auto conn = cpool.get_connection();
-
             char* json_output{};
 
             if (const auto ec = rx_get_file_descriptor_info(comm_, json_input.c_str(), &json_output); ec != 0) {
                 throw std::runtime_error{"Cannot get file descriptor information [ec => " + std::to_string(ec) + ']'};
             }
 
-            log::server::info("Got file descriptor info.");
-            log::server::info({{"file_descriptor_info", json_output}});
+            log::server::trace("Got file descriptor info.");
+            log::server::trace({{"file_descriptor_info", json_output}});
 
             std::string target_hostname;
 
             try {
-                log::server::info("Parsing JSON string into JSON object ...");
+                log::server::trace("Parsing JSON string into JSON object ...");
                 const auto fd_info = json::parse(json_output);
 
-                log::server::info("Getting reference to data object info ...");
+                log::server::trace("Getting reference to data object info ...");
                 const auto& data_obj_info = fd_info["data_object_info"];
 
-                log::server::info("Extracting resource name ...");
+                log::server::trace("Extracting resource name ...");
                 auto target_resc = data_obj_info["resource_name"].get<std::string>();
 
-                log::server::info("Extracting logical path ...");
+                log::server::trace("Extracting logical path ...");
                 logical_path_ = data_obj_info["object_path"].get<std::string>();
 
-                log::server::info("Extracting physical path ...");
+                log::server::trace("Extracting physical path ...");
                 physical_path_ = data_obj_info["file_path"].get<std::string>();
 
                 irods::resource_ptr resc_ptr;
@@ -398,21 +349,22 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                                              std::to_string(err.code()) + ']'};
                 }
 
-                log::server::info({{"log_message", "File Descriptor Info"},
-                                   {"logical_path", logical_path_},
-                                   {"physical_path", physical_path_},
-                                   {"resource", target_resc},
-                                   {"target_hostname", target_hostname}});
+                log::server::trace({{"log_message", "File Descriptor Info"},
+                                    {"logical_path", logical_path_},
+                                    {"physical_path", physical_path_},
+                                    {"resource", target_resc},
+                                    {"target_hostname", target_hostname}});
             }
             catch (const json::parse_error& e) {
                 throw std::runtime_error{e.what()};
             }
-#endif
 
             //close_rx_connection();
 
             // UDT specific initialization code.
-            inet_pton(AF_INET, target_hostname.c_str(), &server_addr_.sin_addr);
+            if (const auto ec = load_in_addr_from_hostname(target_hostname.c_str(), &server_addr_.sin_addr); ec != 0) {
+                throw std::runtime_error{"Cannot resolve hostname of destination resource to IP address"};
+            }
 
             if (auto ptr = reinterpret_cast<sockaddr*>(&server_addr_);
                 UDT::ERROR == UDT::connect(socket_, ptr, sizeof(sockaddr_in)))
