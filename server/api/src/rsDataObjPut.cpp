@@ -3,6 +3,12 @@
 /* This is script-generated code (for the most part).  */
 /* See dataObjPut.h for a description of this API call.*/
 
+// MUST find the header that forces these two headers
+// to be put at the very top. smdh.
+#define IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
+#include "transport/udt_transport.hpp"
+#include "dstream.hpp"
+
 #include "dataObjPut.h"
 #include "rodsLog.h"
 #include "dataPut.h"
@@ -42,9 +48,32 @@
 #include "irods_serialization.hpp"
 #include "irods_server_properties.hpp"
 
+#include "irods_logger.hpp"
+
 int
 rsDataObjPut( rsComm_t *rsComm, dataObjInp_t *dataObjInp,
               bytesBuf_t *dataObjInpBBuf, portalOprOut_t **portalOprOut ) {
+
+    {
+        /*
+        irods::resource_ptr rptr;
+        resc_mgr.resolve("demoResc", rptr);
+        std::string hostname;
+        rptr->get_property(irods::RESOURCE_LOCATION, hostname);
+        using log = irods::experimental::log;
+        log::agent::info("XXXXX resource hostname = " + hostname);
+        */
+        namespace io = irods::experimental::io;
+
+        try {
+            io::server::udt_transport tp{*rsComm};
+            io::odstream out{tp, "/tempZone/home/rods/udt_file.txt"};
+        }
+        catch (std::exception& e) {
+            rodsLog(LOG_ERROR, e.what());
+        }
+    }
+
     int status;
     int status2;
     int remoteFlag;
@@ -241,7 +270,10 @@ _rsDataObjPut( rsComm_t *rsComm, dataObjInp_t *dataObjInp,
         free(transStat);
         clearKeyVal(&replDataObjInp.condInput);
         if (status < 0) {
-            const auto err{ERROR(status, "rsDataObjRepl failed")};
+            // FIXME Apparently the ERROR macros is defined with a different
+            // signature when this line is reached.
+            //const auto err{ERROR(status, "rsDataObjRepl failed")};
+            const auto err{irods::error(false, status, "rsDataObjRepl failed", __FILE__, __LINE__, __PRETTY_FUNCTION__)};
             irods::log(err);
             return err.code();
         }

@@ -402,7 +402,7 @@ static irods::error uninstantiate_shared_memory( ) {
 int
 serverMain() {
     // Launch UDT server.
-    irods::experimental::udt_server udt_server{2247};
+    irods::experimental::udt_server udt_server{};
     std::thread udt_server_thread{[&udt_server] {
         try {
             udt_server.start();

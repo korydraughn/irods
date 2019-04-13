@@ -749,6 +749,7 @@ target_link_libraries(
   ${OPENSSL_CRYPTO_LIBRARY}
   ${CMAKE_DL_LIBS}
   rt
+  udt
   ${CMAKE_THREAD_LIBS_INIT}
   )
 target_include_directories(
@@ -759,6 +760,7 @@ target_include_directories(
   ${CMAKE_SOURCE_DIR}/lib/core/include
   ${CMAKE_SOURCE_DIR}/lib/hasher/include
   ${CMAKE_SOURCE_DIR}/lib/rbudp/include
+  ${CMAKE_SOURCE_DIR}/plugins/api/include
   ${CMAKE_SOURCE_DIR}/lib/filesystem/include
   ${CMAKE_SOURCE_DIR}/server/api/include
   ${CMAKE_SOURCE_DIR}/server/core/include
