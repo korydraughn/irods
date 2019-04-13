@@ -1,6 +1,13 @@
 /*** Copyright (c), The Regents of the University of California            ***
  *** For more information please refer to files in the COPYRIGHT directory ***/
 
+// This is so dumb!
+// Some iRODS header defines the ERROR macro which
+// requires that the UDT header be included before all
+// other headers just so this code compiles.
+#include "udt_server.hpp"
+#include <thread>
+
 #include "rcMisc.h"
 #include "rodsServer.hpp"
 #include "sharedmemory.hpp"
@@ -394,6 +401,19 @@ static irods::error uninstantiate_shared_memory( ) {
 
 int
 serverMain() {
+    // Launch UDT server.
+    irods::experimental::udt_server udt_server{2247};
+    std::thread udt_server_thread{[&udt_server] {
+        try {
+            udt_server.start();
+        }
+        catch (const std::exception& e) {
+            using log = irods::experimental::log;
+            log::server::error(e.what());
+        }
+    }};
+    udt_server_thread.detach();
+
     int acceptErrCnt = 0;
 
     // set re cache salt here

@@ -1212,6 +1212,7 @@ target_compile_options(RodsAPIs PRIVATE -Wno-write-strings)
 set(
   IRODS_MAIN_EXECUTABLE_IRODSSERVER_SOURCES
   ${CMAKE_SOURCE_DIR}/server/core/src/rodsServer.cpp
+  ${CMAKE_SOURCE_DIR}/server/core/src/udt_server.cpp
   ${CMAKE_SOURCE_DIR}/server/core/src/irods_server_control_plane.cpp
   )
 
@@ -1252,6 +1253,7 @@ foreach(EXECUTABLE ${IRODS_MAIN_EXECUTABLES})
     ${CMAKE_THREAD_LIBS_INIT}
     ${CMAKE_DL_LIBS}
     m
+    udt
     )
   target_include_directories(
     ${EXECUTABLE}
