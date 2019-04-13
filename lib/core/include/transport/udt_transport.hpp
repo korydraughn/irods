@@ -6,6 +6,7 @@
 #undef rxDataObjOpen
 #undef rxDataObjClose
 #undef rxDataObjLseek
+#undef rx_get_file_descriptor_info
 
 // clang-format off
 #ifdef IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
@@ -15,36 +16,40 @@
     #include "rsDataObjClose.hpp"
     #include "rsDataObjLseek.hpp"
 
-    #define NAMESPACE_IMPL      server
+    #define NAMESPACE_IMPL                  server
 
-    #define rxComm              rsComm_t
+    #define rxComm                          rsComm_t
 
-    #define rxDataObjOpen       rsDataObjOpen
-    #define rxDataObjClose      rsDataObjClose
-    #define rxDataObjLseek      rsDataObjLseek
+    #define rxDataObjOpen                   rsDataObjOpen
+    #define rxDataObjClose                  rsDataObjClose
+    #define rxDataObjLseek                  rsDataObjLseek
+    #define rx_get_file_descriptor_info     rs_get_file_descriptor_info
 #else
     #include "dataObjOpen.h"
     #include "dataObjClose.h"
     #include "dataObjLseek.h"
 
-    #define NAMESPACE_IMPL      client
+    #define NAMESPACE_IMPL                  client
 
-    #define rxComm              rcComm_t
+    #define rxComm                          rcComm_t
 
-    #define rxDataObjOpen       rcDataObjOpen
-    #define rxDataObjClose      rcDataObjClose
-    #define rxDataObjLseek      rcDataObjLseek
+    #define rxDataObjOpen                   rcDataObjOpen
+    #define rxDataObjClose                  rcDataObjClose
+    #define rxDataObjLseek                  rcDataObjLseek
+    #define rx_get_file_descriptor_info     rc_get_file_descriptor_info
 #endif // IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
 // clang-format on
 
 #include "rcMisc.h"
 #include "api_plugin_number.h"
+#include "get_file_descriptor_info.h"
 #include "rsGlobalExtern.hpp" // Declares resc_mgr
 #include "connection_pool.hpp"
 #include "transport/transport.hpp"
 #include "irods_logger.hpp"
 #include "irods_query.hpp"
 #include "filesystem/path.hpp"
+#include "irods_server_api_call.hpp"
 
 #include "json.hpp"
 
@@ -299,9 +304,8 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             // resource to the hostname/ip of the leaf resource server.
 
             using log = irods::experimental::log;
-            //using json = nlohmann::json;
 
-            irods::connection_pool cpool{1, "kdd-ws", 1247, "rods", "tempZone", 600};
+#if 0
             std::string target_hostname;
 
             namespace fs = irods::experimental::filesystem;
@@ -342,23 +346,22 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                                    {"resource", target_resc},
                                    {"target_hostname", target_hostname}});
             }
+#else
+            using json = nlohmann::json;
 
-            /*
             std::string json_input = R"_({"fd": )_";
             json_input += std::to_string(fd_);
             json_input += '}';
 
             log::server::info({{"JSON_INPUT", json_input}});
 
-            char* json_output{};
-            auto conn = cpool.get_connection();
-            const auto ec = rc_get_file_descriptor_info(&static_cast<rcComm_t&>(conn),
-                                                        json_input.c_str(),
-                                                        &json_output);
+            //irods::connection_pool cpool{1, "kdd-ws", 1247, "rods", "tempZone", 600};
+            //auto conn = cpool.get_connection();
 
-            if (ec != 0) {
-                throw std::runtime_error{"Cannot get file descriptor information [ec => " +
-                                         std::to_string(ec) + ']'};
+            char* json_output{};
+
+            if (const auto ec = rx_get_file_descriptor_info(comm_, json_input.c_str(), &json_output); ec != 0) {
+                throw std::runtime_error{"Cannot get file descriptor information [ec => " + std::to_string(ec) + ']'};
             }
 
             log::server::info("Got file descriptor info.");
@@ -404,7 +407,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             catch (const json::parse_error& e) {
                 throw std::runtime_error{e.what()};
             }
-            */
+#endif
 
             //close_rx_connection();
 
@@ -434,7 +437,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             return true;
         }
 
-        int rc_get_file_descriptor_info(rcComm_t* _comm, const char* _json_input, char** _json_output)
+        int rs_get_file_descriptor_info(rsComm_t* _comm, const char* _json_input, char** _json_output)
         {
             if (!_json_input) {
                 return -1;
@@ -446,9 +449,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             bytesBuf_t* output_buf{};
 
-            const int ec = procApiRequest(_comm, GET_FILE_DESCRIPTOR_INFO_APN,
-                                          &input_buf, nullptr,
-                                          reinterpret_cast<void**>(&output_buf), nullptr);
+            const int ec = server_api_call(GET_FILE_DESCRIPTOR_INFO_APN, _comm, &input_buf, &output_buf);
 
             if (ec == 0) {
                 *_json_output = static_cast<char*>(output_buf->buf);
