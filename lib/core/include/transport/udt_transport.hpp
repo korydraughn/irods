@@ -158,6 +158,44 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         std::streamsize send(const char_type* _buffer, std::streamsize _buffer_size) override
         {
+            using log = irods::experimental::log;
+
+            enum class operation : std::uint32_t
+            {
+                read = 1,
+                write,
+                append
+            };
+
+            struct message
+            {
+                std::int64_t buffer_size;
+                std::int32_t version;
+                operation op;
+            };
+
+            message msg{_buffer_size, 130, operation::write};
+
+            std::streamsize total_bytes_sent = 0;
+            _buffer_size = sizeof(msg);
+
+            while (total_bytes_sent < _buffer_size) {
+                const char* buf_pos = reinterpret_cast<char*>(&msg) + total_bytes_sent;
+                const auto bytes_remaining = _buffer_size - total_bytes_sent;
+
+                const auto bytes_sent = UDT::send(socket_, buf_pos, bytes_remaining, 0);
+
+                if (UDT::ERROR == bytes_sent) {
+                    break;
+                }
+
+                total_bytes_sent += bytes_sent;
+                log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_bytes_sent));
+            }
+
+            return total_bytes_sent;
+
+            /*
             std::streamsize total_bytes_sent = 0;
 
             while (total_bytes_sent < _buffer_size) {
@@ -174,6 +212,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             }
 
             return total_bytes_sent;
+            */
         }
 
         pos_type seekpos(off_type _offset, std::ios_base::seekdir _dir) override

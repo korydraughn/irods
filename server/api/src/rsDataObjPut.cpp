@@ -68,6 +68,8 @@ rsDataObjPut( rsComm_t *rsComm, dataObjInp_t *dataObjInp,
         try {
             io::server::udt_transport tp{*rsComm};
             io::odstream out{tp, "/tempZone/home/rods/udt_file.txt"};
+            char buf[] = "Testing the transport ...";
+            out.write(buf, sizeof(buf));
         }
         catch (std::exception& e) {
             rodsLog(LOG_ERROR, e.what());
