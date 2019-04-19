@@ -1,11 +1,61 @@
 #include "udt_server.hpp"
 
 #include "irods_logger.hpp"
-#include "thread_pool.hpp"
+
+#include "json.hpp"
 
 #include <memory>
 #include <string>
 #include <stdexcept>
+#include <tuple>
+#include <array>
+
+namespace
+{
+    enum class op_code : int
+    {
+        open = 1,
+        close,
+        read,
+        write,
+        seek
+    };
+
+    std::tuple<int, op_code, nlohmann::json> read_header(UDTSOCKET _socket)
+    {
+        using log = irods::experimental::log;
+
+        std::array<char, 2000> buf{};
+        std::streamsize total_bytes_received = 0;
+
+        while (total_bytes_received < static_cast<std::streamsize>(buf.size())) {
+            char* buf_pos = &buf[0]+ total_bytes_received;
+            const auto bytes_remaining = buf.size() - total_bytes_received;
+
+            const auto bytes_received = UDT::recv(_socket, buf_pos, bytes_remaining, 0);
+
+            if (UDT::ERROR == bytes_received) {
+                log::server::error({{"log_message", "XXXX UDT server - recv."},
+                                    {"total_bytes_received", std::to_string(total_bytes_received)}});
+                return {UDT::getlasterror().getErrorCode(), {}, {}};
+            }
+
+            total_bytes_received += bytes_received;
+            log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_bytes_received));
+        }
+
+        using json = nlohmann::json;
+
+        try {
+            auto json_data = json::parse(&buf[0]);
+            return {0, op_code{json_data["op_code"].get<int>()}, json_data};
+        }
+        catch (const json::parse_error& e) {
+        }
+        
+        return {-1, {}, {}};
+    }
+} // anonymous namespace
 
 namespace irods::experimental
 {
@@ -15,6 +65,7 @@ namespace irods::experimental
         , stop_{}
         , port_{_port}
         , max_pending_conns_{_max_pending_connections}
+        , thread_pool_{static_cast<int>(std::thread::hardware_concurrency())}
     {
         sock_addr_.sin_family = AF_INET;
         sock_addr_.sin_port = htons(port_);
@@ -38,7 +89,7 @@ namespace irods::experimental
         //std::string accept_msg = "Waiting for UDT client to connect on port ";
         //accept_msg += std::to_string(port_);
         //accept_msg += " ...";
-
+        
         while (!stop_) {
             int name_length;
             auto client_info = std::make_shared<sockaddr_in>(); 
@@ -68,6 +119,8 @@ namespace irods::experimental
             }
 
             // TODO The server must support the following operations:
+            // - open
+            // - close
             // - read
             // - write
             // - seek
@@ -76,49 +129,43 @@ namespace irods::experimental
                                {"udt_client_ip", inet_ntoa(client_info->sin_addr)},
                                {"udt_client_port", std::to_string(ntohs(client_info->sin_port))}});
 
-            enum class operation : std::uint32_t
-            {
-                read = 1,
-                write,
-                append
-            };
+            irods::thread_pool::post(thread_pool_, [client_socket] {
+                while (true) {
+                    if (const auto [ec, op_code, req] = read_header(client_socket); ec) {
+                        // TODO Handle error. Send error response.
+                    }
+                    else {
+                        log::server::info({{"json_request_data", req.dump()}});
+                        
+                        // TODO Read op code and process request 
+                        switch (op_code) {
+                            case op_code::open:
+                                continue;
 
-            struct message
-            {
-                std::int64_t buffer_size;
-                std::int32_t version;
-                operation op;
-            };
+                            case op_code::close:
+                                break;
 
-            message msg{};
+                            case op_code::read:
+                                continue;
 
-            std::streamsize total_bytes_received = 0;
-            constexpr std::streamsize buffer_size = sizeof(message);
+                            case op_code::write:
+                                continue;
 
-            while (total_bytes_received < buffer_size) {
-                char* buf_pos = reinterpret_cast<char*>(&msg) + total_bytes_received;
-                const auto bytes_remaining = buffer_size - total_bytes_received;
+                            case op_code::seek:
+                                continue;
 
-                const auto bytes_received = UDT::recv(client_socket, buf_pos, bytes_remaining, 0);
-
-                if (UDT::ERROR == bytes_received) {
-                    log::server::error({{"log_message", "XXXX UDT server - recv."},
-                                        {"total_bytes_received", std::to_string(total_bytes_received)}});
-                    break;
+                            default:
+                                log::server::error({{"log_message", "Invalid op code."},
+                                                    {"op_code", std::to_string(static_cast<int>(op_code))}});
+                                continue;
+                        }
+                    }
                 }
 
-                total_bytes_received += bytes_received;
-                log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_bytes_received));
-            }
+                UDT::close(client_socket);
 
-            log::server::info({{"sizeof(message)", std::to_string(buffer_size)},
-                               {"udt_version", std::to_string(msg.version)},
-                               {"udt_operation", std::to_string(static_cast<std::uint8_t>(msg.op))},
-                               {"udt_buffer_size", std::to_string(msg.buffer_size)}});
-
-            UDT::close(client_socket);
-
-            log::server::info("UDT client connection closed.");
+                log::server::info("UDT client connection closed.");
+            });
         }
     }
 

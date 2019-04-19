@@ -54,6 +54,7 @@
 #include <arpa/inet.h>
 
 #include <string>
+#include <array>
 
 namespace irods::experimental::io::NAMESPACE_IMPL
 {
@@ -131,7 +132,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         bool close() override
         {
-            close_rx_connection();
             UDT::close(socket_);
             return true;
         }
@@ -158,6 +158,35 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         std::streamsize send(const char_type* _buffer, std::streamsize _buffer_size) override
         {
+            using log = irods::experimental::log;
+            using json = nlohmann::json;
+
+            json msg{
+                {"op_code", 1},
+                {"buffer_size", _buffer_size},
+                {"logical_path", logical_path_},
+                {"physical_path", physical_path_}
+            };
+
+            std::streamsize total_bytes_sent = 0;
+            _buffer_size = sizeof(msg);
+
+            while (total_bytes_sent < _buffer_size) {
+                const char* buf_pos = reinterpret_cast<char*>(&msg) + total_bytes_sent;
+                const auto bytes_remaining = _buffer_size - total_bytes_sent;
+
+                const auto bytes_sent = UDT::send(socket_, buf_pos, bytes_remaining, 0);
+
+                if (UDT::ERROR == bytes_sent) {
+                    break;
+                }
+
+                total_bytes_sent += bytes_sent;
+                log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_bytes_sent));
+            }
+
+            return total_bytes_sent;
+            /*
             using log = irods::experimental::log;
 
             enum class operation : std::uint32_t
@@ -194,7 +223,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             }
 
             return total_bytes_sent;
-
+            */
             /*
             std::streamsize total_bytes_sent = 0;
 
@@ -221,35 +250,66 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return seek_error;
             }
 
-            openedDataObjInp_t input{};
+            constexpr int seek_beg = 1;
+            constexpr int seek_cur = 2;
+            constexpr int seek_end = 3;
 
-            input.l1descInx = fd_;
-            input.offset = _offset;
+            int seek_dir = 0;
 
             switch (_dir) {
                 case std::ios_base::beg:
-                    input.whence = SEEK_SET;
+                    seek_dir = seek_beg;
                     break;
 
                 case std::ios_base::cur:
-                    input.whence = SEEK_CUR;
+                    seek_dir = seek_cur;
                     break;
 
                 case std::ios_base::end:
-                    input.whence = SEEK_END;
+                    seek_dir = seek_end;
                     break;
 
                 default:
                     return seek_error;
             }
 
-            fileLseekOut_t* output{};
+            using json = nlohmann::json;
 
+            const auto msg = json{
+                {"op_code", 5},
+                {"whence", seek_dir},
+                {"offset", _offset}
+            }.dump();
+
+            std::array<char, 2000> buf{};
+            std::copy(std::begin(msg), std::end(msg), std::begin(buf));
+
+            std::streamsize total_bytes_sent = 0;
+
+            while (total_bytes_sent < static_cast<std::streamsize>(buf.size())) {
+                const auto* buf_pos = &buf[0] + total_bytes_sent;
+                const auto bytes_remaining = buf.size() - total_bytes_sent;
+
+                const auto bytes_sent = UDT::send(socket_, buf_pos, bytes_remaining, 0);
+
+                if (UDT::ERROR == bytes_sent) {
+                    return false;
+                    // TODO Should probably throw
+                }
+
+                total_bytes_sent += bytes_sent;
+                log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_bytes_sent));
+            }
+
+            return 0;
+
+            /*
             if (const auto ec = rxDataObjLseek(comm_, &input, &output); ec < 0) {
                 return seek_error;
             }
 
             return output->offset;
+            */
         }
 
         bool is_open() const noexcept override
@@ -263,6 +323,15 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         }
 
     private:
+        enum class op_code : int
+        {
+            open = 1,
+            close,
+            read,
+            write,
+            seek
+        };
+
         int make_open_flags(std::ios_base::openmode _mode) noexcept
         {
             using std::ios_base;
@@ -342,12 +411,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             using log = irods::experimental::log;
             using json = nlohmann::json;
 
-            std::string json_input = R"_({"fd": )_";
-            json_input += std::to_string(fd_);
-            json_input += '}';
-
-            log::server::info({{"JSON_INPUT", json_input}});
-
+            const auto json_input = json{{"fd", fd_}}.dump();
             char* json_output{};
 
             if (const auto ec = rx_get_file_descriptor_info(comm_, json_input.c_str(), &json_output); ec != 0) {
@@ -360,19 +424,11 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             std::string target_hostname;
 
             try {
-                log::server::trace("Parsing JSON string into JSON object ...");
                 const auto fd_info = json::parse(json_output);
-
-                log::server::trace("Getting reference to data object info ...");
                 const auto& data_obj_info = fd_info["data_object_info"];
 
-                log::server::trace("Extracting resource name ...");
-                auto target_resc = data_obj_info["resource_name"].get<std::string>();
-
-                log::server::trace("Extracting logical path ...");
+                const auto target_resc = data_obj_info["resource_name"].get<std::string>();
                 logical_path_ = data_obj_info["object_path"].get<std::string>();
-
-                log::server::trace("Extracting physical path ...");
                 physical_path_ = data_obj_info["file_path"].get<std::string>();
 
                 irods::resource_ptr resc_ptr;
@@ -381,9 +437,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                                              std::to_string(err.code()) + ']'};
                 }
 
-                if (const auto err = resc_ptr->get_property(irods::RESOURCE_LOCATION, target_hostname);
-                    !err.ok())
-                {
+                if (const auto err = resc_ptr->get_property(irods::RESOURCE_LOCATION, target_hostname); !err.ok()) {
                     throw std::runtime_error{"Cannot resolve resource name to hostname [ec => " +
                                              std::to_string(err.code()) + ']'};
                 }
@@ -398,17 +452,96 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 throw std::runtime_error{e.what()};
             }
 
-            //close_rx_connection();
+            close_rx_connection();
 
             // UDT specific initialization code.
             if (const auto ec = load_in_addr_from_hostname(target_hostname.c_str(), &server_addr_.sin_addr); ec != 0) {
                 throw std::runtime_error{"Cannot resolve hostname of destination resource to IP address"};
             }
 
+            // Connect to resource where the data object is stored.
             if (auto ptr = reinterpret_cast<sockaddr*>(&server_addr_);
                 UDT::ERROR == UDT::connect(socket_, ptr, sizeof(sockaddr_in)))
             {
                 throw std::runtime_error{"UDT::connect - could not connect to server"};
+            }
+
+            // Send command to open data object for UDT reads and/or writes.
+            if (!open_for_udt(_mode)) {
+                // TODO
+            }
+
+            return true;
+        }
+
+        int to_safe_transport_format(std::ios_base::openmode _mode) noexcept
+        {
+            // clang-format off
+            int in    = 1 << 0;
+            int out   = 1 << 1;
+            int trunc = 1 << 2;
+            int app   = 1 << 3;
+            // clang-format on
+
+            using std::ios_base;
+
+            const auto m = _mode & ~(ios_base::ate | ios_base::binary);
+
+            if (ios_base::in == m) {
+                return in;
+            }
+            else if (ios_base::out == m || (ios_base::out | ios_base::trunc) == m) {
+                return out | trunc;
+            }
+            else if (ios_base::app == m || (ios_base::out | ios_base::app) == m) {
+                return out | app;
+            }
+            else if ((ios_base::out | ios_base::in) == m) {
+                return out | in;
+            }
+            else if ((ios_base::out | ios_base::in | ios_base::trunc) == m) {
+                return out | in | trunc;
+            }
+            else if ((ios_base::out | ios_base::in | ios_base::app) == m ||
+                     (ios_base::in | ios_base::app) == m)
+            {
+                return out | in | app;
+            }
+
+            return translation_error;
+        }
+
+        bool open_for_udt(std::ios_base::openmode _mode)
+        {
+            using log = irods::experimental::log;
+            using json = nlohmann::json;
+
+            const auto msg = json{
+                {"op_code", static_cast<int>(op_code::open)},
+                {"open_mode", to_safe_transport_format(_mode)},
+                {"create_mode", 0600},
+                {"logical_path", logical_path_},
+                {"physical_path", physical_path_}
+            }.dump();
+
+            std::array<char, 2000> buf{};
+            std::copy(std::begin(msg), std::end(msg), std::begin(buf));
+
+            std::streamsize total_bytes_sent = 0;
+
+            while (total_bytes_sent < static_cast<std::streamsize>(buf.size())) {
+                const auto* buf_pos = &buf[0] + total_bytes_sent;
+                const auto bytes_remaining = buf.size() - total_bytes_sent;
+
+                const auto bytes_sent = UDT::send(socket_, buf_pos, bytes_remaining, 0);
+
+                if (UDT::ERROR == bytes_sent) {
+                    return false;
+                    // TODO Should probably throw
+                }
+
+                total_bytes_sent += bytes_sent;
+                log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_bytes_sent));
             }
 
             return true;
