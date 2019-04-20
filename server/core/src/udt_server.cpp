@@ -298,6 +298,52 @@ namespace
 
         auto seek(UDTSOCKET _socket, const nlohmann::json& _req) -> void
         {
+            using log = irods::experimental::log;
+
+            // Check input.
+            if (_req.count("seek_from") == 0) {
+                log::server::error("Missing argument [seek_from].");
+                send_error_response(_socket, error_code::missing_arg, "Missing argument [seek_from]");
+                return;
+            }
+
+            if (_req.count("offset") == 0) {
+                log::server::error("Missing argument [offset].");
+                send_error_response(_socket, error_code::missing_arg, "Missing argument [offset]");
+                return;
+            }
+
+            const auto to_seekdir = [](int _dir) -> std::ios_base::seekdir
+            {
+                constexpr int seek_beg = 1;
+                constexpr int seek_cur = 2;
+                constexpr int seek_end = 3;
+
+                switch (_dir) {
+                    case seek_beg:
+                        return std::ios_base::beg;
+
+                    case seek_cur:
+                        return std::ios_base::cur;
+
+                    case seek_end:
+                        return std::ios_base::end;
+
+                    default:
+                        return std::ios_base::cur;
+                        // TODO Should throw an exception.
+                }
+            };
+
+            const auto seek_dir = to_seekdir(_req["seek_from"].get<int>());
+            const auto offset = _req["offset"].get<int>();
+
+            // XXX THESE TWO FUNCTIONS ARE UPDATING THE SAME FILE POINTER!!!
+            // Should only use one of them.
+            //req_ctx.file.seekg(offset, seek_dir);
+            req_ctx.file.seekp(offset, seek_dir);
+
+            // TODO Needs to return the new position in the file.
             send_error_response(_socket, error_code::ok);
         }
 

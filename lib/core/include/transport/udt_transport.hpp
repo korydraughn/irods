@@ -262,48 +262,27 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                     return seek_error;
             }
 
-            using json = nlohmann::json;
-
-            const auto msg = json{
+            const auto sent = send_header({
                 {"op_code", static_cast<int>(op_code::seek)},
                 {"seek_from", seek_dir},
                 {"offset", _offset}
-            }.dump();
+            });
 
-            std::array<char, 2000> buf{};
-            std::copy(std::begin(msg), std::end(msg), std::begin(buf));
-
-            std::streamsize total_bytes_sent = 0;
-
-            while (total_bytes_sent < static_cast<std::streamsize>(buf.size())) {
-                const auto* buf_pos = &buf[0] + total_bytes_sent;
-                const auto bytes_remaining = buf.size() - total_bytes_sent;
-
-                const auto bytes_sent = UDT::send(socket_, buf_pos, bytes_remaining, 0);
-
-                if (UDT::ERROR == bytes_sent) {
-                    return false;
-                    // TODO Should probably throw
-                }
-
-                total_bytes_sent += bytes_sent;
-                log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_bytes_sent));
-            }
-
-            return 0;
-
-            /*
-            if (const auto ec = rxDataObjLseek(comm_, &input, &output); ec < 0) {
+            if (!sent) {
                 return seek_error;
             }
 
-            return output->offset;
-            */
+            using json = nlohmann::json;
+
+            if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
+                return seek_error;
+            }
+
+            return 0;
         }
 
         bool is_open() const noexcept override
         {
-            //return fd_ >= minimum_valid_file_descriptor;
             return connected_;
         }
 
