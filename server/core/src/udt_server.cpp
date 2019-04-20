@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <tuple>
 #include <array>
+#include <unordered_map>
+#include <functional>
 
 namespace
 {
@@ -21,7 +23,7 @@ namespace
         seek
     };
 
-    std::tuple<int, op_code, nlohmann::json> read_header(UDTSOCKET _socket)
+    auto read_header(UDTSOCKET _socket) -> std::tuple<int, op_code, nlohmann::json> 
     {
         using log = irods::experimental::log;
 
@@ -55,6 +57,34 @@ namespace
         
         return {-1, {}, {}};
     }
+
+    namespace handler
+    {
+        auto open(UDTSOCKET _socket, const nlohmann::json& _json_req) -> void
+        {
+        }
+
+        auto read(UDTSOCKET _socket, const nlohmann::json& _json_req) -> void
+        {
+        }
+
+        auto write(UDTSOCKET _socket, const nlohmann::json& _json_req) -> void
+        {
+        }
+
+        auto seek(UDTSOCKET _socket, const nlohmann::json& _json_req) -> void
+        {
+        }
+    } // namespace handler
+
+    using op_handler = std::function<void(UDTSOCKET _socket, const nlohmann::json&)>;
+
+    const std::unordered_map<op_code, op_handler> op_handlers{
+        {op_code::open,  handler::open},
+        {op_code::read,  handler::read},
+        {op_code::write, handler::write},
+        {op_code::seek,  handler::seek}
+    };
 } // anonymous namespace
 
 namespace irods::experimental
@@ -131,34 +161,26 @@ namespace irods::experimental
 
             irods::thread_pool::post(thread_pool_, [client_socket] {
                 while (true) {
-                    if (const auto [ec, op_code, req] = read_header(client_socket); ec) {
+                    const auto [ec, op_code, req] = read_header(client_socket);
+
+                    if (ec) {
                         // TODO Handle error. Send error response.
+                        log::server::error("Could not read header.");
+                        break;
+                    }
+
+                    log::server::info({{"json_request_data", req.dump()}});
+
+                    if (op_code::close == op_code) {
+                        break;
+                    }
+
+                    if (auto it = op_handlers.find(op_code); std::end(op_handlers) != it) {
+                        (it->second)(client_socket, req);
                     }
                     else {
-                        log::server::info({{"json_request_data", req.dump()}});
-                        
-                        // TODO Read op code and process request 
-                        switch (op_code) {
-                            case op_code::open:
-                                continue;
-
-                            case op_code::close:
-                                break;
-
-                            case op_code::read:
-                                continue;
-
-                            case op_code::write:
-                                continue;
-
-                            case op_code::seek:
-                                continue;
-
-                            default:
-                                log::server::error({{"log_message", "Invalid op code."},
-                                                    {"op_code", std::to_string(static_cast<int>(op_code))}});
-                                continue;
-                        }
+                        log::server::error({{"log_message", "Invalid Op Code."},
+                                            {"op_code", std::to_string(static_cast<int>(op_code))}});
                     }
                 }
 
