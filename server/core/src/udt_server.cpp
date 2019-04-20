@@ -70,7 +70,8 @@ namespace
         enum class error_code : int
         {
             ok = 0,
-            missing_arg = 1000,
+            bad_header = 1000,
+            missing_arg,
             file_open,
             network_udt
         };
@@ -83,7 +84,20 @@ namespace
             std::string logical_path;
             std::string physical_path;
             int replica_number;
-            std::unique_ptr<std::fstream> fptr;
+            std::fstream file;
+            std::atomic<bool> close_connection;
+
+            void reset()
+            {
+                data_id = -1;
+                resource.clear();
+                resource_hierarchy.clear();
+                logical_path.clear();
+                physical_path.clear();
+                replica_number = -1;
+                file.close();
+                close_connection = false;
+            }
         };
 
         thread_local request_context req_ctx;
@@ -216,10 +230,9 @@ namespace
             req_ctx.physical_path = _req["physical_path"].get<std::string>();
 
             // Open file.
-            req_ctx.fptr = std::make_unique<std::fstream>(_req["physical_path"].get<std::string>(),
-                                                          to_fstream_mode(_req["open_mode"].get<int>()));
+            req_ctx.file.open(req_ctx.physical_path, to_fstream_mode(_req["open_mode"].get<int>())); 
 
-            if (!req_ctx.fptr || !req_ctx.fptr->is_open()) {
+            if (!req_ctx.file) {
                 send_error_response(_socket, error_code::file_open, "Could not open file");
                 return;
             }
@@ -227,9 +240,18 @@ namespace
             send_error_response(_socket, error_code::ok);
         }
 
+        auto update_catalog() -> void;
+
         auto close(UDTSOCKET _socket, const nlohmann::json& _req) -> void
         {
+            using log = irods::experimental::log;
+
+            log::server::info("Close connection request received. Shutting down connection ...");
+
+            req_ctx.file.close();
+            update_catalog();
             send_error_response(_socket, error_code::ok);
+            req_ctx.close_connection = true;
         }
 
         auto read(UDTSOCKET _socket, const nlohmann::json& _req) -> void
@@ -255,10 +277,6 @@ namespace
             std::streamsize total_bytes_received = 0;
 
             while (total_bytes_received < buffer_size) {
-                //char* buf_pos = &buf[0] + total_bytes_received;
-                //const auto bytes_remaining = buffer_size - total_bytes_received;
-
-                //const auto bytes_received = UDT::recv(_socket, buf_pos, static_cast<int>(buf.size()), 0);
                 const auto bytes_received = UDT::recv(_socket, &buf[0], static_cast<int>(buf.size()), 0);
 
                 if (UDT::ERROR == bytes_received) {
@@ -269,8 +287,7 @@ namespace
                 }
 
                 // Write the bytes to the file.
-                //req_ctx.fptr->write(&buf[0], buf.size());
-                req_ctx.fptr->write(&buf[0], bytes_received);
+                req_ctx.file.write(&buf[0], bytes_received);
 
                 total_bytes_received += bytes_received;
                 log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_bytes_received));
@@ -298,11 +315,15 @@ namespace
             namespace fs = boost::filesystem;
 
             const auto file_size = std::to_string(fs::file_size(req_ctx.physical_path));
+
+            log::server::info("XXXXXXXXXXXXXX FINAL DATA OBJECT SIZE = " + file_size);
+
             keyValPair_t kvp{};
 
             addKeyVal(&kvp, DATA_SIZE_KW, file_size.c_str());
 
             rodsEnv env;
+
             if (const auto ec = getRodsEnv(&env); ec != 0) {
                 log::server::error({{"log_message", "Could not get iRODS environment for data object size update."},
                                     {"logical_path", req_ctx.logical_path},
@@ -342,6 +363,7 @@ namespace irods::experimental
         , port_{_port}
         , max_pending_conns_{_max_pending_connections}
         , thread_pool_{static_cast<int>(std::thread::hardware_concurrency())}
+        //, thread_pool_{static_cast<int>(10)}
     {
         sock_addr_.sin_family = AF_INET;
         sock_addr_.sin_port = htons(port_);
@@ -406,18 +428,18 @@ namespace irods::experimental
                                {"udt_client_port", std::to_string(ntohs(client_info->sin_port))}});
 
             irods::thread_pool::post(thread_pool_, [client_socket] {
-                while (true) {
+                handler::req_ctx.reset();
+
+                while (!handler::req_ctx.close_connection) {
                     const auto [ec, op_code, req] = read_header(client_socket);
 
                     if (ec) {
-                        // TODO Handle error. Send error response.
                         log::server::error("Could not read header.");
-                        handler::req_ctx.fptr.reset();
-                        handler::update_catalog();
+                        send_error_response(client_socket, handler::error_code::bad_header, "Bad request header");
                         break;
                     }
 
-                    log::server::info({{"json_request_data", req.dump()}});
+                    log::server::info({{"XXXXX JSON_REQUEST_DATA", req.dump()}});
 
                     if (auto it = op_handlers.find(op_code); std::end(op_handlers) != it) {
                         (it->second)(client_socket, req);
@@ -427,9 +449,7 @@ namespace irods::experimental
                                             {"op_code", std::to_string(static_cast<int>(op_code))}});
                     }
 
-                    if (op_code::close == op_code) {
-                        break;
-                    }
+                    std::this_thread::yield();
                 }
 
                 UDT::close(client_socket);
