@@ -39,7 +39,7 @@
 #include "api_plugin_number.h"
 #include "get_file_descriptor_info.h"
 #include "rsGlobalExtern.hpp" // Declares resc_mgr
-#include "transport/transport.hpp"
+#include "transport/default_transport.hpp"
 #include "transport/udt_transport_common.hpp"
 #include "irods_logger.hpp"
 #include "irods_server_api_call.hpp"
@@ -56,44 +56,25 @@
 namespace irods::experimental::io::NAMESPACE_IMPL
 {
     template <typename CharT>
-    class basic_udt_transport : public transport<CharT>
+    class basic_udt_transport : public basic_transport<CharT>
     {
     public:
         // clang-format off
-        using char_type   = typename transport<CharT>::char_type;
-        using traits_type = typename transport<CharT>::traits_type;
+        using char_type   = typename basic_transport<CharT>::char_type;
+        using traits_type = typename basic_transport<CharT>::traits_type;
         using int_type    = typename traits_type::int_type;
         using pos_type    = typename traits_type::pos_type;
         using off_type    = typename traits_type::off_type;
         // clang-format on
 
-    private:
-        // clang-format off
-        inline static constexpr auto uninitialized_file_descriptor = -1;
-        inline static constexpr auto minimum_valid_file_descriptor = 3;
-
-        // Errors
-        inline static constexpr auto translation_error             = -1;
-        inline static const     auto seek_error                    = pos_type{off_type{-1}};
-        // clang-format on
-
-        struct data_object_info
-        {
-            int data_id;
-            std::string logical_path;
-            std::string physical_path;
-            std::string resource;
-            std::string resource_hierarchy;
-            int repl_number;
-        };
+    protected:
+        inline static const auto seek_error = pos_type{off_type{-1}};
 
     public:
         explicit basic_udt_transport(rxComm& _comm)
-            : transport<CharT>{}
+            : basic_transport<char_type>{_comm}
             , server_addr_{}
             , socket_{UDT::socket(AF_INET, SOCK_STREAM, 0)}
-            , comm_{&_comm}
-            , fd_{uninitialized_file_descriptor}
             , connected_{}
         {
             server_addr_.sin_family = AF_INET;
@@ -103,9 +84,15 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         bool open(const irods::experimental::filesystem::path& _p,
                   std::ios_base::openmode _mode) override
         {
-            return !is_open()
-                ? open_impl(_p, _mode, [](auto&) {})
-                : false;
+            if (is_open()) {
+                return false;
+            }
+
+            if (!basic_transport<char_type>::open(_p, _mode)) {
+                return false;
+            }
+
+            return open_and_connect_to_udt_server(_mode);
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
@@ -116,10 +103,11 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return false;
             }
 
-            return open_impl(_p, _mode, [_replica_number](auto& _input) {
-                const auto replica = std::to_string(_replica_number);
-                addKeyVal(&_input.condInput, REPL_NUM_KW, replica.c_str());
-            });
+            if (!basic_transport<char_type>::open(_p, _replica_number, _mode)) {
+                return false;
+            }
+
+            return open_and_connect_to_udt_server(_mode);
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
@@ -130,9 +118,11 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return false;
             }
 
-            return open_impl(_p, _mode, [&_resource_name](auto& _input) {
-                addKeyVal(&_input.condInput, RESC_NAME_KW, _resource_name.c_str());
-            });
+            if (!basic_transport<char_type>::open(_p, _resource_name, _mode)) {
+                return false;
+            }
+
+            return open_and_connect_to_udt_server(_mode);
         }
 
         bool close() override
@@ -141,17 +131,19 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             using log = irods::experimental::log;
 
-            if (const auto sent = send_header({{"op_code", static_cast<int>(common::op_code::close)}}); !sent) {
-                log::server::error("XXXX UDT client - close socket");
+            if (connected_) {
+                if (const auto sent = common::send_message(socket_, {{"op_code", static_cast<int>(common::op_code::close)}}); !sent) {
+                    log::server::error("XXXX UDT client - close socket");
+                }
+
+                using json = nlohmann::json;
+
+                if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
+                    log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                }
+
+                UDT::close(socket_);
             }
-
-            using json = nlohmann::json;
-
-            if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
-                log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
-            }
-
-            UDT::close(socket_);
 
             return true;
         }
@@ -166,7 +158,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             // Send header.
 
             {
-                const auto sent = send_header({
+                const auto sent = common::send_message(socket_, {
                     {"op_code", static_cast<int>(common::op_code::read)},
                     {"buffer_size", _buffer_size}
                 });
@@ -192,7 +184,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 log::server::info("UDT CLIENT READ - Reading incoming buffer size ...");
 
                 // Read header (get incoming buffer size).
-                std::array<char, 15> expected_size_buf{};
+                std::array<char_type, 15> expected_size_buf{};
 
                 common::receive_buffer(socket_, expected_size_buf.data(), expected_size_buf.size());
 
@@ -224,7 +216,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             // Send header.
 
             {
-                const auto sent = send_header({
+                const auto sent = common::send_message(socket_, {
                     {"op_code", static_cast<int>(common::op_code::write)},
                     {"buffer_size", _buffer_size}
                 });
@@ -266,7 +258,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return seek_error;
             }
 
-            const auto sent = send_header({
+            const auto sent = common::send_message(socket_, {
                 {"op_code", static_cast<int>(common::op_code::seek)},
                 {"seek_from", common::to_safe_transport_format(_dir)},
                 {"offset", _offset}
@@ -278,12 +270,13 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             using json = nlohmann::json;
 
-            if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
+            const json resp = read_error_response();
+
+            if (resp["error_code"].get<int>() != 0) {
                 return seek_error;
             }
 
-            // TODO Needs to return the new position!
-            return 0;
+            return resp["position"].get<off_type>();
         }
 
         bool is_open() const noexcept override
@@ -291,91 +284,22 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             return connected_;
         }
 
-        int file_descriptor() const noexcept override
-        {
-            return fd_;
-        }
-
     private:
-        int make_open_flags(std::ios_base::openmode _mode) noexcept
+        struct data_object_info
         {
-            using std::ios_base;
+            int data_id;
+            std::string logical_path;
+            std::string physical_path;
+            std::string resource;
+            std::string resource_hierarchy;
+            int repl_number;
+        };
 
-            const auto m = _mode & ~(ios_base::ate | ios_base::binary);
-
-            if (ios_base::in == m) {
-                return O_RDONLY;
-            }
-            else if (ios_base::out == m || (ios_base::out | ios_base::trunc) == m) {
-                return O_CREAT | O_WRONLY | O_TRUNC;
-            }
-            else if (ios_base::app == m || (ios_base::out | ios_base::app) == m) {
-                return O_CREAT | O_WRONLY | O_APPEND;
-            }
-            else if ((ios_base::out | ios_base::in) == m) {
-                return O_CREAT | O_RDWR;
-            }
-            else if ((ios_base::out | ios_base::in | ios_base::trunc) == m) {
-                return O_CREAT | O_RDWR | O_TRUNC;
-            }
-            else if ((ios_base::out | ios_base::in | ios_base::app) == m ||
-                     (ios_base::in | ios_base::app) == m)
-            {
-                return O_CREAT | O_RDWR | O_APPEND | O_TRUNC;
-            }
-
-            return translation_error;
-        }
-
-        bool seek_to_end_if_required(std::ios_base::openmode _mode)
+        auto open_and_connect_to_udt_server(std::ios_base::openmode _mode) -> bool
         {
-            if (std::ios_base::ate & _mode) {
-                if (seek_error == seekpos(0, std::ios_base::end)) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        template <typename Function>
-        bool open_impl(const filesystem::path& _p, std::ios_base::openmode _mode, Function _func)
-        {
-            const auto flags = make_open_flags(_mode);
-
-            if (flags == translation_error) {
-                return false;
-            }
-
-            dataObjInp_t input{};
-
-            input.createMode = 0600;
-            input.openFlags = flags;
-            rstrcpy(input.objPath, _p.c_str(), sizeof(input.objPath));
-
-            _func(input);
-
-            // TODO Modularize the block of code below.
-
-            const auto fd = rxDataObjOpen(comm_, &input);
-
-            if (fd < minimum_valid_file_descriptor) {
-                return false;
-            }
-
-            fd_ = fd;
-
-            if (!seek_to_end_if_required(_mode)) {
-                close_rx_connection();
-                return false;
-            }
-
-            // Fetch file descriptor information and resolve the
-            // resource to the hostname/ip of the leaf resource server.
-
             const auto [info_captured, error_msg, hostname, info] = capture_file_descriptor_info();
 
-            close_rx_connection();
+            basic_transport<char_type>::close();
 
             if (!info_captured) {
                 return false;
@@ -410,10 +334,10 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             using log  = irods::experimental::log;
             using json = nlohmann::json;
 
-            const auto json_input = json{{"fd", fd_}}.dump();
+            const auto json_input = json{{"fd", basic_transport<char_type>::file_descriptor()}}.dump();
             char* json_output{};
 
-            if (const auto ec = rx_get_file_descriptor_info(comm_, json_input.c_str(), &json_output); ec != 0) {
+            if (const auto ec = rx_get_file_descriptor_info(basic_transport<char_type>::connection(), json_input.c_str(), &json_output); ec != 0) {
                 std::string error_msg = "Cannot get file descriptor information [ec => ";
                 error_msg += std::to_string(ec);
                 error_msg += ']';
@@ -468,31 +392,13 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             return {true, {}, hostname, info};
         }
 
-        bool send_header(const nlohmann::json& _header)
-        {
-            namespace common = irods::experimental::io::common;
-
-            using log = irods::experimental::log;
-
-            const auto msg = _header.dump();
-
-            std::array<char, 2000> buf{};
-            std::copy(std::begin(msg), std::end(msg), std::begin(buf));
-
-            const auto total_sent = common::send_buffer(socket_, buf.data(), buf.size());
-
-            log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_sent));
-
-            return total_sent == buf.size();
-        }
-
         nlohmann::json read_error_response()
         {
             namespace common = irods::experimental::io::common;
 
             using log = irods::experimental::log;
 
-            std::array<char, 2000> buf{};
+            std::array<char_type, 2000> buf{};
 
             const auto total_received = common::receive_buffer(socket_, buf.data(), buf.size());
 
@@ -516,7 +422,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             using log  = irods::experimental::log;
             using json = nlohmann::json;
 
-            const auto sent = send_header({
+            const auto sent = common::send_message(socket_, {
                 {"op_code", static_cast<int>(common::op_code::open)},
                 {"open_mode", common::to_safe_transport_format(_mode)},
                 {"data_id", _info.data_id},
@@ -537,20 +443,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                 return false;
             }
-
-            return true;
-        }
-
-        bool close_rx_connection()
-        {
-            openedDataObjInp_t input{};
-            input.l1descInx = fd_;
-
-            if (const auto ec = rxDataObjClose(comm_, &input); ec < 0) {
-                return false;
-            }
-
-            fd_ = uninitialized_file_descriptor;
 
             return true;
         }
@@ -578,8 +470,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         sockaddr_in server_addr_;
         UDTSOCKET socket_;
-        rxComm* comm_;
-        int fd_;
         bool connected_;
     }; // basic_udt_transport
 

@@ -208,6 +208,12 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             return fd_;
         }
 
+    protected:
+        rxComm* connection() const noexcept
+        {
+            return comm_;
+        }
+
     private:
         int make_open_flags(std::ios_base::openmode _mode) noexcept
         {

@@ -1,6 +1,8 @@
 #ifndef IRODS_IO_UDT_TRANSPORT_COMMON_HPP
 #define IRODS_IO_UDT_TRANSPORT_COMMON_HPP
 
+#include "json.hpp"
+
 #include <udt/udt.h>
 
 #include <array>
@@ -77,6 +79,18 @@ namespace irods::experimental::io::common
         }
 
         return total_received;
+    }
+
+    inline auto send_message(UDTSOCKET _socket, const nlohmann::json& _message) -> bool
+    {
+        const auto msg = _message.dump();
+
+        std::array<char, 2000> buf{};
+        std::copy(std::begin(msg), std::end(msg), std::begin(buf));
+
+        const auto total_sent = send_buffer(_socket, buf.data(), buf.size());
+
+        return total_sent == buf.size();
     }
 
     inline auto to_safe_transport_format(std::ios_base::openmode _mode) noexcept -> int

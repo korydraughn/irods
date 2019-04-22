@@ -271,8 +271,10 @@ namespace
             //req_ctx.file.seekg(offset, seek_dir);
             req_ctx.file.seekp(offset, seek_dir);
 
-            // TODO Needs to return the new position in the file.
-            send_error_response(_socket, error_code::ok);
+            common::send_message(_socket, {
+                {"error_code", static_cast<int>(error_code::ok)},
+                {"position", static_cast<int>(req_ctx.file.tellp())}
+            });
         }
 
         auto update_catalog() -> void
