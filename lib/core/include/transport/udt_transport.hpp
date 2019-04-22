@@ -5,7 +5,6 @@
 #undef rxComm
 #undef rxDataObjOpen
 #undef rxDataObjClose
-#undef rxDataObjLseek
 #undef rx_get_file_descriptor_info
 
 // clang-format off
@@ -14,7 +13,6 @@
 
     #include "rsDataObjOpen.hpp"
     #include "rsDataObjClose.hpp"
-    #include "rsDataObjLseek.hpp"
 
     #define NAMESPACE_IMPL                  server
 
@@ -22,12 +20,10 @@
 
     #define rxDataObjOpen                   rsDataObjOpen
     #define rxDataObjClose                  rsDataObjClose
-    #define rxDataObjLseek                  rsDataObjLseek
     #define rx_get_file_descriptor_info     rs_get_file_descriptor_info
 #else
     #include "dataObjOpen.h"
     #include "dataObjClose.h"
-    #include "dataObjLseek.h"
 
     #define NAMESPACE_IMPL                  client
 
@@ -35,7 +31,6 @@
 
     #define rxDataObjOpen                   rcDataObjOpen
     #define rxDataObjClose                  rcDataObjClose
-    #define rxDataObjLseek                  rcDataObjLseek
     #define rx_get_file_descriptor_info     rc_get_file_descriptor_info
 #endif // IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
 // clang-format on
@@ -189,25 +184,53 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             std::streamsize total_bytes_received = 0;
 
             while (total_bytes_received < _buffer_size) {
-                auto* buf_pos = _buffer + total_bytes_received;
-                const auto bytes_remaining = _buffer_size - total_bytes_received;
+                log::server::info("UDT CLIENT READ - Reading incoming buffer size ...");
 
-                const auto bytes_received = UDT::recv(socket_, buf_pos, bytes_remaining, 0);
+                std::array<char, 15> hbuf{};
 
-                log::server::info("UDT CLIENT READ - bytes received = " + std::to_string(total_bytes_received));
+                // Read header (get incoming buffer size).
+                for (int tbr = 0; tbr < static_cast<int>(hbuf.size()); ) {
+                    auto* buf_pos = &hbuf[0] + tbr;
+                    const auto bytes_remaining = static_cast<int>(hbuf.size()) - tbr;
 
-                if (UDT::ERROR == bytes_received) {
-                    // TODO Should probably throw
-                    break;
+                    const auto bytes_received = UDT::recv(socket_, buf_pos, bytes_remaining, 0);
+
+                    log::server::info("UDT CLIENT READ - bytes received = " + std::to_string(bytes_received));
+
+                    if (UDT::ERROR == bytes_received) {
+                        // TODO Should probably throw
+                        break;
+                    }
+
+                    tbr += bytes_received;
                 }
 
-                total_bytes_received += bytes_received;
+                const int buf_size = std::stoi(std::string(std::begin(hbuf), std::end(hbuf)));
 
-                /*
-                if (bytes_received < bytes_remaining) {
-                    break;
+                log::server::info("UDT CLIENT READ - incoming buffer size = " + std::to_string(buf_size));
+
+                if (buf_size == 0) {
+                    return total_bytes_received;
                 }
-                */
+
+                log::server::info("UDT CLIENT READ - Reading incoming buffer data ...");
+
+                //while (total_bytes_received < _buffer_size) {
+                while (total_bytes_received < buf_size) {
+                    auto* buf_pos = _buffer + total_bytes_received;
+                    const auto bytes_remaining = buf_size - total_bytes_received;
+
+                    const auto bytes_received = UDT::recv(socket_, buf_pos, bytes_remaining, 0);
+
+                    log::server::info("UDT CLIENT READ - bytes received = " + std::to_string(bytes_received));
+
+                    if (UDT::ERROR == bytes_received) {
+                        // TODO Should probably throw
+                        break;
+                    }
+
+                    total_bytes_received += bytes_received;
+                }
             }
 
             log::server::info("UDT CLIENT READ - total bytes received = " + std::to_string(total_bytes_received));

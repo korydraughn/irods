@@ -41,6 +41,7 @@ namespace
 
     struct request_context
     {
+        std::ios_base::openmode open_mode;
         int data_id;
         std::string resource;
         std::string resource_hierarchy;
@@ -52,6 +53,7 @@ namespace
 
         void reset()
         {
+            open_mode = 0;
             data_id = -1;
             resource.clear();
             resource_hierarchy.clear();
@@ -185,13 +187,6 @@ namespace
                 return;
             }
 
-            req_ctx.data_id = _req["data_id"].get<int>();
-            req_ctx.resource = _req["resource"].get<std::string>();
-            req_ctx.resource_hierarchy = _req["resource_hierarchy"].get<std::string>();
-            req_ctx.replica_number = _req["replica_number"].get<int>();
-            req_ctx.logical_path = _req["logical_path"].get<std::string>();
-            req_ctx.physical_path = _req["physical_path"].get<std::string>();
-
             const auto to_openmode = [](int _safe_mode) -> std::ios_base::openmode
             {
                 // clang-format off
@@ -229,8 +224,16 @@ namespace
                 return m;
             };
 
+            req_ctx.open_mode = to_openmode(_req["open_mode"].get<int>());
+            req_ctx.data_id = _req["data_id"].get<int>();
+            req_ctx.resource = _req["resource"].get<std::string>();
+            req_ctx.resource_hierarchy = _req["resource_hierarchy"].get<std::string>();
+            req_ctx.replica_number = _req["replica_number"].get<int>();
+            req_ctx.logical_path = _req["logical_path"].get<std::string>();
+            req_ctx.physical_path = _req["physical_path"].get<std::string>();
+
             // Open file.
-            req_ctx.file.open(req_ctx.physical_path, to_openmode(_req["open_mode"].get<int>())); 
+            req_ctx.file.open(req_ctx.physical_path, req_ctx.open_mode); 
 
             if (!req_ctx.file) {
                 send_error_response(_socket, error_code::file_open, "Could not open file");
@@ -249,7 +252,11 @@ namespace
             log::server::info("Close connection request received. Shutting down connection ...");
 
             req_ctx.file.close();
-            update_catalog();
+
+            if (!(req_ctx.open_mode & std::ios_base::in)) {
+                update_catalog();
+            }
+
             send_error_response(_socket, error_code::ok);
             req_ctx.close_connection = true;
         }
@@ -278,19 +285,54 @@ namespace
             // 2. If there is no more data, send flag indicating that so that
             //    the client can stop gracefully.
 
-            if (!req_ctx.file) {
-                
-            }
+            while (total_bytes_sent < buffer_size) {
+                if (!req_ctx.file) {
+                    int total = 0;
+                    const std::array<char, 15> hbuf{'0'};
 
-            while (true) {
+                    // Send size of outgoing buffer data.
+                    while (total < static_cast<int>(hbuf.size())) {
+                        const auto* buf_pos = &hbuf[0]  + total;
+                        const auto bytes_remaining = static_cast<int>(hbuf.size()) - total;
+                        const auto bytes_sent = UDT::send(_socket, buf_pos, bytes_remaining, 0);
 
-            }
+                        if (UDT::ERROR == bytes_sent) {
+                            log::server::error({{"log_message", "XXXX UDT server - send."},
+                                                {"total_bytes_sent", std::to_string(total_bytes_sent)}});
+                            break;
+                        }
 
-            while (req_ctx.file && total_bytes_sent < buffer_size) {
+                        total += bytes_sent;
+                    }
+
+                    break;
+                }
+
                 req_ctx.file.read(&buf[0], std::min<std::streamsize>(buf.size(), buffer_size));
 
-                const auto count = req_ctx.file.gcount();
+                const int count = req_ctx.file.gcount();
                 int total = 0;
+                const std::string size = std::to_string(count);
+                std::array<char, 15> hbuf{};
+
+                std::copy(std::begin(size), std::end(size), hbuf.data());
+
+                // Send size of outgoing buffer data.
+                while (total < static_cast<int>(hbuf.size())) {
+                    const auto* buf_pos = &hbuf[0]  + total;
+                    const auto bytes_remaining = static_cast<int>(hbuf.size()) - total;
+                    const auto bytes_sent = UDT::send(_socket, buf_pos, bytes_remaining, 0);
+
+                    if (UDT::ERROR == bytes_sent) {
+                        log::server::error({{"log_message", "XXXX UDT server - send."},
+                                            {"total_bytes_sent", std::to_string(total_bytes_sent)}});
+                        break;
+                    }
+
+                    total += bytes_sent;
+                }
+
+                total = 0;
 
                 while (total < count) {
                     const auto* buf_pos = &buf[0] + total;
@@ -300,7 +342,7 @@ namespace
                     if (UDT::ERROR == bytes_sent) {
                         log::server::error({{"log_message", "XXXX UDT server - send."},
                                             {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                        return;
+                        break;
                     }
 
                     total += bytes_sent;
