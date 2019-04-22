@@ -3,6 +3,7 @@
 #include "getRodsEnv.h"
 #include "modDataObjMeta.h"
 
+#include "transport/udt_transport_common.hpp"
 #include "irods_logger.hpp"
 #include "connection_pool.hpp"
 
@@ -19,29 +20,15 @@
 #include <functional>
 #include <fstream>
 
+namespace common = irods::experimental::io::common;
+
+using op_code    = common::op_code;
+using error_code = common::error_code;
+
 namespace
 {
-    enum class op_code : int
-    {
-        open = 1,
-        close,
-        read,
-        write,
-        seek
-    };
-
-    enum class error_code : int
-    {
-        ok = 0,
-        bad_header = 1000,
-        missing_arg,
-        file_open,
-        network_udt
-    };
-
     struct request_context
     {
-        std::ios_base::openmode open_mode;
         int data_id;
         std::string resource;
         std::string resource_hierarchy;
@@ -49,11 +36,11 @@ namespace
         std::string physical_path;
         int replica_number;
         std::fstream file;
+        bool update_catalog;
         std::atomic<bool> close_connection;
 
         void reset()
         {
-            open_mode = 0;
             data_id = -1;
             resource.clear();
             resource_hierarchy.clear();
@@ -61,6 +48,7 @@ namespace
             physical_path.clear();
             replica_number = -1;
             file.close();
+            update_catalog = false;
             close_connection = false;
         }
     };
@@ -72,23 +60,10 @@ namespace
         using log = irods::experimental::log;
 
         std::array<char, 2000> buf{};
-        std::streamsize total_bytes_received = 0;
 
-        while (total_bytes_received < static_cast<std::streamsize>(buf.size())) {
-            char* buf_pos = &buf[0] + total_bytes_received;
-            const auto bytes_remaining = buf.size() - total_bytes_received;
+        const auto received = common::receive_buffer(_socket, buf.data(), buf.size());
 
-            const auto bytes_received = UDT::recv(_socket, buf_pos, bytes_remaining, 0);
-
-            if (UDT::ERROR == bytes_received) {
-                log::server::error({{"log_message", "XXXX UDT server - recv."},
-                                    {"total_bytes_received", std::to_string(total_bytes_received)}});
-                return {UDT::getlasterror().getErrorCode(), {}, {}};
-            }
-
-            total_bytes_received += bytes_received;
-            log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_bytes_received));
-        }
+        log::server::info("XXXX UDT server - total bytes received = " + std::to_string(received));
 
         using json = nlohmann::json;
 
@@ -115,21 +90,9 @@ namespace
         std::array<char, 2000> buf{};
         std::copy(std::begin(msg), std::end(msg), std::begin(buf));
 
-        std::streamsize total_bytes_sent = 0;
+        const auto sent = common::send_buffer(_socket, buf.data(), buf.size());
 
-        while (total_bytes_sent < static_cast<std::streamsize>(buf.size())) {
-            const auto* buf_pos = &buf[0] + total_bytes_sent;
-            const auto bytes_remaining = buf.size() - total_bytes_sent;
-
-            const auto bytes_sent = UDT::send(_socket, buf_pos, bytes_remaining, 0);
-
-            if (UDT::ERROR == bytes_sent) {
-                // TODO Should probably throw
-            }
-
-            total_bytes_sent += bytes_sent;
-            log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_bytes_sent));
-        }
+        log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(sent));
     }
 
     namespace handler
@@ -138,16 +101,9 @@ namespace
         {
             using log = irods::experimental::log;
 
-            // Check input.
             if (_req.count("open_mode") == 0) {
                 log::server::error("Missing argument [open_mode].");
                 send_error_response(_socket, error_code::missing_arg, "Missing argument [open_mode]");
-                return;
-            }
-
-            if (_req.count("create_mode") == 0) {
-                log::server::error("Missing argument [create_mode].");
-                send_error_response(_socket, error_code::missing_arg, "Missing argument [create_mode]");
                 return;
             }
 
@@ -187,44 +143,6 @@ namespace
                 return;
             }
 
-            const auto to_openmode = [](int _safe_mode) -> std::ios_base::openmode
-            {
-                // clang-format off
-                int in    = 1 << 0;
-                int out   = 1 << 1;
-                int trunc = 1 << 2;
-                int app   = 1 << 3;
-                int ate   = 1 << 4;
-                // clang-format on
-
-                using std::ios_base;
-                
-                ios_base::openmode m{};
-
-                if (_safe_mode & out) {
-                    m |= ios_base::out;
-                }
-
-                if (_safe_mode & in) {
-                    m |= ios_base::in;
-                }
-
-                if (_safe_mode & trunc) {
-                    m |= ios_base::trunc;
-                }
-
-                if (_safe_mode & app) {
-                    m |= ios_base::app;
-                }
-
-                if (_safe_mode & ate) {
-                    m |= ios_base::ate;
-                }
-
-                return m;
-            };
-
-            req_ctx.open_mode = to_openmode(_req["open_mode"].get<int>());
             req_ctx.data_id = _req["data_id"].get<int>();
             req_ctx.resource = _req["resource"].get<std::string>();
             req_ctx.resource_hierarchy = _req["resource_hierarchy"].get<std::string>();
@@ -233,7 +151,7 @@ namespace
             req_ctx.physical_path = _req["physical_path"].get<std::string>();
 
             // Open file.
-            req_ctx.file.open(req_ctx.physical_path, req_ctx.open_mode); 
+            req_ctx.file.open(req_ctx.physical_path, common::to_openmode(_req["open_mode"].get<int>())); 
 
             if (!req_ctx.file) {
                 send_error_response(_socket, error_code::file_open, "Could not open file");
@@ -253,7 +171,7 @@ namespace
 
             req_ctx.file.close();
 
-            if (!(req_ctx.open_mode & std::ios_base::in)) {
+            if (req_ctx.update_catalog) {
                 update_catalog();
             }
 
@@ -267,7 +185,6 @@ namespace
 
             using log = irods::experimental::log;
 
-            // Check input.
             if (_req.count("buffer_size") == 0) {
                 log::server::error("Missing argument [buffer_size].");
                 send_error_response(_socket, error_code::missing_arg, "Missing argument [buffer_size]");
@@ -275,181 +192,29 @@ namespace
             }
 
             const auto buffer_size = _req["buffer_size"].get<std::streamsize>();
+            std::array<char, 15> expected_size_buf{};
             std::array<char, 8192> buf{};
-            std::streamsize total_bytes_sent = 0;
+            std::streamsize total_sent = 0;
 
-            // Steps to handle all read cases:
-            // Loop:
-            // 1. Send client a flag indicating whether more data is coming.
-            //    1a. If there is data to send, provide the expected size.
-            // 2. If there is no more data, send flag indicating that so that
-            //    the client can stop gracefully.
-
-            while (total_bytes_sent < buffer_size) {
+            while (total_sent < buffer_size) {
                 if (!req_ctx.file) {
-                    int total = 0;
-                    const std::array<char, 15> hbuf{'0'};
-
-                    // Send size of outgoing buffer data.
-                    while (total < static_cast<int>(hbuf.size())) {
-                        const auto* buf_pos = &hbuf[0]  + total;
-                        const auto bytes_remaining = static_cast<int>(hbuf.size()) - total;
-                        const auto bytes_sent = UDT::send(_socket, buf_pos, bytes_remaining, 0);
-
-                        if (UDT::ERROR == bytes_sent) {
-                            log::server::error({{"log_message", "XXXX UDT server - send."},
-                                                {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                            break;
-                        }
-
-                        total += bytes_sent;
-                    }
-
+                    expected_size_buf= {'0'};
+                    common::send_buffer(_socket, expected_size_buf.data(), expected_size_buf.size());
                     break;
                 }
 
                 req_ctx.file.read(&buf[0], std::min<std::streamsize>(buf.size(), buffer_size));
 
                 const int count = req_ctx.file.gcount();
-                int total = 0;
-                const std::string size = std::to_string(count);
-                std::array<char, 15> hbuf{};
+                const std::string expected_size = std::to_string(count);
 
-                std::copy(std::begin(size), std::end(size), hbuf.data());
+                std::copy(std::begin(expected_size), std::end(expected_size), std::begin(expected_size_buf));
 
-                // Send size of outgoing buffer data.
-                while (total < static_cast<int>(hbuf.size())) {
-                    const auto* buf_pos = &hbuf[0]  + total;
-                    const auto bytes_remaining = static_cast<int>(hbuf.size()) - total;
-                    const auto bytes_sent = UDT::send(_socket, buf_pos, bytes_remaining, 0);
-
-                    if (UDT::ERROR == bytes_sent) {
-                        log::server::error({{"log_message", "XXXX UDT server - send."},
-                                            {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                        break;
-                    }
-
-                    total += bytes_sent;
-                }
-
-                total = 0;
-
-                while (total < count) {
-                    const auto* buf_pos = &buf[0] + total;
-                    const auto bytes_remaining = count - total;
-                    const auto bytes_sent = UDT::send(_socket, buf_pos, bytes_remaining, 0);
-
-                    if (UDT::ERROR == bytes_sent) {
-                        log::server::error({{"log_message", "XXXX UDT server - send."},
-                                            {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                        break;
-                    }
-
-                    total += bytes_sent;
-                }
-
-                total_bytes_sent += total;
+                common::send_buffer(_socket, expected_size_buf.data(), expected_size_buf.size());
+                total_sent += common::send_buffer(_socket, buf.data(), count);
             }
 
-            /*
-            if (auto empty_bytes = buffer_size - total_bytes_sent; empty_bytes > 0) {
-                buf = {};
-
-                while (empty_bytes > 0) {
-                    const auto bytes_sent = UDT::send(_socket, &buf[0], std::min<int>(buf.size(), empty_bytes), 0);
-
-                    if (UDT::ERROR == bytes_sent) {
-                        log::server::error({{"log_message", "XXXX UDT server - send."},
-                                            {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                        return;
-                    }
-
-                    total_bytes_sent += bytes_sent;
-                    empty_bytes -= bytes_sent;
-                }
-            }
-            */
-
-            log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_bytes_sent));
-
-            /*
-            //namespace fs = boost::filesystem;
-
-            //const auto file_size = fs::file_size(req_ctx.physical_path) - req_ctx.file.tellp();
-
-            const auto buffer_size = _req["buffer_size"].get<std::streamsize>();
-            constexpr int read_buf_size = 8192;
-            const int chunks = buffer_size / read_buf_size;
-            const int bytes_remaining = buffer_size % read_buf_size;
-            std::streamsize total_bytes_sent = 0;
-            std::array<char, read_buf_size> buf{};
-
-            for (int i = 0; i < chunks; ++i) {
-                log::server::info("XXXX UDT SERVER READ - READING CHUNK ...");
-
-                if (!req_ctx.file) {
-                    log::server::info("XXXX UDT SERVER READ - EOF REACHED OR FILE ERROR!!!");
-                    log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_bytes_sent));
-                    return;
-                }
-
-                req_ctx.file.read(&buf[0], read_buf_size);
-
-                const auto bytes_sent = UDT::send(_socket, &buf[0], req_ctx.file.gcount(), 0);
-
-                if (UDT::ERROR == bytes_sent) {
-                    log::server::error({{"log_message", "XXXX UDT server - send."},
-                                        {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                    return;
-                }
-
-                total_bytes_sent += bytes_sent;
-            }
-
-            if (bytes_remaining == 0 || !req_ctx.file) {
-                log::server::info("XXXX UDT SERVER READ - EOF REACHED OR NO MORE BYTES TO READ!!!");
-                log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_bytes_sent));
-                return;
-            }
-
-            log::server::info("XXXX UDT SERVER READ - READING REMAINING BYTES!!!");
-
-            req_ctx.file.read(&buf[0], bytes_remaining);
-
-            const auto bytes_sent = UDT::send(_socket, &buf[0], req_ctx.file.gcount(), 0);
-
-            if (UDT::ERROR == bytes_sent) {
-                log::server::error({{"log_message", "XXXX UDT server - send."},
-                                    {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                return;
-            }
-
-            total_bytes_sent += bytes_sent;
-
-            log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_bytes_sent));
-            */
-
-            /*
-            const auto buffer_size = _req["buffer_size"].get<std::streamsize>();
-            std::array<char, 8192> buf{};
-            std::streamsize total_bytes_sent = 0;
-
-            while (total_bytes_sent < buffer_size) {
-                req_ctx.file.read(&buf[0], std::min<std::streamsize>(buf.size(), buffer_size));
-
-                const auto bytes_sent = UDT::send(_socket, &buf[0], req_ctx.file.gcount(), 0);
-
-                if (UDT::ERROR == bytes_sent) {
-                    log::server::error({{"log_message", "XXXX UDT server - send."},
-                                        {"total_bytes_sent", std::to_string(total_bytes_sent)}});
-                    send_error_response(_socket, error_code::network_udt, "Network::UDT send failed");
-                    return;
-                }
-
-                total_bytes_sent += bytes_sent;
-                log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_bytes_sent));
-            }
-            */
+            log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_sent));
         }
 
         auto write(UDTSOCKET _socket, const nlohmann::json& _req) -> void
@@ -458,7 +223,6 @@ namespace
 
             using log = irods::experimental::log;
 
-            // Check input.
             if (_req.count("buffer_size") == 0) {
                 log::server::error("Missing argument [buffer_size].");
                 send_error_response(_socket, error_code::missing_arg, "Missing argument [buffer_size]");
@@ -467,24 +231,18 @@ namespace
 
             const auto buffer_size = _req["buffer_size"].get<std::streamsize>();
             std::array<char, 8192> buf{};
-            std::streamsize total_bytes_received = 0;
+            std::streamsize total_received = 0;
 
-            while (total_bytes_received < buffer_size) {
-                const auto bytes_received = UDT::recv(_socket, &buf[0], static_cast<int>(buf.size()), 0);
+            while (total_received < buffer_size) {
+                const auto received = common::receive_buffer(_socket, buf.data(), buf.size());
 
-                if (UDT::ERROR == bytes_received) {
-                    log::server::error({{"log_message", "XXXX UDT server - recv."},
-                                        {"total_bytes_received", std::to_string(total_bytes_received)}});
-                    send_error_response(_socket, error_code::network_udt, "Network::UDT recv failed");
-                    return;
-                }
+                req_ctx.file.write(buf.data(), received);
+                req_ctx.update_catalog = true;
 
-                // Write the bytes to the file.
-                req_ctx.file.write(&buf[0], bytes_received);
-
-                total_bytes_received += bytes_received;
-                log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_bytes_received));
+                total_received += received;
             }
+
+            log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_received));
 
             send_error_response(_socket, error_code::ok);
         }
@@ -493,7 +251,6 @@ namespace
         {
             using log = irods::experimental::log;
 
-            // Check input.
             if (_req.count("seek_from") == 0) {
                 log::server::error("Missing argument [seek_from].");
                 send_error_response(_socket, error_code::missing_arg, "Missing argument [seek_from]");
@@ -506,29 +263,7 @@ namespace
                 return;
             }
 
-            const auto to_seekdir = [](int _dir) -> std::ios_base::seekdir
-            {
-                constexpr int seek_beg = 1;
-                constexpr int seek_cur = 2;
-                constexpr int seek_end = 3;
-
-                switch (_dir) {
-                    case seek_beg:
-                        return std::ios_base::beg;
-
-                    case seek_cur:
-                        return std::ios_base::cur;
-
-                    case seek_end:
-                        return std::ios_base::end;
-
-                    default:
-                        return std::ios_base::cur;
-                        // TODO Should throw an exception.
-                }
-            };
-
-            const auto seek_dir = to_seekdir(_req["seek_from"].get<int>());
+            const auto seek_dir = common::to_seekdir(_req["seek_from"].get<int>());
             const auto offset = _req["offset"].get<int>();
 
             // XXX THESE TWO FUNCTIONS ARE UPDATING THE SAME FILE POINTER!!!
@@ -653,13 +388,6 @@ namespace irods::experimental
             if (UDT::INVALID_SOCK == client_socket) {
                 continue;
             }
-
-            // TODO The server must support the following operations:
-            // - open
-            // - close
-            // - read
-            // - write
-            // - seek
 
             log::server::info({{"log_message", "New UDT client connected."},
                                {"udt_client_ip", inet_ntoa(client_info->sin_addr)},

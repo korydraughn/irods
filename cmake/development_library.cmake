@@ -611,6 +611,8 @@ install(
   FILES_MATCHING
     PATTERN */transport/transport.hpp
     PATTERN */transport/default_transport.hpp
+    PATTERN */transport/udt_transport.hpp
+    PATTERN */transport/udt_transport_common.hpp
   )
 
 install(
