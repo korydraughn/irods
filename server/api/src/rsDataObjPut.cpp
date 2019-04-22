@@ -69,8 +69,19 @@ rsDataObjPut( rsComm_t *rsComm, dataObjInp_t *dataObjInp,
             io::server::udt_transport tp{*rsComm};
             io::odstream out{tp, "/tempZone/home/rods/udt_file.txt"};
             out << "Testing the transport ...\n";
-            out.seekp(100, std::ios_base::cur);
+            //out.seekp(100, std::ios_base::cur);
             out << "We've moved the file pointer forward by 100 bytes!\n";
+        }
+        catch (std::exception& e) {
+            rodsLog(LOG_ERROR, e.what());
+        }
+
+        try {
+            io::server::udt_transport tp{*rsComm};
+            io::idstream in{tp, "/tempZone/home/rods/udt_file.txt"};
+            std::string line;
+            while (std::getline(in, line))
+                rodsLog(LOG_NOTICE, ">>>>>>>> LINE READ ::: %s", line.c_str());
         }
         catch (std::exception& e) {
             rodsLog(LOG_ERROR, e.what());

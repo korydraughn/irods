@@ -160,6 +160,32 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         std::streamsize receive(char_type* _buffer, std::streamsize _buffer_size) override
         {
+            using log = irods::experimental::log;
+            using json = nlohmann::json;
+
+            // Send header.
+
+            {
+                const auto sent = send_header({
+                    {"op_code", static_cast<int>(op_code::read)},
+                    {"buffer_size", _buffer_size}
+                });
+
+                if (!sent) {
+                    log::server::error("XXXX UDT client - could not send header.");
+                    return -1;
+                }
+
+                const json resp = read_error_response();
+
+                if (resp["error_code"].get<int>() != 0) {
+                    log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                    return -1;
+                }
+            }
+
+            // Read buffer data.
+
             std::streamsize total_bytes_received = 0;
 
             while (total_bytes_received < _buffer_size) {
@@ -168,12 +194,23 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
                 const auto bytes_received = UDT::recv(socket_, buf_pos, bytes_remaining, 0);
 
+                log::server::info("UDT CLIENT READ - bytes received = " + std::to_string(total_bytes_received));
+
                 if (UDT::ERROR == bytes_received) {
+                    // TODO Should probably throw
                     break;
                 }
 
                 total_bytes_received += bytes_received;
+
+                /*
+                if (bytes_received < bytes_remaining) {
+                    break;
+                }
+                */
             }
+
+            log::server::info("UDT CLIENT READ - total bytes received = " + std::to_string(total_bytes_received));
 
             return total_bytes_received;
         }
@@ -215,8 +252,8 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 const auto bytes_sent = UDT::send(socket_, buf_pos, bytes_remaining, 0);
 
                 if (UDT::ERROR == bytes_sent) {
-                    return -1;
                     // TODO Should probably throw
+                    break;
                 }
 
                 total_bytes_sent += bytes_sent;
