@@ -234,7 +234,7 @@ namespace
             std::streamsize total_received = 0;
 
             while (total_received < buffer_size) {
-                const auto received = common::receive_buffer(_socket, buf.data(), buf.size());
+                const auto received = common::receive_buffer(_socket, buf.data(), std::min<int>(buf.size(), buffer_size));
 
                 req_ctx.file.write(buf.data(), received);
                 req_ctx.update_catalog = true;
