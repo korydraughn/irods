@@ -84,45 +84,33 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         bool open(const irods::experimental::filesystem::path& _p,
                   std::ios_base::openmode _mode) override
         {
-            if (is_open()) {
-                return false;
-            }
-
             if (!basic_transport<char_type>::open(_p, _mode)) {
                 return false;
             }
 
-            return open_and_connect_to_udt_server(_mode);
+            return connect_to_udt_server_and_open_data_object(_mode);
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
                   int _replica_number,
                   std::ios_base::openmode _mode) override
         {
-            if (is_open()) {
-                return false;
-            }
-
             if (!basic_transport<char_type>::open(_p, _replica_number, _mode)) {
                 return false;
             }
 
-            return open_and_connect_to_udt_server(_mode);
+            return connect_to_udt_server_and_open_data_object(_mode);
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
                   const std::string& _resource_name,
                   std::ios_base::openmode _mode) override
         {
-            if (is_open()) {
-                return false;
-            }
-
             if (!basic_transport<char_type>::open(_p, _resource_name, _mode)) {
                 return false;
             }
 
-            return open_and_connect_to_udt_server(_mode);
+            return connect_to_udt_server_and_open_data_object(_mode);
         }
 
         bool close() override
@@ -131,19 +119,17 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             using log = irods::experimental::log;
 
-            if (connected_) {
-                if (const auto sent = common::send_message(socket_, {{"op_code", static_cast<int>(common::op_code::close)}}); !sent) {
-                    log::server::error("XXXX UDT client - close socket");
-                }
-
-                using json = nlohmann::json;
-
-                if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
-                    log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
-                }
-
-                UDT::close(socket_);
+            if (!common::send_message(socket_, {{"op_code", static_cast<int>(common::op_code::close)}})) {
+                log::server::error("XXXX UDT client - close socket");
             }
+
+            using json = nlohmann::json;
+
+            if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
+                log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+            }
+
+            UDT::close(socket_);
 
             return true;
         }
@@ -254,10 +240,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            if (!is_open()) {
-                return seek_error;
-            }
-
             const auto sent = common::send_message(socket_, {
                 {"op_code", static_cast<int>(common::op_code::seek)},
                 {"seek_from", common::to_safe_transport_format(_dir)},
@@ -295,7 +277,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             int repl_number;
         };
 
-        auto open_and_connect_to_udt_server(std::ios_base::openmode _mode) -> bool
+        auto connect_to_udt_server_and_open_data_object(std::ios_base::openmode _mode) -> bool
         {
             const auto [info_captured, error_msg, hostname, info] = capture_file_descriptor_info();
 
@@ -321,7 +303,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             // Send command to open data object for UDT reads and/or writes.
             if (!open_for_udt(_mode, info)) {
-                // TODO
+                return false;
             }
 
             connected_ = true;

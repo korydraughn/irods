@@ -88,70 +88,86 @@ namespace irods::experimental::io
 
         bool is_open() const noexcept
         {
-            return transport_->is_open();
+            return transport_ && transport_->is_open();
         }
 
-        bool open(transport<char_type>& _transport,
-                  const filesystem::path& _p,
-                  std::ios_base::openmode _mode)
+        basic_data_object_buf* open(transport<char_type>& _transport,
+                                    const filesystem::path& _p,
+                                    std::ios_base::openmode _mode)
         {
-            transport_ = &_transport;
+            if (!transport_ || !transport_->is_open()) {
+                transport_ = &_transport;
 
-            if (!transport_->open(_p, _mode)) {
-                return false;
+                if (!transport_->open(_p, _mode)) {
+                    return nullptr;
+                }
+
+                init_get_or_put_area(_mode);
+
+                return this;
             }
 
-            init_get_or_put_area(_mode);
-
-            return true;
+            return nullptr;
         }
 
-        bool open(transport<char_type>& _transport,
-                  const filesystem::path& _p,
-                  int _replica_number,
-                  std::ios_base::openmode _mode)
+        basic_data_object_buf* open(transport<char_type>& _transport,
+                                    const filesystem::path& _p,
+                                    int _replica_number,
+                                    std::ios_base::openmode _mode)
         {
-            transport_ = &_transport;
+            if (!transport_ || !transport_->is_open()) {
+                transport_ = &_transport;
 
-            if (!transport_->open(_p, _replica_number, _mode)) {
-                return false;
+                if (!transport_->open(_p, _replica_number, _mode)) {
+                    return nullptr;
+                }
+
+                init_get_or_put_area(_mode);
+
+                return this;
             }
 
-            init_get_or_put_area(_mode);
-
-            return true;
+            return nullptr;
         }
 
-        bool open(transport<char_type>& _transport,
-                  const filesystem::path& _p,
-                  const std::string& _resource_name,
-                  std::ios_base::openmode _mode)
+        basic_data_object_buf* open(transport<char_type>& _transport,
+                                    const filesystem::path& _p,
+                                    const std::string& _resource_name,
+                                    std::ios_base::openmode _mode)
         {
-            transport_ = &_transport;
+            if (!transport_ || !transport_->is_open()) {
+                transport_ = &_transport;
 
-            if (!transport_->open(_p, _resource_name, _mode)) {
-                return false;
+                if (!transport_->open(_p, _resource_name, _mode)) {
+                    return nullptr;
+                }
+
+                init_get_or_put_area(_mode);
+
+                return this;
             }
 
-            init_get_or_put_area(_mode);
-
-            return true;
+            return nullptr;
         }
 
-        bool close()
+        basic_data_object_buf* close()
         {
-            if (!transport_->is_open()) {
-                return false;
+            if (transport_ && transport_->is_open()) {
+                this->sync();
+
+                if (!transport_->close()) {
+                    return nullptr;
+                }
+
+                return this;
             }
 
-            this->sync();
-
-            return transport_->close();
+            return nullptr;
         }
 
         int file_descriptor() const noexcept
         {
-            return transport_->file_descriptor();;
+            return transport_ ? transport_->file_descriptor() : -1;
         }
 
     protected:
@@ -255,7 +271,7 @@ namespace irods::experimental::io
                          std::ios_base::seekdir _dir,
                          std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
         {
-            if (this->sync() != 0) {
+            if (!is_open() || this->sync() != 0) {
                 return seek_error;
             }
 
@@ -264,7 +280,7 @@ namespace irods::experimental::io
 
         pos_type seekpos(pos_type _pos, std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
         {
-            if (this->sync() != 0) {
+            if (!is_open() || this->sync() != 0) {
                 return seek_error;
             }
 
@@ -361,8 +377,7 @@ namespace irods::experimental::io
     // character type. Using wchar_t or anything else to instantiate this template is undefined.
     // This class is modeled after the C++ standard file stream classes.
     template <typename GeneralStream>
-    class basic_dstream final
-        : public GeneralStream
+    class basic_dstream final : public GeneralStream
     {
     private:
         template <typename>

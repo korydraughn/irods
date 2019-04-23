@@ -85,19 +85,13 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         bool open(const irods::experimental::filesystem::path& _p,
                   std::ios_base::openmode _mode) override
         {
-            return !is_open()
-                ? open_impl(_p, _mode, [](auto&) {})
-                : false;
+            return open_impl(_p, _mode, [](auto&) {});
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
                   int _replica_number,
                   std::ios_base::openmode _mode) override
         {
-            if (is_open()) {
-                return false;
-            }
-
             return open_impl(_p, _mode, [_replica_number](auto& _input) {
                 const auto replica = std::to_string(_replica_number);
                 addKeyVal(&_input.condInput, REPL_NUM_KW, replica.c_str());
@@ -108,10 +102,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                   const std::string& _resource_name,
                   std::ios_base::openmode _mode) override
         {
-            if (is_open()) {
-                return false;
-            }
-
             return open_impl(_p, _mode, [&_resource_name](auto& _input) {
                 addKeyVal(&_input.condInput, RESC_NAME_KW, _resource_name.c_str());
             });
