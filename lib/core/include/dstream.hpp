@@ -159,6 +159,8 @@ namespace irods::experimental::io
                     return nullptr;
                 }
 
+                transport_ = nullptr;
+
                 return this;
             }
 

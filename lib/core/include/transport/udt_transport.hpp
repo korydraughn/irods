@@ -41,7 +41,7 @@
 #include "rsGlobalExtern.hpp" // Declares resc_mgr
 #include "transport/default_transport.hpp"
 #include "transport/udt_transport_common.hpp"
-#include "irods_logger.hpp"
+//#include "irods_logger.hpp"
 #include "irods_server_api_call.hpp"
 
 #include "json.hpp"
@@ -73,12 +73,12 @@ namespace irods::experimental::io::NAMESPACE_IMPL
     public:
         explicit basic_udt_transport(rxComm& _comm)
             : basic_transport<char_type>{_comm}
-            , server_addr_{}
+            //, server_addr_{}
             , socket_{UDT::socket(AF_INET, SOCK_STREAM, 0)}
             , connected_{}
         {
-            server_addr_.sin_family = AF_INET;
-            server_addr_.sin_port = htons(9000);
+            //server_addr_.sin_family = AF_INET;
+            //server_addr_.sin_port = htons(9000);
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
@@ -117,16 +117,16 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            using log = irods::experimental::log;
+            //using log = irods::experimental::log;
 
             if (!common::send_message(socket_, {{"op_code", static_cast<int>(common::op_code::close)}})) {
-                log::server::error("XXXX UDT client - close socket");
+                //log::server::error("XXXX UDT client - close socket");
             }
 
             using json = nlohmann::json;
 
             if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
-                log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
             }
 
             UDT::close(socket_);
@@ -138,7 +138,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            using log  = irods::experimental::log;
+            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             // Send header.
@@ -150,14 +150,14 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 });
 
                 if (!sent) {
-                    log::server::error("XXXX UDT client - could not send header.");
+                    //log::server::error("XXXX UDT client - could not send header.");
                     return -1;
                 }
 
                 const json resp = read_error_response();
 
                 if (resp["error_code"].get<int>() != 0) {
-                    log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                    //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                     return -1;
                 }
             }
@@ -167,7 +167,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             std::streamsize total_received = 0;
 
             while (total_received < _buffer_size) {
-                log::server::info("UDT CLIENT READ - Reading incoming buffer size ...");
+                //log::server::info("UDT CLIENT READ - Reading incoming buffer size ...");
 
                 // Read header (get incoming buffer size).
                 std::array<char_type, 15> expected_size_buf{};
@@ -176,18 +176,18 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
                 const int expected_size = std::stoi(std::string(std::begin(expected_size_buf), std::end(expected_size_buf)));
 
-                log::server::info("UDT CLIENT READ - incoming buffer size = " + std::to_string(expected_size));
+                //log::server::info("UDT CLIENT READ - incoming buffer size = " + std::to_string(expected_size));
 
                 if (expected_size == 0) {
                     return total_received;
                 }
 
-                log::server::info("UDT CLIENT READ - Reading incoming buffer data ...");
+                //log::server::info("UDT CLIENT READ - Reading incoming buffer data ...");
 
                 total_received += common::receive_buffer(socket_, _buffer, expected_size);
             }
 
-            log::server::info("UDT CLIENT READ - total bytes received = " + std::to_string(total_received));
+            //log::server::info("UDT CLIENT READ - total bytes received = " + std::to_string(total_received));
 
             return total_received;
         }
@@ -196,7 +196,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            using log  = irods::experimental::log;
+            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             // Send header.
@@ -208,14 +208,14 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 });
 
                 if (!sent) {
-                    log::server::error("XXXX UDT client - could not send header.");
+                    //log::server::error("XXXX UDT client - could not send header.");
                     return -1;
                 }
 
                 const json resp = read_error_response();
 
                 if (resp["error_code"].get<int>() != 0) {
-                    log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                    //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                     return -1;
                 }
             }
@@ -224,12 +224,12 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             const auto total_sent = common::send_buffer(socket_, _buffer, _buffer_size);
 
-            log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_sent));
+            //log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_sent));
 
             const json resp = read_error_response();
 
             if (resp["error_code"].get<int>() != 0) {
-                log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                 return -1;
             }
 
@@ -287,6 +287,10 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return false;
             }
 
+            sockaddr_in server_addr_{};
+            server_addr_.sin_family = AF_INET;
+            server_addr_.sin_port = htons(9000);
+
             // UDT specific initialization code.
             if (const auto ec = load_in_addr_from_hostname(hostname.c_str(), &server_addr_.sin_addr); ec != 0) {
                 //throw std::runtime_error{"Cannot resolve hostname of destination resource to IP address"};
@@ -313,7 +317,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         auto capture_file_descriptor_info() -> std::tuple<bool, std::string, std::string, data_object_info>
         {
-            using log  = irods::experimental::log;
+            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             const auto json_input = json{{"fd", basic_transport<char_type>::file_descriptor()}}.dump();
@@ -327,8 +331,8 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return {false, error_msg, {}, {}};
             }
 
-            log::server::trace("Got file descriptor info.");
-            log::server::trace({{"file_descriptor_info", json_output}});
+            //log::server::trace("Got file descriptor info.");
+            //log::server::trace({{"file_descriptor_info", json_output}});
 
             std::string hostname;
             data_object_info info{};
@@ -361,11 +365,13 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                     return {false, error_msg, {}, {}};
                 }
 
+                /*
                 log::server::trace({{"log_message", "File Descriptor Info"},
                                     {"logical_path", info.logical_path},
                                     {"physical_path", info.physical_path},
                                     {"resource", info.resource},
                                     {"hostname", hostname}});
+                                    */
             }
             catch (const json::parse_error& e) {
                 return {false, e.what(), {}, {}};
@@ -378,13 +384,14 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            using log = irods::experimental::log;
+            //using log = irods::experimental::log;
 
             std::array<char_type, 2000> buf{};
 
             const auto total_received = common::receive_buffer(socket_, buf.data(), buf.size());
+            (void) total_received;
 
-            log::server::info("XXXX UDT client - total bytes received = " + std::to_string(total_received));
+            //log::server::info("XXXX UDT client - total bytes received = " + std::to_string(total_received));
 
             using json = nlohmann::json;
 
@@ -401,7 +408,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            using log  = irods::experimental::log;
+            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             const auto sent = common::send_message(socket_, {
@@ -422,13 +429,14 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             const json resp = read_error_response();
 
             if (resp["error_code"].get<int>() != 0) {
-                log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                 return false;
             }
 
             return true;
         }
 
+#ifdef IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
         int rs_get_file_descriptor_info(rsComm_t* _comm, const char* _json_input, char** _json_output)
         {
             if (!_json_input) {
@@ -449,8 +457,9 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             return ec;
         }
+#endif // IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
 
-        sockaddr_in server_addr_;
+        //sockaddr_in server_addr_;
         UDTSOCKET socket_;
         bool connected_;
     }; // basic_udt_transport
