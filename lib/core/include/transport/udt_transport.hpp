@@ -35,18 +35,20 @@
 #endif // IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
 // clang-format on
 
+#include <udt/udt.h>
+#undef ERROR
+
 #include "rcMisc.h"
 #include "api_plugin_number.h"
 #include "get_file_descriptor_info.h"
 #include "rsGlobalExtern.hpp" // Declares resc_mgr
 #include "transport/default_transport.hpp"
 #include "transport/udt_transport_common.hpp"
-//#include "irods_logger.hpp"
 #include "irods_server_api_call.hpp"
+#include "irods_query.hpp"
 
 #include "json.hpp"
 
-#include <udt/udt.h>
 #include <arpa/inet.h>
 
 #include <string>
@@ -348,6 +350,14 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 info.physical_path = data_obj_info["file_path"].get<std::string>();
                 info.repl_number = data_obj_info["replica_number"].get<int>();
 
+                std::string sql = "select RESC_LOC where RESC_NAME = '";
+                sql += info.resource;
+                sql += "'";
+                for (const auto&& row : irods::query<rxComm>{basic_transport<char_type>::connection(), sql}) {
+                    hostname = row[0];
+                }
+
+                /*
                 irods::resource_ptr resc_ptr;
                 if (const auto err = resc_mgr.resolve(info.resource, resc_ptr); !err.ok()) {
                     std::string error_msg = "Cannot resolve resource name to hostname [ec => ";
@@ -364,6 +374,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
                     return {false, error_msg, {}, {}};
                 }
+                */
 
                 /*
                 log::server::trace({{"log_message", "File Descriptor Info"},

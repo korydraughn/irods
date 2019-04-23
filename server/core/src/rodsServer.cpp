@@ -6,8 +6,6 @@
 // requires that the UDT header be included before all
 // other headers just so this code compiles.
 #include "udt_server.hpp"
-#include "irods_server_api_table.hpp"
-#include "irods_client_api_table.hpp"
 #include <thread>
 
 #include "rcMisc.h"
@@ -403,13 +401,6 @@ static irods::error uninstantiate_shared_memory( ) {
 
 int
 serverMain() {
-    // Initialize API plugins (required by UDT server).
-    auto client_api_table = irods::get_client_api_table();
-    auto server_api_table = irods::get_client_api_table();
-    auto pck_table = irods::get_pack_table();
-    init_api_table(client_api_table, pck_table, false);
-    init_api_table(server_api_table, pck_table, false);
-
     // Launch UDT server.
     irods::experimental::udt_server udt_server{};
     std::thread udt_server_thread{[&udt_server] {

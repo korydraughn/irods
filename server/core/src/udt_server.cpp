@@ -57,13 +57,14 @@ namespace
 
     auto read_header(UDTSOCKET _socket) -> std::tuple<int, op_code, nlohmann::json> 
     {
-        using log = irods::experimental::log;
+        //using log = irods::experimental::log;
 
         std::array<char, 2000> buf{};
 
         const auto received = common::receive_buffer(_socket, buf.data(), buf.size());
+        (void) received;
 
-        log::server::info("XXXX UDT server - total bytes received = " + std::to_string(received));
+        //log::server::info("XXXX UDT server - total bytes received = " + std::to_string(received));
 
         using json = nlohmann::json;
 
@@ -79,7 +80,7 @@ namespace
 
     auto send_error_response(UDTSOCKET _socket, error_code _ec, const std::string& _msg = "") -> void
     {
-        using log = irods::experimental::log;
+        //using log = irods::experimental::log;
         using json = nlohmann::json;
 
         const auto msg = json{
@@ -91,8 +92,9 @@ namespace
         std::copy(std::begin(msg), std::end(msg), std::begin(buf));
 
         const auto sent = common::send_buffer(_socket, buf.data(), buf.size());
+        (void) sent;
 
-        log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(sent));
+        //log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(sent));
     }
 
     namespace handler
@@ -165,9 +167,9 @@ namespace
 
         auto close(UDTSOCKET _socket, const nlohmann::json& _req) -> void
         {
-            using log = irods::experimental::log;
+            //using log = irods::experimental::log;
 
-            log::server::info("Close connection request received. Shutting down connection ...");
+            //log::server::info("Close connection request received. Shutting down connection ...");
 
             req_ctx.file.close();
 
@@ -214,7 +216,7 @@ namespace
                 total_sent += common::send_buffer(_socket, buf.data(), count);
             }
 
-            log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_sent));
+            //log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_sent));
         }
 
         auto write(UDTSOCKET _socket, const nlohmann::json& _req) -> void
@@ -242,7 +244,7 @@ namespace
                 total_received += received;
             }
 
-            log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_received));
+            //log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_received));
 
             send_error_response(_socket, error_code::ok);
         }
@@ -292,7 +294,7 @@ namespace
 
             const auto file_size = std::to_string(fs::file_size(req_ctx.physical_path));
 
-            log::server::info("XXXXXXXXXXXXXX FINAL DATA OBJECT SIZE = " + file_size);
+            //log::server::info("XXXXXXXXXXXXXX FINAL DATA OBJECT SIZE = " + file_size);
 
             keyValPair_t kvp{};
 
@@ -391,9 +393,11 @@ namespace irods::experimental
                 continue;
             }
 
+            /*
             log::server::info({{"log_message", "New UDT client connected."},
                                {"udt_client_ip", inet_ntoa(client_info->sin_addr)},
                                {"udt_client_port", std::to_string(ntohs(client_info->sin_port))}});
+                               */
 
             irods::thread_pool::post(thread_pool_, [client_socket] {
                 req_ctx.reset();
@@ -407,7 +411,7 @@ namespace irods::experimental
                         break;
                     }
 
-                    log::server::info({{"XXXXX JSON_REQUEST_DATA", req.dump()}});
+                    //log::server::info({{"XXXXX JSON_REQUEST_DATA", req.dump()}});
 
                     if (auto it = op_handlers.find(op_code); std::end(op_handlers) != it) {
                         (it->second)(client_socket, req);

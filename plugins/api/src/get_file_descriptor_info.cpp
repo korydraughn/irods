@@ -213,7 +213,7 @@ namespace
         std::strncpy(buf, _s.c_str(), _s.length());
 
         bytesBuf_t* bbp = new bytesBuf_t{};
-        bbp->len = _s.length();
+        bbp->len = _s.length() + 1;
         bbp->buf = buf;
 
         return bbp;

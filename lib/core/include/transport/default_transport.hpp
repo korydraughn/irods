@@ -153,10 +153,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         pos_type seekpos(off_type _offset, std::ios_base::seekdir _dir) override
         {
-            if (!is_open()) {
-                return seek_error;
-            }
-
             openedDataObjInp_t input{};
 
             input.l1descInx = fd_;
