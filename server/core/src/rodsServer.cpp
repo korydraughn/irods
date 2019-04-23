@@ -407,8 +407,8 @@ serverMain() {
     auto client_api_table = irods::get_client_api_table();
     auto server_api_table = irods::get_client_api_table();
     auto pck_table = irods::get_pack_table();
-    init_api_table(client_api_table, pck_table);
-    init_api_table(server_api_table, pck_table);
+    init_api_table(client_api_table, pck_table, false);
+    init_api_table(server_api_table, pck_table, false);
 
     // Launch UDT server.
     irods::experimental::udt_server udt_server{};
