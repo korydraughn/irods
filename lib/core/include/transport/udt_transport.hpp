@@ -143,7 +143,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
-            // Send header.
+            // Send buffer size.
 
             {
                 const auto sent = common::send_message(socket_, {

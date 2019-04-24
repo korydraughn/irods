@@ -153,7 +153,7 @@ namespace
             req_ctx.physical_path = _req["physical_path"].get<std::string>();
 
             // Open file.
-            req_ctx.file.open(req_ctx.physical_path, common::to_openmode(_req["open_mode"].get<int>())); 
+            req_ctx.file.open(req_ctx.physical_path, common::to_openmode(_req["open_mode"].get<int>()) | std::ios_base::binary); 
 
             if (!req_ctx.file) {
                 send_error_response(_socket, error_code::file_open, "Could not open file");
