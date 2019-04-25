@@ -264,7 +264,8 @@ namespace
             }
 
             const auto seek_dir = common::to_seekdir(_req["seek_from"].get<int>());
-            const auto offset = _req["offset"].get<int>();
+            //const auto offset = _req["offset"].get<int>();
+            const auto offset = _req["offset"].get<std::fstream::off_type>();
 
             // XXX THESE TWO FUNCTIONS ARE UPDATING THE SAME FILE POINTER!!!
             // Should only use one of them.
@@ -273,7 +274,8 @@ namespace
 
             common::send_message(_socket, {
                 {"error_code", static_cast<int>(error_code::ok)},
-                {"position", static_cast<int>(req_ctx.file.tellp())}
+                //{"position", static_cast<int>(req_ctx.file.tellp())}
+                {"position", static_cast<std::fstream::off_type>(req_ctx.file.tellp())}
             });
         }
 
