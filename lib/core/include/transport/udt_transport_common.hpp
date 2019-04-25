@@ -31,11 +31,12 @@ namespace irods::experimental::io::common
     struct openmode
     {
         // clang-format off
-        static constexpr int in    = 1 << 0;
-        static constexpr int out   = 1 << 1;
-        static constexpr int trunc = 1 << 2;
-        static constexpr int app   = 1 << 3;
-        static constexpr int ate   = 1 << 4;
+        static constexpr int in     = 1 << 0;
+        static constexpr int out    = 1 << 1;
+        static constexpr int trunc  = 1 << 2;
+        static constexpr int app    = 1 << 3;
+        static constexpr int ate    = 1 << 4;
+        static constexpr int binary = 1 << 5;
         // clang-format on
     };
 
@@ -143,6 +144,10 @@ namespace irods::experimental::io::common
 
         if (_mode & openmode::app) {
             m |= ios_base::app;
+        }
+
+        if (_mode & openmode::binary) {
+            m |= ios_base::binary;
         }
 
         if (_mode & openmode::ate) {

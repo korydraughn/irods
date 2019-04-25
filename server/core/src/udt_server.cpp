@@ -149,7 +149,7 @@ namespace
             req_ctx.physical_path = _req["physical_path"].get<std::string>();
 
             // Open file.
-            req_ctx.file.open(req_ctx.physical_path, common::to_openmode(_req["open_mode"].get<int>()) | std::ios_base::binary); 
+            req_ctx.file.open(req_ctx.physical_path, common::to_openmode(_req["open_mode"].get<int>())); 
 
             if (!req_ctx.file) {
                 send_error_response(_socket, error_code::file_open, "Could not open file");
@@ -215,7 +215,7 @@ namespace
             });
 
             if (bytes_read > 0) {
-                common::send_buffer(_socket, buf.data(), buf.size());
+                common::send_buffer(_socket, buf.data(), bytes_read);
             }
         }
 
@@ -232,11 +232,33 @@ namespace
             }
 
             const auto buffer_size = _req["buffer_size"].get<std::streamsize>();
+            std::vector<char> buf(buffer_size);
+
+            const auto received = common::receive_buffer(_socket, buf.data(), buf.size());
+            std::size_t bytes_written = 0;
+
+            if (received > 0) {
+                const auto start_pos = req_ctx.file.tellp();
+
+                if (req_ctx.file.write(buf.data(), received)) {
+                    req_ctx.update_catalog = true;
+                    bytes_written = req_ctx.file.tellp() - start_pos;
+                }
+            }
+            
+            common::send_message(_socket, {
+                {"error_code", error_code::ok},
+                {"bytes_written", bytes_written}
+            });
+
+            /*
+            const auto buffer_size = _req["buffer_size"].get<std::streamsize>();
             std::array<char, 8192> buf{};
             std::streamsize total_received = 0;
+            const auto fetch_buffer_size = std::min<std::streamsize>(buf.size(), buffer_size);
 
             while (total_received < buffer_size) {
-                const auto received = common::receive_buffer(_socket, buf.data(), std::min<int>(buf.size(), buffer_size));
+                const auto received = common::receive_buffer(_socket, buf.data(), fetch_buffer_size);
 
                 req_ctx.file.write(buf.data(), received);
                 req_ctx.update_catalog = true;
@@ -245,6 +267,7 @@ namespace
             }
 
             send_error_response(_socket, error_code::ok);
+            */
         }
 
         auto seek(UDTSOCKET _socket, const nlohmann::json& _req) -> void

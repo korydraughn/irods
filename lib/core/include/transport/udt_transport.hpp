@@ -326,7 +326,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 sql += info.resource;
                 sql += "'";
 
-                for (const auto&& row : irods::query<rxComm>{basic_transport<char_type>::connection(), sql}) {
+                for (const auto&& row : irods::query{basic_transport<char_type>::connection(), sql}) {
                     hostname = row[0];
                 }
             }
