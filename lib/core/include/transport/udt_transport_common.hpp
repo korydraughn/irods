@@ -117,6 +117,10 @@ namespace irods::experimental::io::common
             m |= openmode::app;
         }
 
+        if (_mode & ios_base::binary) {
+            m |= openmode::binary;
+        }
+
         if (_mode & ios_base::ate) {
             m |= openmode::ate;
         }
