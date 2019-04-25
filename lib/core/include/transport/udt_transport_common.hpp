@@ -24,7 +24,8 @@ namespace irods::experimental::io::common
         bad_header = 1000,
         missing_arg,
         file_open,
-        network_udt
+        network_udt,
+        eof
     };
 
     struct openmode

@@ -22,8 +22,10 @@
 
 namespace common = irods::experimental::io::common;
 
+// clang-format off
 using op_code    = common::op_code;
 using error_code = common::error_code;
+// clang-format on
 
 namespace
 {
@@ -49,7 +51,6 @@ namespace
             replica_number = -1;
             file.close();
             update_catalog = false;
-            close_connection = false;
         }
     };
 
@@ -64,7 +65,13 @@ namespace
         const auto received = common::receive_buffer(_socket, buf.data(), buf.size());
         (void) received;
 
-        //log::server::info("XXXX UDT server - total bytes received = " + std::to_string(received));
+        if (UDT::getlasterror_code() == CUDTException::ECONNLOST) {
+            return {CUDTException::ECONNLOST, {}, {}};
+        }
+
+        if (received != buf.size()) {
+            return {-1, {}, {}};
+        }
 
         using json = nlohmann::json;
 
@@ -72,7 +79,7 @@ namespace
             auto json_data = json::parse(&buf[0]);
             return {0, op_code{json_data["op_code"].get<int>()}, json_data};
         }
-        catch (const json::parse_error& e) {
+        catch (const std::exception& e) {
         }
 
         return {-1, {}, {}};
@@ -80,21 +87,10 @@ namespace
 
     auto send_error_response(UDTSOCKET _socket, error_code _ec, const std::string& _msg = "") -> void
     {
-        //using log = irods::experimental::log;
-        using json = nlohmann::json;
-
-        const auto msg = json{
+        common::send_message(_socket, {
             {"error_code", static_cast<int>(_ec)},
             {"error_message", _msg}
-        }.dump();
-
-        std::array<char, 2000> buf{};
-        std::copy(std::begin(msg), std::end(msg), std::begin(buf));
-
-        const auto sent = common::send_buffer(_socket, buf.data(), buf.size());
-        (void) sent;
-
-        //log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(sent));
+        });
     }
 
     namespace handler
@@ -167,9 +163,9 @@ namespace
 
         auto close(UDTSOCKET _socket, const nlohmann::json& _req) -> void
         {
-            //using log = irods::experimental::log;
+            using log = irods::experimental::log;
 
-            //log::server::info("Close connection request received. Shutting down connection ...");
+            log::server::info("Close connection request received. Shutting down connection ...");
 
             req_ctx.file.close();
 
@@ -178,12 +174,18 @@ namespace
             }
 
             send_error_response(_socket, error_code::ok);
+
             req_ctx.close_connection = true;
         }
 
         auto read(UDTSOCKET _socket, const nlohmann::json& _req) -> void
         {
-            send_error_response(_socket, error_code::ok);
+            if (!req_ctx.file) {
+                send_error_response(_socket, error_code::eof);
+                return;
+            }
+
+            //send_error_response(_socket, error_code::ok);
 
             using log = irods::experimental::log;
 
@@ -193,30 +195,28 @@ namespace
                 return;
             }
 
-            const auto buffer_size = _req["buffer_size"].get<std::streamsize>();
-            std::array<char, 15> expected_size_buf{};
-            std::array<char, 8192> buf{};
-            std::streamsize total_sent = 0;
+            std::vector<char> buf(_req["buffer_size"].get<std::streamsize>());
 
-            while (total_sent < buffer_size) {
-                if (!req_ctx.file) {
-                    expected_size_buf= {'0'};
-                    common::send_buffer(_socket, expected_size_buf.data(), expected_size_buf.size());
-                    break;
-                }
+            req_ctx.file.read(&buf[0], buf.size());
 
-                req_ctx.file.read(&buf[0], std::min<std::streamsize>(buf.size(), buffer_size));
+            const auto bytes_read = req_ctx.file.gcount();
+            /*
+            const auto bytes_read_string = std::to_string(req_ctx.file.gcount());
+            std::array<char, 20> bytes_read_buf{};
 
-                const int count = req_ctx.file.gcount();
-                const std::string expected_size = std::to_string(count);
+            std::copy(std::begin(bytes_read_string), std::end(bytes_read_string), std::begin(bytes_read_buf));
 
-                std::copy(std::begin(expected_size), std::end(expected_size), std::begin(expected_size_buf));
+            common::send_buffer(_socket, bytes_read_buf.data(), bytes_read_buf.size());
+            */
 
-                common::send_buffer(_socket, expected_size_buf.data(), expected_size_buf.size());
-                total_sent += common::send_buffer(_socket, buf.data(), count);
+            common::send_message(_socket, {
+                {"error_code", error_code::ok},
+                {"bytes_read", bytes_read}
+            });
+
+            if (bytes_read > 0) {
+                common::send_buffer(_socket, buf.data(), buf.size());
             }
-
-            //log::server::info("XXXX UDT server - total bytes sent = " + std::to_string(total_sent));
         }
 
         auto write(UDTSOCKET _socket, const nlohmann::json& _req) -> void
@@ -243,8 +243,6 @@ namespace
 
                 total_received += received;
             }
-
-            //log::server::info("XXXX UDT server - total bytes received = " + std::to_string(total_received));
 
             send_error_response(_socket, error_code::ok);
         }
@@ -293,8 +291,6 @@ namespace
             namespace fs = boost::filesystem;
 
             const auto file_size = std::to_string(fs::file_size(req_ctx.physical_path));
-
-            //log::server::info("XXXXXXXXXXXXXX FINAL DATA OBJECT SIZE = " + file_size);
 
             keyValPair_t kvp{};
 
@@ -406,12 +402,14 @@ namespace irods::experimental
                     const auto [ec, op_code, req] = read_header(client_socket);
 
                     if (ec) {
+                        if (ec == CUDTException::ECONNLOST) {
+                            break;
+                        }
+
                         log::server::error("Could not read header.");
                         send_error_response(client_socket, error_code::bad_header, "Bad request header");
                         break;
                     }
-
-                    //log::server::info({{"XXXXX JSON_REQUEST_DATA", req.dump()}});
 
                     if (auto it = op_handlers.find(op_code); std::end(op_handlers) != it) {
                         (it->second)(client_socket, req);

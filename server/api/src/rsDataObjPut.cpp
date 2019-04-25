@@ -3,12 +3,6 @@
 /* This is script-generated code (for the most part).  */
 /* See dataObjPut.h for a description of this API call.*/
 
-// MUST find the header that forces these two headers
-// to be put at the very top. smdh.
-#define IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
-#include "transport/udt_transport.hpp"
-#include "dstream.hpp"
-
 #include "dataObjPut.h"
 #include "rodsLog.h"
 #include "dataPut.h"
@@ -48,46 +42,9 @@
 #include "irods_serialization.hpp"
 #include "irods_server_properties.hpp"
 
-#include "irods_logger.hpp"
-
 int
 rsDataObjPut( rsComm_t *rsComm, dataObjInp_t *dataObjInp,
               bytesBuf_t *dataObjInpBBuf, portalOprOut_t **portalOprOut ) {
-
-    {
-        /*
-        irods::resource_ptr rptr;
-        resc_mgr.resolve("demoResc", rptr);
-        std::string hostname;
-        rptr->get_property(irods::RESOURCE_LOCATION, hostname);
-        using log = irods::experimental::log;
-        log::agent::info("XXXXX resource hostname = " + hostname);
-        */
-        namespace io = irods::experimental::io;
-
-        try {
-            io::server::udt_transport tp{*rsComm};
-            io::odstream out{tp, "/tempZone/home/rods/udt_file.txt"};
-            out << "Testing the transport ...\n";
-            out.seekp(-10, std::ios_base::end);
-            out << " ... seek works!\n";
-        }
-        catch (std::exception& e) {
-            rodsLog(LOG_ERROR, e.what());
-        }
-
-        try {
-            io::server::udt_transport tp{*rsComm};
-            io::idstream in{tp, "/tempZone/home/rods/udt_file.txt"};
-            std::string line;
-            while (std::getline(in, line))
-                rodsLog(LOG_NOTICE, ">>>>>>>> LINE READ ::: %s", line.c_str());
-        }
-        catch (std::exception& e) {
-            rodsLog(LOG_ERROR, e.what());
-        }
-    }
-
     int status;
     int status2;
     int remoteFlag;

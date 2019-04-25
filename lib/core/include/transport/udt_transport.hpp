@@ -119,19 +119,17 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            //using log = irods::experimental::log;
-
             if (!common::send_message(socket_, {{"op_code", static_cast<int>(common::op_code::close)}})) {
-                //log::server::error("XXXX UDT client - close socket");
             }
 
             using json = nlohmann::json;
 
             if (const json resp = read_error_response(); resp["error_code"].get<int>() != 0) {
-                //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
             }
 
             UDT::close(socket_);
+
+            connected_ = false;
 
             return true;
         }
@@ -140,7 +138,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             // Send buffer size.
@@ -152,53 +149,38 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 });
 
                 if (!sent) {
-                    //log::server::error("XXXX UDT client - could not send header.");
                     return -1;
                 }
 
                 const json resp = read_error_response();
+                const common::error_code ec{resp["error_code"].get<int>()};
 
-                if (resp["error_code"].get<int>() != 0) {
-                    //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
+                if (ec == common::error_code::eof) {
+                    return 0;
+                }
+
+                if (ec != common::error_code::ok) {
                     return -1;
                 }
+
+                _buffer_size = resp["bytes_read"].get<std::streamsize>();
             }
 
             // Read buffer data.
 
-            std::streamsize total_received = 0;
+            /*
+            common::receive_buffer(socket_, _buffer, 20);
 
-            while (total_received < _buffer_size) {
-                //log::server::info("UDT CLIENT READ - Reading incoming buffer size ...");
+            _buffer_size = std::stol(_buffer);
+            */
 
-                // Read header (get incoming buffer size).
-                std::array<char_type, 15> expected_size_buf{};
-
-                common::receive_buffer(socket_, expected_size_buf.data(), expected_size_buf.size());
-
-                const int expected_size = std::stoi(std::string(std::begin(expected_size_buf), std::end(expected_size_buf)));
-
-                //log::server::info("UDT CLIENT READ - incoming buffer size = " + std::to_string(expected_size));
-
-                if (expected_size == 0) {
-                    return total_received;
-                }
-
-                //log::server::info("UDT CLIENT READ - Reading incoming buffer data ...");
-
-                total_received += common::receive_buffer(socket_, _buffer, expected_size);
-            }
-
-            //log::server::info("UDT CLIENT READ - total bytes received = " + std::to_string(total_received));
-
-            return total_received;
+            return common::receive_buffer(socket_, _buffer, _buffer_size);
         }
 
         std::streamsize send(const char_type* _buffer, std::streamsize _buffer_size) override
         {
             namespace common = irods::experimental::io::common;
 
-            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             // Send header.
@@ -210,14 +192,12 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 });
 
                 if (!sent) {
-                    //log::server::error("XXXX UDT client - could not send header.");
                     return -1;
                 }
 
                 const json resp = read_error_response();
 
                 if (resp["error_code"].get<int>() != 0) {
-                    //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                     return -1;
                 }
             }
@@ -225,13 +205,9 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             // Send buffer data.
 
             const auto total_sent = common::send_buffer(socket_, _buffer, _buffer_size);
-
-            //log::server::info("XXXX UDT client - total bytes sent = " + std::to_string(total_sent));
-
             const json resp = read_error_response();
 
             if (resp["error_code"].get<int>() != 0) {
-                //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                 return -1;
             }
 
@@ -319,7 +295,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         auto capture_file_descriptor_info() -> std::tuple<bool, std::string, std::string, data_object_info>
         {
-            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             const auto json_input = json{{"fd", basic_transport<char_type>::file_descriptor()}}.dump();
@@ -332,9 +307,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
                 return {false, error_msg, {}, {}};
             }
-
-            //log::server::trace("Got file descriptor info.");
-            //log::server::trace({{"file_descriptor_info", json_output}});
 
             std::string hostname;
             data_object_info info{};
@@ -353,36 +325,10 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 std::string sql = "select RESC_LOC where RESC_NAME = '";
                 sql += info.resource;
                 sql += "'";
+
                 for (const auto&& row : irods::query<rxComm>{basic_transport<char_type>::connection(), sql}) {
                     hostname = row[0];
                 }
-
-                /*
-                irods::resource_ptr resc_ptr;
-                if (const auto err = resc_mgr.resolve(info.resource, resc_ptr); !err.ok()) {
-                    std::string error_msg = "Cannot resolve resource name to hostname [ec => ";
-                    error_msg += std::to_string(err.code());
-                    error_msg += ']';
-
-                    return {false, error_msg, {}, {}};
-                }
-
-                if (const auto err = resc_ptr->get_property(irods::RESOURCE_LOCATION, hostname); !err.ok()) {
-                    std::string error_msg = "Cannot resolve resource name to hostname [ec => ";
-                    error_msg += std::to_string(err.code());
-                    error_msg += ']';
-
-                    return {false, error_msg, {}, {}};
-                }
-                */
-
-                /*
-                log::server::trace({{"log_message", "File Descriptor Info"},
-                                    {"logical_path", info.logical_path},
-                                    {"physical_path", info.physical_path},
-                                    {"resource", info.resource},
-                                    {"hostname", hostname}});
-                                    */
             }
             catch (const json::parse_error& e) {
                 return {false, e.what(), {}, {}};
@@ -395,21 +341,16 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            //using log = irods::experimental::log;
-
             std::array<char_type, 2000> buf{};
 
             const auto total_received = common::receive_buffer(socket_, buf.data(), buf.size());
-            (void) total_received;
-
-            //log::server::info("XXXX UDT client - total bytes received = " + std::to_string(total_received));
 
             using json = nlohmann::json;
 
             try {
-                return json::parse(&buf[0]);
+                return json::parse(buf.data());
             }
-            catch (const json::parse_error& e) {
+            catch (const std::exception& e) {
             }
 
             return {}; // TODO Should probably throw instead.
@@ -419,7 +360,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         {
             namespace common = irods::experimental::io::common;
 
-            //using log  = irods::experimental::log;
             using json = nlohmann::json;
 
             const auto sent = common::send_message(socket_, {
@@ -440,7 +380,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             const json resp = read_error_response();
 
             if (resp["error_code"].get<int>() != 0) {
-                //log::server::error("XXXX UDT client - " + resp["error_message"].get<std::string>());
                 return false;
             }
 
