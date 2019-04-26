@@ -197,9 +197,14 @@ namespace
 
             std::vector<char> buf(_req["buffer_size"].get<std::streamsize>());
 
+            /*
             req_ctx.file.read(&buf[0], buf.size());
 
             const auto bytes_read = req_ctx.file.gcount();
+            */
+
+            const auto bytes_read = req_ctx.file.rdbuf()->sgetn(&buf[0], buf.size());
+
             /*
             const auto bytes_read_string = std::to_string(req_ctx.file.gcount());
             std::array<char, 20> bytes_read_buf{};
@@ -235,14 +240,16 @@ namespace
             std::vector<char> buf(buffer_size);
 
             const auto received = common::receive_buffer(_socket, buf.data(), buf.size());
-            std::size_t bytes_written = 0;
+            //std::size_t bytes_written = 0;
+            std::streamsize bytes_written = 0;
 
             if (received > 0) {
-                const auto start_pos = req_ctx.file.tellp();
+                //const auto start_pos = req_ctx.file.tellp();
 
-                if (req_ctx.file.write(buf.data(), received)) {
+                //if (req_ctx.file.write(buf.data(), received)) {
+                if ((bytes_written = req_ctx.file.rdbuf()->sputn(buf.data(), received)) > 0) {
                     req_ctx.update_catalog = true;
-                    bytes_written = req_ctx.file.tellp() - start_pos;
+                    //bytes_written = req_ctx.file.tellp() - start_pos;
                 }
             }
             
