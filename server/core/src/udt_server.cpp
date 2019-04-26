@@ -382,28 +382,33 @@ namespace irods::experimental
             irods::thread_pool::post(thread_pool_, [client_socket] {
                 request_context ctx{};
 
-                while (!ctx.close_connection) {
-                    const auto [ec, op_code, req] = read_header(client_socket);
+                try {
+                    while (!ctx.close_connection) {
+                        const auto [ec, op_code, req] = read_header(client_socket);
 
-                    if (ec) {
-                        if (ec == CUDTException::ECONNLOST) {
+                        if (ec) {
+                            if (ec == CUDTException::ECONNLOST) {
+                                break;
+                            }
+
+                            log::server::error("Could not read header.");
+                            send_error_response(client_socket, error_code::bad_header, "Bad request header");
                             break;
                         }
 
-                        log::server::error("Could not read header.");
-                        send_error_response(client_socket, error_code::bad_header, "Bad request header");
-                        break;
-                    }
+                        if (auto it = op_handlers.find(op_code); std::end(op_handlers) != it) {
+                            (it->second)(client_socket, ctx, req);
+                        }
+                        else {
+                            log::server::error({{"log_message", "Invalid Op Code."},
+                                                {"op_code", std::to_string(static_cast<int>(op_code))}});
+                        }
 
-                    if (auto it = op_handlers.find(op_code); std::end(op_handlers) != it) {
-                        (it->second)(client_socket, ctx, req);
+                        std::this_thread::yield();
                     }
-                    else {
-                        log::server::error({{"log_message", "Invalid Op Code."},
-                                            {"op_code", std::to_string(static_cast<int>(op_code))}});
-                    }
-
-                    std::this_thread::yield();
+                }
+                catch (...) {
+                    // Ignore all exceptions!
                 }
 
                 UDT::close(client_socket);
