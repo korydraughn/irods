@@ -23,7 +23,7 @@ namespace irods::experimental::io::common
         ok = 0,
         bad_header = 1000,
         missing_arg,
-        file_open,
+        data_object_not_open,
         network_udt,
         eof
     };
