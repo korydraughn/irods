@@ -1,21 +1,27 @@
 {
-    "schema_name": "server_config",
-    "schema_version": "v3",
+    "_schema_name": "server_config",
+    "_schema_version": "v3",
     "advanced_settings": {
-        "default_number_of_transfer_threads": 4,
-        "default_temporary_password_lifetime_in_seconds": 120,
-        "maximum_number_of_concurrent_rule_engine_server_processes": 4,
-        "rule_engine_server_sleep_time_in_seconds" : 30,
-        "rule_engine_server_execution_time_in_seconds" : 120,
-        "maximum_size_for_single_buffer_in_megabytes": 32,
+        "_default_log_rotation_in_days" : 5
+        "_default_number_of_transfer_threads": 4,
+        "_default_temporary_password_lifetime_in_seconds": 120,
+        "_maximum_number_of_concurrent_rule_engine_server_processes": 4,
+        "_maximum_size_for_single_buffer_in_megabytes": 32,
         "maximum_temporary_password_lifetime_in_seconds": 1000,
-        "transfer_buffer_size_for_parallel_transfer_in_megabytes": 4,
-        "transfer_chunk_size_for_parallel_transfer_in_megabytes": 40,
-        "default_log_rotation_in_days" : 5
+        "_rule_engine_server_execution_time_in_seconds" : 120,
+        "_rule_engine_server_sleep_time_in_seconds" : 30,
+        "_transfer_buffer_size_for_parallel_transfer_in_megabytes": 4,
+        "_transfer_chunk_size_for_parallel_transfer_in_megabytes": 40,
     },
-    "default_dir_mode": "0750",
-    "default_file_mode": "0600",
+
+    "catalog_service_role": "provider", // Missing
+
+    "_default_dir_mode": "0750",
+    "_default_file_mode": "0600",
     "default_hash_scheme": "SHA256",
+
+    "_default_resource_name": "demoResc", // Missing
+
     "environment_variables": {},
     "federation": [],
     "log_level": {
@@ -35,6 +41,20 @@
     "match_hash_policy": "compatible",
     "plugin_configuration": {
         "authentication" : {},
+	
+/////////////// Missing /////////////////
+        "database": {
+            "postgres": {
+                "db_host": "localhost",
+                "db_name": "ICAT",
+                "db_odbc_driver": "PostgreSQL ANSI",
+                "db_password": "testpassword",
+                "db_port": 5432,
+                "db_username": "irods"
+            }
+        },
+/////////////////////////////////////////
+
         "network": {},
         "resource" : {},
         "rule_engines": [
@@ -74,4 +94,18 @@
     "server_control_plane_encryption_num_hash_rounds": 16,
     "server_control_plane_timeout_milliseconds": 10000,
     "zone_auth_scheme": "native"
+
+// These were missing.
+    "server_control_plane_key": "32_byte_server_control_plane_key",
+    "server_control_plane_port": 1248,
+    "server_port_range_end": 20199,
+    "server_port_range_start": 20000,
+    "zone_auth_scheme": "native",
+    "zone_key": "TEMPORARY_ZONE_KEY",
+    "zone_name": "tempZone",
+    "zone_port": 1247,
+    "zone_user": "rods"
+
+// This should not be needed anymore in master.
+    "xmsg_port": 1279,
 }
