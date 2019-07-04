@@ -9109,6 +9109,8 @@ irods::error db_add_avu_metadata_op(
     }
 
     if ( _value == NULL || *_value == '\0' ) {
+        // FIXME This is where #4063 fails!!!
+        // An empty value field is not allowed!
         return  ERROR( CAT_INVALID_ARGUMENT, "value null or empty" );
     }
 
