@@ -6,6 +6,7 @@
 #include "irods_pack_table.hpp"
 #include "irods_client_api_table.hpp"
 #include <boost/filesystem.hpp>
+
 namespace irods {
 
 
@@ -100,7 +101,8 @@ namespace irods {
     error init_api_table(
         api_entry_table&  _api_tbl,
         pack_entry_table& _pack_tbl,
-        bool              _cli_flg ) {
+        bool              _cli_flg )
+    {
         // =-=-=-=-=-=-=-
         // resolve plugin directory
         std::string plugin_home;
@@ -109,18 +111,26 @@ namespace irods {
             return PASS( ret );
         }
 
+        namespace fs = boost::filesystem;
+
         // =-=-=-=-=-=-=-
         // iterate over the API_HOME directory entries
-        boost::filesystem::path so_dir( plugin_home );
-        if ( boost::filesystem::exists( so_dir ) ) {
-            for ( boost::filesystem::directory_iterator it( so_dir );
-                    it != boost::filesystem::directory_iterator();
-                    ++it ) {
+        fs::path so_dir( plugin_home );
+        bool so_dir_exists = false;
 
+        try {
+            so_dir_exists = fs::exists(so_dir);
+        }
+        catch (const fs::filesystem_error& e) {
+            rodsLog(LOG_ERROR, e.what());
+            return ERROR(SYS_INTERNAL_ERR, "Shared object directory does not exist.");
+        }
 
+        if ( so_dir_exists ) {
+            for ( fs::directory_iterator it( so_dir ); it != fs::directory_iterator(); ++it ) {
                 // =-=-=-=-=-=-=-
                 // given a shared object, load the plugin from it
-                std::string name  = it->path().stem().string();
+                std::string name = it->path().stem().string();
                 // =-=-=-=-=-=-=-
                 // if client side, skip server plugins, etc.
                 if ( _cli_flg ) {
@@ -128,14 +138,12 @@ namespace irods {
                     if ( std::string::npos != pos ) {
                         continue;
                     }
-
                 }
                 else {
                     size_t pos = name.find( "_client" );
                     if ( std::string::npos != pos ) {
                         continue;
                     }
-
                 }
 
                 // =-=-=-=-=-=-=-
@@ -147,7 +155,7 @@ namespace irods {
                 }
                 name = name.substr( 3 );
 
-                api_entry*  entry = 0;
+                api_entry* entry = 0;
                 error ret = load_plugin< api_entry >(
                                 entry,
                                 name,
@@ -188,26 +196,18 @@ namespace irods {
                     // which are composites of the in or out structs
                     if ( !entry->extra_pack_struct.empty() ) {
                         lookup_table<std::string>::iterator itr;
-                        for ( itr  = entry->extra_pack_struct.begin();
-                                itr != entry->extra_pack_struct.end();
-                                ++itr ) {
+                        for ( itr = entry->extra_pack_struct.begin(); itr != entry->extra_pack_struct.end(); ++itr ) {
                             _pack_tbl[ itr->first ].packInstruct = itr->second;
-
                         } // for itr
-
                     } // if empty
-
                 }
                 else {
                     irods::log( PASS( ret ) );
                 }
-
             } // for itr
-
         } // if exists
 
         return SUCCESS();
-
     } // init_api_table
 
 }; // namespace irods

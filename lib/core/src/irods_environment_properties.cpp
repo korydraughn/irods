@@ -5,6 +5,7 @@
 
 #include "rods.h"
 #include "irods_log.hpp"
+#include "irods_logger.hpp"
 
 #include <string>
 #include <algorithm>
@@ -86,8 +87,14 @@ namespace irods {
             return;
         }
 
-        if (!boost::filesystem::exists(json_file)) {
-            rodsLog(LOG_ERROR, "environment_properties::capture: missing environment file. should be at [%s]", json_file.c_str());
+        try {
+            if (!boost::filesystem::exists(json_file)) {
+                rodsLog(LOG_ERROR, "environment_properties::capture: missing environment file. should be at [%s]", json_file.c_str());
+                return;
+            }
+        }
+        catch (const boost::filesystem::filesystem_error& e) {
+            // TODO Log exception.
             return;
         }
 

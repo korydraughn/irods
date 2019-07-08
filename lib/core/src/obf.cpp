@@ -209,21 +209,31 @@ obfGetPw( char *pw ) {
  opt: if zero, prompt before removing
  opt: if non-zero, don't ask and don't print error;just remove it if it exists.
 */
-int
-obfRmPw( int opt ) {
+int obfRmPw( int opt )
+{
     char fileName[MAX_NAME_LEN + 10];
     char inbuf[MAX_NAME_LEN + 10];
 
     if ( int status = obfiGetFilename( fileName ) ) {
         return status;
     }
-    boost::filesystem::path filePath( fileName );
-    if ( !boost::filesystem::exists( filePath ) ) {
-        if ( opt == 0 ) {
-            printf( "%s does not exist\n", fileName );
+
+    namespace fs = boost::filesystem;
+
+    fs::path filePath( fileName );
+
+    try {
+        if ( !fs::exists( filePath ) ) {
+            if ( opt == 0 ) {
+                printf( "%s does not exist\n", fileName );
+            }
+            return AUTH_FILE_DOES_NOT_EXIST;
         }
-        return AUTH_FILE_DOES_NOT_EXIST;
     }
+    catch (const fs::filesystem_error& e) {
+        // TODO Handle exception
+    }
+
     if ( opt == 0 ) {
         printf( "Remove %s?: ", fileName );
         const char *fgets_ret = fgets( inbuf, MAX_NAME_LEN, stdin );
@@ -231,11 +241,14 @@ obfRmPw( int opt ) {
             return 0;
         }
     }
+
     boost::system::error_code error;
-    boost::filesystem::remove( filePath, error );
+    fs::remove( filePath, error );
+
     if ( error.value() ) {
         return UNLINK_FAILED;
     }
+
     return 0;
 }
 

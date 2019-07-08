@@ -7,14 +7,19 @@
 #include "irods_plugin_name_generator.hpp"
 #include "generalAdmin.h"
 #include "irods_log.hpp"
+#include "irods_logger.hpp"
+
 #include <sys/statvfs.h>
+
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
 extern irods::resource_manager resc_mgr;
 
-int
-msi_update_unixfilesystem_resource_free_space(msParam_t *resource_name_msparam, ruleExecInfo_t *rei) {
+int msi_update_unixfilesystem_resource_free_space(msParam_t *resource_name_msparam, ruleExecInfo_t *rei)
+{
+    using log = irods::experimental::log;
+
     if (rei == NULL) {
         rodsLog(LOG_ERROR, "[%s]: input rei is NULL", __FUNCTION__);
         return SYS_INTERNAL_NULL_INPUT_ERR;
@@ -70,13 +75,19 @@ msi_update_unixfilesystem_resource_free_space(msParam_t *resource_name_msparam, 
 
     boost::filesystem::path path_to_stat{resource_vault_path};
     const auto absolute_vault_path{boost::filesystem::absolute(path_to_stat)};
-    while(!boost::filesystem::exists(path_to_stat)) {
-        rodsLog(LOG_NOTICE, "[%s]: path to stat [%s] for resource [%s] doesn't exist, moving to parent", __FUNCTION__, path_to_stat.string().c_str(), resource_name_cstring);
-        path_to_stat = path_to_stat.parent_path();
-        if (path_to_stat.empty()) {
-            rodsLog(LOG_ERROR, "[%s]: could not find existing path from vault path [%s] for resource [%s]", __FUNCTION__, resource_vault_path.c_str(), resource_name_cstring);
-            return SYS_INVALID_RESC_INPUT;
+    try {
+        while(!boost::filesystem::exists(path_to_stat)) {
+            rodsLog(LOG_NOTICE, "[%s]: path to stat [%s] for resource [%s] doesn't exist, moving to parent", __FUNCTION__, path_to_stat.string().c_str(), resource_name_cstring);
+            path_to_stat = path_to_stat.parent_path();
+            if (path_to_stat.empty()) {
+                rodsLog(LOG_ERROR, "[%s]: could not find existing path from vault path [%s] for resource [%s]", __FUNCTION__, resource_vault_path.c_str(), resource_name_cstring);
+                return SYS_INVALID_RESC_INPUT;
+            }
         }
+    }
+    catch (const boost::filesystem::filesystem_error& e) {
+        log::microservice::error(e.what());
+        return SYS_INTERNAL_ERR;
     }
 
     // Using the root directory as a vault path is bad - do not allow it to be used for updating free space

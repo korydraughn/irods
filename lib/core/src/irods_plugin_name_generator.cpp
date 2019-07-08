@@ -76,59 +76,76 @@ namespace irods {
         }
         else {
             boost::filesystem::path lib_path( so_name );
-            if ( !boost::filesystem::exists( lib_path ) ) {
+
+            try {
+                if ( !boost::filesystem::exists( lib_path ) ) {
+                    result = false;
+                }
+            }
+            catch (const boost::filesystem::filesystem_error& e) {
                 result = false;
+                // TODO Log exception
             }
         }
 
         return result;
     }
 
-    error plugin_name_generator::list_plugins(
-        const std::string& _dir_name,
-        plugin_list_t& _list ) {
-        error result = SUCCESS();
+    error plugin_name_generator::list_plugins( const std::string& _dir_name, plugin_list_t& _list )
+    {
         if ( _dir_name.empty() ) {
             std::stringstream msg;
             msg << __FUNCTION__;
             msg << " - Directory name is empty.";
-            result = ERROR( -1, msg.str() );
+            return ERROR( -1, msg.str() );
         }
-        else {
-            boost::filesystem::path so_dir( _dir_name );
-            if ( boost::filesystem::exists( so_dir ) ) {
-                _list.clear();
-                for ( boost::filesystem::directory_iterator it( so_dir );
-                        result.ok() && it != boost::filesystem::directory_iterator();
-                        ++it ) {
-                    boost::filesystem::path entry = it->path();
-                    std::string plugin_name;
-                    error ret = generate_plugin_name( entry.filename().string(), plugin_name );
-                    if ( ret.ok() ) {
-                        // plugin_name is empty if the dir entry was not a proper .so
-                        if ( !plugin_name.empty() ) {
-                            _list.push_back( plugin_name );
-                        }
-                    }
-                    else {
-                        std::stringstream msg;
-                        msg << __FUNCTION__;
-                        msg << " - An error occurred while generating plugin name from filename \"";
-                        msg << entry.filename();
-                        msg << "\"";
-                        result = PASSMSG( msg.str(), ret );
+
+        namespace fs = boost::filesystem;
+
+        fs::path so_dir( _dir_name );
+        bool so_dir_exists = false;
+
+        try {
+            so_dir_exists = fs::exists(so_dir);
+        }
+        catch (const fs::filesystem_error& e) {
+            // TODO Handle exception
+        }
+
+        error result = SUCCESS();
+
+        if (so_dir_exists) {
+            _list.clear();
+
+            for ( fs::directory_iterator it( so_dir ); result.ok() && it != fs::directory_iterator(); ++it ) {
+                fs::path entry = it->path();
+                std::string plugin_name;
+                error ret = generate_plugin_name( entry.filename().string(), plugin_name );
+                if ( ret.ok() ) {
+                    // plugin_name is empty if the dir entry was not a proper .so
+                    if ( !plugin_name.empty() ) {
+                        _list.push_back( plugin_name );
                     }
                 }
-            }
-            else {
-                std::stringstream msg;
-                msg << __FUNCTION__;
-                msg << " - Plugin directory \"";
-                msg << _dir_name;
-                msg << "\" does not exist.";
-                result = ERROR( -1, msg.str() );
+                else {
+                    std::stringstream msg;
+                    msg << __FUNCTION__;
+                    msg << " - An error occurred while generating plugin name from filename \"";
+                    msg << entry.filename();
+                    msg << "\"";
+                    result = PASSMSG( msg.str(), ret );
+                }
             }
         }
+        else {
+            std::stringstream msg;
+            msg << __FUNCTION__;
+            msg << " - Plugin directory \"";
+            msg << _dir_name;
+            msg << "\" does not exist.";
+            result = ERROR( -1, msg.str() );
+        }
+
         return result;
     }
 
