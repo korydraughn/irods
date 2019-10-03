@@ -81,12 +81,14 @@ connection_pool::connection_pool(int _size,
                                  const int _port,
                                  const std::string& _username,
                                  const std::string& _zone,
-                                 const int _refresh_time)
+                                 const int _refresh_time,
+                                 login_functor_type _login_func)
     : host_{_host}
     , port_{_port}
     , username_{_username}
     , zone_{_zone}
     , refresh_time_(_refresh_time)
+    , login_func_{std::move(_login_func)}
     , conn_ctxs_(_size)
 {
     if (_size < 1) {
@@ -153,7 +155,10 @@ void connection_pool::create_connection(int _index,
         return;
     }
 
-    if (clientLogin(ctx.conn.get()) != 0) {
+    if (login_func_) {
+        login_func_(*ctx.conn);
+    }
+    else if (clientLogin(ctx.conn.get()) != 0) {
         _on_login_error();
     }
 }

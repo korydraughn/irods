@@ -15,6 +15,8 @@ namespace irods
     class connection_pool
     {
     public:
+        using login_functor_type = std::function<void(rcComm_t&)>;
+
         // A wrapper around a connection in the pool.
         // On destruction, the underlying connection is immediately returned
         // to the pool.
@@ -50,7 +52,8 @@ namespace irods
                         const int _port,
                         const std::string& _username,
                         const std::string& _zone,
-                        const int _refresh_time);
+                        const int _refresh_time,
+                        login_functor_type _login_func = {});
 
         connection_pool(const connection_pool&) = delete;
         connection_pool& operator=(const connection_pool&) = delete;
@@ -87,6 +90,7 @@ namespace irods
         const std::string username_;
         const std::string zone_;
         const int refresh_time_;
+        const login_functor_type login_func_;
         std::vector<connection_context> conn_ctxs_;
     };
 } // namespace irods
