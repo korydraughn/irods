@@ -88,6 +88,7 @@ set(
   ${CMAKE_SOURCE_DIR}/lib/core/include/irods_tcp_object.hpp
   ${CMAKE_SOURCE_DIR}/lib/core/include/irods_threads.hpp
   ${CMAKE_SOURCE_DIR}/lib/core/include/irods_virtual_path.hpp
+  ${CMAKE_SOURCE_DIR}/lib/core/include/lock_and_wait_strategy.hpp
   ${CMAKE_SOURCE_DIR}/lib/core/include/query_builder.hpp
   ${CMAKE_SOURCE_DIR}/lib/core/include/query_processor.hpp
   ${CMAKE_SOURCE_DIR}/lib/core/include/key_value_proxy.hpp
