@@ -101,6 +101,7 @@ set(
   ${CMAKE_SOURCE_DIR}/lib/core/include/mkdirUtil.h
   ${CMAKE_SOURCE_DIR}/lib/core/include/msParam.h
   ${CMAKE_SOURCE_DIR}/lib/core/include/mvUtil.h
+  ${CMAKE_SOURCE_DIR}/lib/core/include/nonblocking_stream.hpp
   ${CMAKE_SOURCE_DIR}/lib/core/include/obf.h
   ${CMAKE_SOURCE_DIR}/lib/core/include/objInfo.h
   ${CMAKE_SOURCE_DIR}/lib/core/include/osauth.h
