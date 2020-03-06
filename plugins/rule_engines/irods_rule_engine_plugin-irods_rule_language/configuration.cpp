@@ -1,5 +1,6 @@
 /* For copyright information please refer to files in the COPYRIGHT directory
  */
+#include <exception>
 #include <sys/stat.h>
 #include <time.h>
 #include "configuration.hpp"
@@ -422,56 +423,68 @@ int hash_rules(const std::vector<std::string> &irbs, const int pid, std::string 
     return 0;
 }
 
-class make_copy {
+class make_copy
+{
 public:
-        make_copy(const std::vector<std::string> _irbs, const int _pid) : irbs_(_irbs), pid_(_pid) {
-            for(auto const &irb : _irbs) {
+    make_copy(const std::vector<std::string> _irbs, const int _pid)
+        : irbs_(_irbs)
+        , pid_(_pid)
+    {
+        try {
+            for (const auto& irb : _irbs) {
                 boost::filesystem::copy_file(get_rule_base_path(irb), get_rule_base_path_copy(irb, _pid));
             }
         }
-        ~make_copy() {
-            for(auto const &irb : irbs_) {
-                boost::filesystem::remove(get_rule_base_path_copy(irb, pid_));
-            }
+        catch (const std::exception& e) {
+            rodsLog(LOG_ERROR, e.what());
         }
+    }
+
+    ~make_copy()
+    {
+        for (const auto& irb : irbs_) {
+            boost::filesystem::remove(get_rule_base_path_copy(irb, pid_));
+        }
+    }
+
 private:
-        const std::vector<std::string> irbs_;
-        const int pid_;
+    const std::vector<std::string> irbs_;
+    const int pid_;
 };
 
 int load_rules(const char* irbSet, const std::vector<std::string> &irbs, const int pid, const time_type timestamp) {
-                generateRegions();
-                generateRuleSets();
-                generateFunctionDescriptionTables();
-                if ( ruleEngineConfig.ruleEngineStatus == UNINITIALIZED ) {
-                    getSystemFunctions( ruleEngineConfig.sysFuncDescIndex->current, ruleEngineConfig.sysRegion );
-                }
+    generateRegions();
+    generateRuleSets();
+    generateFunctionDescriptionTables();
+    if ( ruleEngineConfig.ruleEngineStatus == UNINITIALIZED ) {
+        getSystemFunctions( ruleEngineConfig.sysFuncDescIndex->current, ruleEngineConfig.sysRegion );
+    }
 
-                make_copy copy_rule_base_files(irbs, pid);
-                for(auto const & irb: irbs) {
-                    int i = readRuleStructAndRuleSetFromFile( irb.c_str(), get_rule_base_path_copy(irb, pid).c_str() );
+    make_copy copy_rule_base_files(irbs, pid);
+    for(auto const & irb: irbs) {
+        int i = readRuleStructAndRuleSetFromFile( irb.c_str(), get_rule_base_path_copy(irb, pid).c_str() );
 
-                    if ( i != 0 ) {
-                        ruleEngineConfig.ruleEngineStatus = INITIALIZED;
-                        return i;
-                    }
-                }
+        if ( i != 0 ) {
+            ruleEngineConfig.ruleEngineStatus = INITIALIZED;
+            return i;
+        }
+    }
 
-                createCoreRuleIndex( );
+    createCoreRuleIndex( );
 
-                /* set max timestamp */
-                time_type_set( ruleEngineConfig.timestamp, timestamp );
-                std::string hash;
-                int ret = hash_rules(irbs, pid, hash);
-                if (ret >= 0) {
-                    rstrcpy(ruleEngineConfig.hash, hash.c_str(), CHKSUM_LEN);
-                } else {
-                    ruleEngineConfig.ruleEngineStatus = INITIALIZED;
-                    return ret;
-                }
-                snprintf( ruleEngineConfig.ruleBase, sizeof( ruleEngineConfig.ruleBase ), "%s", irbSet );
-                ruleEngineConfig.ruleEngineStatus = INITIALIZED;
-                return 0;
+    /* set max timestamp */
+    time_type_set( ruleEngineConfig.timestamp, timestamp );
+    std::string hash;
+    int ret = hash_rules(irbs, pid, hash);
+    if (ret >= 0) {
+        rstrcpy(ruleEngineConfig.hash, hash.c_str(), CHKSUM_LEN);
+    } else {
+        ruleEngineConfig.ruleEngineStatus = INITIALIZED;
+        return ret;
+    }
+    snprintf( ruleEngineConfig.ruleBase, sizeof( ruleEngineConfig.ruleBase ), "%s", irbSet );
+    ruleEngineConfig.ruleEngineStatus = INITIALIZED;
+    return 0;
 }
 
 int loadRuleFromCacheOrFile( const char* inst_name, const char *irbSet ) {
