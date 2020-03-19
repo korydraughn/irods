@@ -1,0 +1,21 @@
+[Unit]
+Description=iRODS - Integrated Rule Oriented Data System
+Documentation=https://irods.org
+# See "man 5 systemd.unit".
+# See "https://www.freedesktop.org/wiki/Software/systemd/NetworkTarget/"
+After=network.target
+
+[Service]
+# See example 3 of "man 5 systemd.service".
+Type=oneshot
+RemainAfterExit=true
+User=irods
+WorkingDirectory=/var/lib/irods
+# Must invoke the irods_control.py script directly because irodsctl uses
+# bashisms such as "$(cmd)" and that is not supported by systemd.
+ExecStart=/bin/sh -c 'python /var/lib/irods/scripts/irods_control.py start'
+ExecReload=/bin/sh -c 'python /var/lib/irods/scripts/irods_control.py restart'
+ExecStop=/bin/sh -c 'python /var/lib/irods/scripts/irods_control.py stop'
+
+[Install]
+WantedBy=multi-user.target
