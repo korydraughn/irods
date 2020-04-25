@@ -1,3 +1,7 @@
+language: cpp
+
+install: skip
+
 before_install:
  - sudo apt-get update -qq
  - sudo apt-get install -qq wget curl g++ make python-dev help2man unixodbc libcurl4-gnutls-dev libbz2-dev zlib1g-dev libpam0g-dev libssl-dev libxml2-dev unixodbc-dev python-psutil super odbc-postgresql ninja-build
