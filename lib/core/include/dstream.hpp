@@ -205,6 +205,7 @@ namespace io {
             return traits_type::not_eof(_c);
         }
 
+#if 0
         std::streamsize xsgetn(char_type* _buffer, std::streamsize _buffer_size) override
         {
             prepare_for_input();
@@ -231,6 +232,7 @@ namespace io {
 
             return transport_->send(_buffer, _buffer_size * sizeof(char_type));
         }
+#endif
 
         int sync() override
         {
