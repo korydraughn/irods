@@ -70,10 +70,14 @@ namespace
             rodsLog(LOG_NOTICE, "Compressed Buffer Length     = %d", output_length);
 
             if (output_length <= static_cast<std::size_t>(bbuf->len)) {
+                rodsLog(LOG_NOTICE, "Updated read buffer");
                 std::free(bbuf->buf);
                 bbuf->buf = output;
                 bbuf->len = output_length;
+                return CODE(output_length);
             }
+
+            return CODE(bbuf->len);
         }
         else if ("pep_api_data_obj_write_pre" == rule_name) {
             std::vector<char> src(bbuf->len);

@@ -67,6 +67,7 @@ namespace irods::experimental::io
 
             // Uncompress the buffer.
             if (snappy_validate_compressed_buffer(_buffer, bytes_read) == SNAPPY_OK) {
+            //if (snappy_validate_compressed_buffer(_buffer, _buffer_size) == SNAPPY_OK) {
                 std::cout << "transport :: buffer is compressed.  inflating ...\n";
 
                 std::size_t output_length;
