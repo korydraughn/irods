@@ -12,10 +12,8 @@
 #include <algorithm>
 #include <utility>
 
-namespace irods {
-namespace experimental {
-namespace io {
-
+namespace irods::experimental::io
+{
     // Details about what each virtual function in this template are required to
     // do can be found at the following link:
     //
@@ -205,7 +203,6 @@ namespace io {
             return traits_type::not_eof(_c);
         }
 
-#if 0
         std::streamsize xsgetn(char_type* _buffer, std::streamsize _buffer_size) override
         {
             prepare_for_input();
@@ -232,7 +229,6 @@ namespace io {
 
             return transport_->send(_buffer, _buffer_size * sizeof(char_type));
         }
-#endif
 
         int sync() override
         {
@@ -541,10 +537,7 @@ namespace io {
     using odstream        = basic_dstream<std::basic_ostream<char>>;
     using dstream         = basic_dstream<std::basic_iostream<char>>;
     // clang-format on
-
-} // namespace io
-} // namespace experimental
-} // namespace irods
+} // namespace irods::experimental::io
 
 #endif // IRODS_IO_DSTREAM_HPP
 

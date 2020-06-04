@@ -17,6 +17,9 @@
 #include "irods_resource_backport.hpp"
 #include "irods_hierarchy_parser.hpp"
 
+//#include <snappy-c.h>
+#include <string>
+
 int
 applyRuleForPostProcForRead( rsComm_t *rsComm, bytesBuf_t *dataObjReadOutBBuf, char *objPath ) {
     if ( ReadWriteRuleState != ON_STATE ) {
@@ -93,6 +96,21 @@ rsDataObjRead( rsComm_t *rsComm, openedDataObjInp_t *dataObjReadInp,
         if ( i < 0 ) {
             return i;
         }
+
+        /*
+        auto output_length = snappy_max_compressed_length(dataObjReadOutBBuf->len);
+        auto* output = static_cast<char*>(std::malloc(output_length));
+        //irods::at_scope_exit release_mem{[output] { std::free(output); }};
+        snappy_compress(static_cast<char*>(dataObjReadOutBBuf->buf),
+                        dataObjReadOutBBuf->len,
+                        output,
+                        &output_length);
+
+        dataObjReadOutBBuf->buf = output;
+        dataObjReadOutBBuf->len = output_length;
+
+        bytesRead = output_length;
+        */
     }
 
     return bytesRead;

@@ -21,6 +21,8 @@
 #include "irods_file_object.hpp"
 #include "irods_resource_redirect.hpp"
 
+//#include <snappy-c.h>
+#include <string>
 
 int
 applyRuleForPostProcForWrite( rsComm_t *rsComm, bytesBuf_t *dataObjWriteInpBBuf, char *objPath ) {
@@ -126,6 +128,22 @@ int rsDataObjWrite(
             irods::log( ret );
             return ret.code();
         }
+
+        /*
+        std::size_t output_length;
+        snappy_uncompressed_length(static_cast<char*>(dataObjWriteInpBBuf->buf),
+                                   dataObjWriteInpBBuf->len,
+                                   &output_length);
+
+        auto* output = static_cast<char*>(std::malloc(output_length));
+        snappy_uncompress(static_cast<char*>(dataObjWriteInpBBuf->buf),
+                          dataObjWriteInpBBuf->len,
+                          output,
+                          &output_length);
+
+        dataObjWriteInpBBuf->buf = output;
+        dataObjWriteInpBBuf->len = output_length;
+        */
 
         dataObjWriteInp->len = dataObjWriteInpBBuf->len;
         bytesWritten = l3Write(

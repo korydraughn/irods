@@ -3,15 +3,64 @@
 #include "connection_pool.hpp"
 #include "dstream.hpp"
 #include "transport/default_transport.hpp"
+#include "transport/snappy_transport.hpp"
 #include "filesystem.hpp"
 #include "irods_at_scope_exit.hpp"
 
+#include <iostream>
 #include <string_view>
+#include <chrono>
+#include <array>
 
 TEST_CASE("dstream", "[iostreams]")
 {
     namespace fs = irods::experimental::filesystem;
     namespace io = irods::experimental::io;
+
+    SECTION("snappy")
+    {
+        auto conn_pool = irods::make_connection_pool();
+        auto conn = conn_pool->get_connection();
+
+        using clock_type = std::chrono::high_resolution_clock;
+
+        /*
+        // Takes roughly 145663ms.
+        {
+            const auto start = clock_type::now();
+
+            io::client::default_transport tp{conn};
+            io::idstream in{tp, "/tempZone/home/kory/foo"};
+            
+            std::uint64_t count = 0;
+            std::array<char, 4 * 1024 * 1024> buf;
+            while (in.read(buf.data(), buf.size()))
+                count += in.gcount();
+
+            std::cout << "(w/o snappy) elapsed time = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
+        }
+        */
+
+        {
+            const auto start = clock_type::now();
+
+            io::client::default_transport dtp{conn};
+            io::snappy_transport tp{dtp};
+            io::idstream in{tp, "/tempZone/home/kory/bar"};
+            
+            std::uint64_t count = 0;
+            std::array<char, 4 * 1024 * 1024> buf;
+#if 0
+            in.read(buf.data(), buf.size());
+#else
+            while (in.read(buf.data(), buf.size()))
+#endif
+                count += in.gcount();
+
+            std::cout << "(w/  snappy) elapsed time = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
+            std::cout << "number of bytes read      = " << count << '\n';
+        }
+    }
 
     SECTION("default constructed stream does not cause segfault on destruction")
     {

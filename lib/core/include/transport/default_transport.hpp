@@ -50,11 +50,8 @@
 
 #include <string>
 
-namespace irods {
-namespace experimental {
-namespace io {
-namespace NAMESPACE_IMPL {
-
+namespace irods::experimental::io::NAMESPACE_IMPL
+{
     template <typename CharT>
     class basic_transport : public transport<CharT>
     {
@@ -297,11 +294,8 @@ namespace NAMESPACE_IMPL {
         basic_transport<CharT>::seek_error = basic_transport<CharT>::off_type{-1};
 
     using default_transport = basic_transport<char>;
-
-} // NAMESPACE_IMPL
-} // io
-} // experimental
-} // irods
+    using native_transport  = basic_transport<char>;
+} // namespace irods::experimental::io::NAMESPACE_IMPL
 
 #endif // IRODS_IO_DEFAULT_TRANSPORT_HPP
 
