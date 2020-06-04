@@ -1,19 +1,43 @@
 #ifndef IRODS_IO_SNAPPY_TRANSPORT_HPP
 #define IRODS_IO_SNAPPY_TRANSPORT_HPP
 
-#include "transport/transport.hpp"
+#undef NAMESPACE_IMPL
+#undef rxComm
 
+#ifdef IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
+    #include "rs_set_stream_compression.hpp"
+
+    #define NAMESPACE_IMPL              server
+
+    #define rxComm                      rsComm
+
+    #define rx_set_stream_compression   rs_set_stream_compression
+
+    // Forward declarations
+    struct rsComm;
+#else
+    #include "set_stream_compression.h"
+
+    #define NAMESPACE_IMPL              client
+
+    #define rxComm                      rcComm
+
+    #define rx_set_stream_compression   rc_set_stream_compression
+
+    // Forward declarations
+    struct rcComm;
+#endif // IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
+
+#include "transport/transport.hpp"
 #include "irods_at_scope_exit.hpp"
 
 #include <snappy-c.h>
 
-#include <cstdio>
 #include <ios>
 #include <string>
 #include <vector>
-#include <iostream>
 
-namespace irods::experimental::io
+namespace irods::experimental::io::NAMESPACE_IMPL
 {
     template <typename CharT>
     class basic_snappy_transport : public transport<CharT>
@@ -27,8 +51,9 @@ namespace irods::experimental::io
         using off_type    = typename traits_type::off_type;
         // clang-format on
 
-        explicit basic_snappy_transport(transport<CharT>& tp)
+        explicit basic_snappy_transport(rxComm& conn, transport<CharT>& tp)
             : transport<CharT>{}
+            , conn_{&conn}
             , tp_{&tp}
         {
         }
@@ -36,21 +61,21 @@ namespace irods::experimental::io
         bool open(const irods::experimental::filesystem::path& _p,
                   std::ios_base::openmode _mode) override
         {
-            return tp_->open(_p, _mode);
+            return tp_->open(_p, _mode) && set_compression_algo();
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
                   int _replica_number,
                   std::ios_base::openmode _mode) override
         {
-            return tp_->open(_p, _replica_number, _mode);
+            return tp_->open(_p, _replica_number, _mode) && set_compression_algo();
         }
 
         bool open(const irods::experimental::filesystem::path& _p,
                   const std::string& _resource_name,
                   std::ios_base::openmode _mode) override
         {
-            return tp_->open(_p, _resource_name, _mode);
+            return tp_->open(_p, _resource_name, _mode) && set_compression_algo();
         }
 
         bool close() override
@@ -60,42 +85,29 @@ namespace irods::experimental::io
 
         std::streamsize receive(char_type* _buffer, std::streamsize _buffer_size) override
         {
-            //return tp_->receive(_buffer, _buffer_size);
-
             const auto bytes_read = tp_->receive(_buffer, _buffer_size);
-            std::cout << "transport :: bytes received = " << bytes_read << '\n';
 
-            // Uncompress the buffer.
+            // Uncompress the buffer if the buffer can be uncompressed.
             if (snappy_validate_compressed_buffer(_buffer, bytes_read) == SNAPPY_OK) {
-            //if (snappy_validate_compressed_buffer(_buffer, _buffer_size) == SNAPPY_OK) {
-                std::cout << "transport :: buffer is compressed.  inflating ...\n";
-
                 std::size_t output_length;
                 snappy_uncompressed_length(_buffer, bytes_read, &output_length);
 
                 std::vector<char_type> compressed(bytes_read);
                 std::copy(_buffer, _buffer + bytes_read, std::begin(compressed));
-
                 snappy_uncompress(compressed.data(), compressed.size(), _buffer, &output_length);
 
-                std::cout << "transport :: uncompressed buffer size = " << output_length << '\n';
                 return output_length;
             }
 
-            std::cout << "transport :: buffer is NOT compressed.\n";
-            std::cout << "transport :: buffer size = " << bytes_read << '\n';
             return bytes_read;
         }
 
         std::streamsize send(const char_type* _buffer, std::streamsize _buffer_size) override
         {
-            return tp_->send(_buffer, _buffer_size);
-
             auto output_length = snappy_max_compressed_length(_buffer_size);
-            auto* output = static_cast<char*>(std::malloc(output_length));
-            irods::at_scope_exit release_mem{[output] { std::free(output); }};
-            snappy_compress(_buffer, _buffer_size, output, &output_length);
-            return tp_->send(output, output_length);
+            std::vector<char> output(output_length);
+            snappy_compress(_buffer, _buffer_size, output.data(), &output_length);
+            return tp_->send(output.data(), output_length);
         }
 
         pos_type seekpos(off_type _offset, std::ios_base::seekdir _dir) override
@@ -114,11 +126,24 @@ namespace irods::experimental::io
         }
 
     private:
+        bool set_compression_algo() const noexcept
+        {
+            const compression_input_t input{tp_->file_descriptor(), COMPRESSION_SNAPPY};
+
+            if (rx_set_stream_compression(conn_, &input) != 0) {
+                tp_->close();
+                return false;
+            }
+
+            return true;
+        }
+
+        rxComm* conn_;
         transport<CharT>* tp_;
     };
 
     using snappy_transport = basic_snappy_transport<char>;
-} // namespace irods::experimental::io
+} // namespace irods::experimental::io::NAMESPACE_IMPL
 
 #endif // IRODS_IO_SNAPPY_TRANSPORT_HPP
 

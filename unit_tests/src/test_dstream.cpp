@@ -1,5 +1,6 @@
 #include "catch.hpp"
 
+#include "rodsClient.h"
 #include "connection_pool.hpp"
 #include "dstream.hpp"
 #include "transport/default_transport.hpp"
@@ -7,10 +8,12 @@
 #include "filesystem.hpp"
 #include "irods_at_scope_exit.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <string_view>
 #include <chrono>
-#include <array>
+#include <vector>
+#include <random>
 
 TEST_CASE("dstream", "[iostreams]")
 {
@@ -19,46 +22,88 @@ TEST_CASE("dstream", "[iostreams]")
 
     SECTION("snappy")
     {
+        load_client_api_plugins();
+
         auto conn_pool = irods::make_connection_pool();
         auto conn = conn_pool->get_connection();
 
         using clock_type = std::chrono::high_resolution_clock;
 
-        /*
         // Takes roughly 145663ms.
+        std::cout << "Testing Read Speed\n";
         {
             const auto start = clock_type::now();
 
             io::client::default_transport tp{conn};
-            io::idstream in{tp, "/tempZone/home/kory/foo"};
+            io::idstream in{tp, "/tempZone/home/kory/bar"};
             
             std::uint64_t count = 0;
-            std::array<char, 4 * 1024 * 1024> buf;
+            std::vector<char> buf(4 * 1024 * 1024);
             while (in.read(buf.data(), buf.size()))
                 count += in.gcount();
 
-            std::cout << "(w/o snappy) elapsed time = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
+            std::cout << "(w/o snappy) elapsed time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
+            std::cout << "number of bytes read           = " << count << '\n';
         }
-        */
 
         {
             const auto start = clock_type::now();
 
             io::client::default_transport dtp{conn};
-            io::snappy_transport tp{dtp};
+            io::client::snappy_transport tp{conn, dtp};
             io::idstream in{tp, "/tempZone/home/kory/bar"};
-            
+
             std::uint64_t count = 0;
-            std::array<char, 4 * 1024 * 1024> buf;
-#if 0
-            in.read(buf.data(), buf.size());
-#else
+            std::vector<char> buf(4 * 1024 * 1024);
             while (in.read(buf.data(), buf.size()))
-#endif
                 count += in.gcount();
 
-            std::cout << "(w/  snappy) elapsed time = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
-            std::cout << "number of bytes read      = " << count << '\n';
+            std::cout << "(w/  snappy) elapsed time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
+            std::cout << "number of bytes read           = " << count << '\n';
+        }
+
+        // Test Writes
+        std::cout << "\nTesting Write Speed\n";
+
+        //std::random_device rd;
+        //std::mt19937 gen{rd()};
+        //std::uniform_int_distribution<> distrib{1, 128};
+
+        std::vector<char> buf;
+        buf.reserve(1'000'000);
+        for (std::size_t i = 0; i < 1'000'000; ++i)
+            //buf.push_back(static_cast<char>(distrib(gen)));
+            buf.push_back('1');
+
+        {
+            const auto start = clock_type::now();
+
+            io::client::default_transport tp{conn};
+            io::odstream out{tp, "/tempZone/home/kory/foo"};
+
+            REQUIRE(out);
+            
+            constexpr int chunk_size = 10'000;
+            for (std::size_t i = 0; out && i < buf.size(); i += chunk_size)
+                out.write(buf.data() + i, chunk_size);
+
+            std::cout << "(w/o snappy) elapsed time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
+        }
+
+        {
+            const auto start = clock_type::now();
+
+            io::client::default_transport dtp{conn};
+            io::client::snappy_transport tp{conn, dtp};
+            io::odstream out{tp, "/tempZone/home/kory/foo"};
+
+            REQUIRE(out);
+
+            constexpr int chunk_size = 10'000;
+            for (std::size_t i = 0; out && i < buf.size(); i += chunk_size)
+                out.write(buf.data() + i, chunk_size);
+
+            std::cout << "(w/  snappy) elapsed time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count() << '\n';
         }
     }
 

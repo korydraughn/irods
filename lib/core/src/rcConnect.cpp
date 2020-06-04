@@ -24,7 +24,8 @@
 #include "irods_threads.hpp"
 #include "sockCommNetworkInterface.hpp"
 #include "rodsError.h"
-#include <time.h>
+
+#include <ctime>
 
 rcComm_t *
 rcConnect( const char *rodsHost, int rodsPort, const char *userName, const char *rodsZone,

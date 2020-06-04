@@ -352,6 +352,7 @@ set(
   ${CMAKE_SOURCE_DIR}/lib/api/src/rc_atomic_apply_metadata_operations.cpp
   ${CMAKE_SOURCE_DIR}/lib/api/src/rc_get_file_descriptor_info.cpp
   ${CMAKE_SOURCE_DIR}/lib/api/src/rc_data_object_modify_info.cpp
+  ${CMAKE_SOURCE_DIR}/lib/api/src/rc_set_stream_compression.cpp
   ${CMAKE_SOURCE_DIR}/lib/api/src/rcAuthCheck.cpp
   ${CMAKE_SOURCE_DIR}/lib/api/src/rcAuthPluginRequest.cpp
   ${CMAKE_SOURCE_DIR}/lib/api/src/rcAuthRequest.cpp

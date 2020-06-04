@@ -108,7 +108,6 @@ set(
   IRODS_API_PLUGIN_COMPILE_DEFINITIONS_irods_atomic_apply_metadata_operations_server
   RODS_SERVER
   ENABLE_RE
-  IRODS_ENABLE_SYSLOG
   )
 
 set(
@@ -126,6 +125,37 @@ set(
   irods_client
   )
 
+# set_stream_compression API
+set(
+  IRODS_API_PLUGIN_SOURCES_irods_set_stream_compression_server
+  ${CMAKE_SOURCE_DIR}/plugins/api/src/set_stream_compression.cpp
+  )
+
+set(
+  IRODS_API_PLUGIN_SOURCES_irods_set_stream_compression_client
+  ${CMAKE_SOURCE_DIR}/plugins/api/src/set_stream_compression.cpp
+  )
+
+set(
+  IRODS_API_PLUGIN_COMPILE_DEFINITIONS_irods_set_stream_compression_server
+  RODS_SERVER
+  ENABLE_RE
+  )
+
+set(
+  IRODS_API_PLUGIN_COMPILE_DEFINITIONS_irods_set_stream_compression_client
+  )
+
+set(
+  IRODS_API_PLUGIN_LINK_LIBRARIES_irods_set_stream_compression_server
+  irods_server
+  )
+
+set(
+  IRODS_API_PLUGIN_LINK_LIBRARIES_irods_set_stream_compression_client
+  irods_client
+  )
+
 set(
   IRODS_API_PLUGINS
   helloworld_server
@@ -136,6 +166,8 @@ set(
   irods_data_object_modify_info_client
   irods_atomic_apply_metadata_operations_server
   irods_atomic_apply_metadata_operations_client
+  irods_set_stream_compression_server
+  irods_set_stream_compression_client
   )
 
 foreach(PLUGIN ${IRODS_API_PLUGINS})

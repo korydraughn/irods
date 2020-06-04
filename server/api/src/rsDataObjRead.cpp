@@ -17,7 +17,7 @@
 #include "irods_resource_backport.hpp"
 #include "irods_hierarchy_parser.hpp"
 
-//#include <snappy-c.h>
+#include <snappy-c.h>
 #include <string>
 
 int
@@ -83,34 +83,37 @@ rsDataObjRead( rsComm_t *rsComm, openedDataObjInp_t *dataObjReadInp,
     if ( L1desc[l1descInx].remoteZoneHost != NULL ) {
         /* cross zone operation */
         dataObjReadInp->l1descInx = L1desc[l1descInx].remoteL1descInx;
-        bytesRead = rcDataObjRead( L1desc[l1descInx].remoteZoneHost->conn,
-                                   dataObjReadInp, dataObjReadOutBBuf );
+        bytesRead = rcDataObjRead( L1desc[l1descInx].remoteZoneHost->conn, dataObjReadInp, dataObjReadOutBBuf );
         dataObjReadInp->l1descInx = l1descInx;
     }
     else {
-        int i;
-        bytesRead = l3Read( rsComm, l1descInx, dataObjReadInp->len,
-                            dataObjReadOutBBuf );
-        i = applyRuleForPostProcForRead( rsComm, dataObjReadOutBBuf,
-                                         L1desc[l1descInx].dataObjInfo->objPath );
-        if ( i < 0 ) {
+        bytesRead = l3Read(rsComm, l1descInx, dataObjReadInp->len, dataObjReadOutBBuf);
+
+        if (int i = applyRuleForPostProcForRead(rsComm, dataObjReadOutBBuf, L1desc[l1descInx].dataObjInfo->objPath); i < 0) {
             return i;
         }
 
-        /*
-        auto output_length = snappy_max_compressed_length(dataObjReadOutBBuf->len);
-        auto* output = static_cast<char*>(std::malloc(output_length));
-        //irods::at_scope_exit release_mem{[output] { std::free(output); }};
-        snappy_compress(static_cast<char*>(dataObjReadOutBBuf->buf),
-                        dataObjReadOutBBuf->len,
-                        output,
-                        &output_length);
+        if (COMPRESSION_SNAPPY == L1desc[l1descInx].compression) {
+            // Try to compress the read buffer using the space already allocated.
+            std::size_t output_length = snappy_max_compressed_length(dataObjReadOutBBuf->len);
+            auto* output = static_cast<char*>(std::malloc(output_length));
+            auto* input = static_cast<char*>(dataObjReadOutBBuf->buf);
 
-        dataObjReadOutBBuf->buf = output;
-        dataObjReadOutBBuf->len = output_length;
+            // If compression was successful and the compressed length does not exceed the read buffer's
+            // length, then replace the buffer. The length of the buffer is no longer the number of bytes
+            // read. Instead, it is the length of the compressed buffer.
+            if (snappy_compress(input, dataObjReadOutBBuf->len, output, &output_length) == SNAPPY_OK &&
+                output_length <= static_cast<std::size_t>(dataObjReadOutBBuf->len))
+            {
+                rodsLog(LOG_NOTICE, "Read buffer compressed. Updating resutls ...");
+                dataObjReadOutBBuf->buf = output;
+                dataObjReadOutBBuf->len = output_length;
+                return output_length;
+            }
 
-        bytesRead = output_length;
-        */
+            rodsLog(LOG_NOTICE, "Could not compress read buffer.");
+            std::free(output);
+        }
     }
 
     return bytesRead;

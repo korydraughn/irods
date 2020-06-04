@@ -184,6 +184,8 @@ set(
   ${CMAKE_SOURCE_DIR}/lib/api/include/closeCollection.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/collCreate.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/collRepl.h
+  ${CMAKE_SOURCE_DIR}/lib/api/include/compression_algorithm.h
+  ${CMAKE_SOURCE_DIR}/lib/api/include/compression_input.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/data_object_modify_info.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/dataCopy.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/dataGet.h
@@ -279,6 +281,7 @@ set(
   ${CMAKE_SOURCE_DIR}/lib/api/include/sendXmsg.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/server_report.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/set_round_robin_context.h
+  ${CMAKE_SOURCE_DIR}/lib/api/include/set_stream_compression.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/simpleQuery.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/specificQuery.h
   ${CMAKE_SOURCE_DIR}/lib/api/include/sslEnd.h
@@ -325,6 +328,7 @@ set(
   IRODS_SERVER_API_INCLUDE_HEADERS
   ${CMAKE_SOURCE_DIR}/server/api/include/rs_atomic_apply_metadata_operations.hpp
   ${CMAKE_SOURCE_DIR}/server/api/include/rs_get_file_descriptor_info.hpp
+  ${CMAKE_SOURCE_DIR}/server/api/include/rs_set_stream_compression.hpp
   ${CMAKE_SOURCE_DIR}/server/api/include/rsAuthCheck.hpp
   ${CMAKE_SOURCE_DIR}/server/api/include/rsAuthPluginRequest.hpp
   ${CMAKE_SOURCE_DIR}/server/api/include/rsAuthRequest.hpp

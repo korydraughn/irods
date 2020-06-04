@@ -18,6 +18,7 @@
 #include "structFileExtAndReg.h"
 #include "dataObjOpenAndStat.h"
 #include "rodsConnect.h"
+#include "compression_algorithm.h"
 
 #include "boost/any.hpp"
 
@@ -58,6 +59,8 @@ typedef struct l1desc {
                                      * on close */
     rodsServerHost_t *remoteZoneHost;
     char in_pdmo[MAX_NAME_LEN];
+
+    compression_t compression;
 } l1desc_t;
 
 extern "C" {

@@ -3,6 +3,7 @@
 /* This is script-generated code (for the most part).  */
 /* See dataObjWrite.h for a description of this API call.*/
 
+#include "compression_algorithm.h"
 #include "dataObjWrite.h"
 #include "rodsLog.h"
 #include "objMetaOpr.hpp"
@@ -21,7 +22,7 @@
 #include "irods_file_object.hpp"
 #include "irods_resource_redirect.hpp"
 
-//#include <snappy-c.h>
+#include <snappy-c.h>
 #include <string>
 
 int
@@ -70,7 +71,8 @@ applyRuleForPostProcForWrite( rsComm_t *rsComm, bytesBuf_t *dataObjWriteInpBBuf,
 int rsDataObjWrite(
     rsComm_t*           rsComm,
     openedDataObjInp_t* dataObjWriteInp,
-    bytesBuf_t*         dataObjWriteInpBBuf ) {
+    bytesBuf_t*         dataObjWriteInpBBuf )
+{
     int bytesWritten = 0;
     int l1descInx    = dataObjWriteInp->l1descInx;
 
@@ -129,21 +131,28 @@ int rsDataObjWrite(
             return ret.code();
         }
 
-        /*
-        std::size_t output_length;
-        snappy_uncompressed_length(static_cast<char*>(dataObjWriteInpBBuf->buf),
-                                   dataObjWriteInpBBuf->len,
-                                   &output_length);
+        rodsLog(LOG_NOTICE, "Checking if write buffer is compressed ...");
+        if (COMPRESSION_SNAPPY == L1desc[l1descInx].compression) {
+            rodsLog(LOG_NOTICE, "Decompressing write buffer ...");
+            auto* input = static_cast<char*>(dataObjWriteInpBBuf->buf);
 
-        auto* output = static_cast<char*>(std::malloc(output_length));
-        snappy_uncompress(static_cast<char*>(dataObjWriteInpBBuf->buf),
-                          dataObjWriteInpBBuf->len,
-                          output,
-                          &output_length);
+            if (snappy_validate_compressed_buffer(input, dataObjWriteInpBBuf->len) == SNAPPY_OK) {
+                std::size_t output_length;
+                snappy_uncompressed_length(input, dataObjWriteInpBBuf->len, &output_length);
 
-        dataObjWriteInpBBuf->buf = output;
-        dataObjWriteInpBBuf->len = output_length;
-        */
+                auto* output = static_cast<char*>(std::malloc(output_length));
+                const auto didit = snappy_uncompress(input, dataObjWriteInpBBuf->len, output, &output_length) == SNAPPY_OK;
+
+                rodsLog(LOG_NOTICE, "uncompressed  = %d", didit);
+                rodsLog(LOG_NOTICE, "output_length = %d", output_length);
+                std::free(dataObjWriteInpBBuf->buf);
+                dataObjWriteInpBBuf->buf = output;
+                dataObjWriteInpBBuf->len = output_length;
+            }
+        }
+        else {
+            rodsLog(LOG_NOTICE, "No compression detected.");
+        }
 
         dataObjWriteInp->len = dataObjWriteInpBBuf->len;
         bytesWritten = l3Write(

@@ -1,0 +1,12 @@
+#ifndef IRODS_COMPRESSION_ALGORITHM_H
+#define IRODS_COMPRESSION_ALGORITHM_H
+
+typedef enum compression
+{
+    COMPRESSION_NONE   = 0,
+    COMPRESSION_SNAPPY = 1,
+    COMPRESSION_GZIP   = 2
+} compression_t;
+
+#endif // IRODS_COMPRESSION_ALGORITHM_H
+
