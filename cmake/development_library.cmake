@@ -640,6 +640,7 @@ install(
   FILES_MATCHING
     PATTERN */transport/transport.hpp
     PATTERN */transport/default_transport.hpp
+    PATTERN */transport/snappy_transport.hpp
   )
 
 install(

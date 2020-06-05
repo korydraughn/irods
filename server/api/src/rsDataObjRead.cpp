@@ -18,7 +18,6 @@
 #include "irods_hierarchy_parser.hpp"
 
 #include <snappy-c.h>
-#include <string>
 
 int
 applyRuleForPostProcForRead( rsComm_t *rsComm, bytesBuf_t *dataObjReadOutBBuf, char *objPath ) {
@@ -105,13 +104,11 @@ rsDataObjRead( rsComm_t *rsComm, openedDataObjInp_t *dataObjReadInp,
             if (snappy_compress(input, dataObjReadOutBBuf->len, output, &output_length) == SNAPPY_OK &&
                 output_length <= static_cast<std::size_t>(dataObjReadOutBBuf->len))
             {
-                rodsLog(LOG_NOTICE, "Read buffer compressed. Updating resutls ...");
                 dataObjReadOutBBuf->buf = output;
                 dataObjReadOutBBuf->len = output_length;
                 return output_length;
             }
 
-            rodsLog(LOG_NOTICE, "Could not compress read buffer.");
             std::free(output);
         }
     }

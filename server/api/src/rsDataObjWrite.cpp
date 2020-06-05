@@ -130,10 +130,8 @@ int rsDataObjWrite(
             irods::log( ret );
             return ret.code();
         }
-
-        rodsLog(LOG_NOTICE, "Checking if write buffer is compressed ...");
+#if 0
         if (COMPRESSION_SNAPPY == L1desc[l1descInx].compression) {
-            rodsLog(LOG_NOTICE, "Decompressing write buffer ...");
             auto* input = static_cast<char*>(dataObjWriteInpBBuf->buf);
 
             if (snappy_validate_compressed_buffer(input, dataObjWriteInpBBuf->len) == SNAPPY_OK) {
@@ -141,25 +139,19 @@ int rsDataObjWrite(
                 snappy_uncompressed_length(input, dataObjWriteInpBBuf->len, &output_length);
 
                 auto* output = static_cast<char*>(std::malloc(output_length));
-                const auto didit = snappy_uncompress(input, dataObjWriteInpBBuf->len, output, &output_length) == SNAPPY_OK;
+                if (snappy_uncompress(input, dataObjWriteInpBBuf->len, output, &output_length) != SNAPPY_OK) {
+                    rodsLog(LOG_ERROR, "Could not uncompress buffer.");
+                    return SYS_INTERNAL_ERR;
+                }
 
-                rodsLog(LOG_NOTICE, "uncompressed  = %d", didit);
-                rodsLog(LOG_NOTICE, "output_length = %d", output_length);
                 std::free(dataObjWriteInpBBuf->buf);
                 dataObjWriteInpBBuf->buf = output;
                 dataObjWriteInpBBuf->len = output_length;
             }
         }
-        else {
-            rodsLog(LOG_NOTICE, "No compression detected.");
-        }
-
+#endif
         dataObjWriteInp->len = dataObjWriteInpBBuf->len;
-        bytesWritten = l3Write(
-                           rsComm,
-                           l1descInx,
-                           dataObjWriteInp->len,
-                           dataObjWriteInpBBuf );
+        bytesWritten = l3Write(rsComm, l1descInx, dataObjWriteInp->len, dataObjWriteInpBBuf);
     }
 
     return bytesWritten;
