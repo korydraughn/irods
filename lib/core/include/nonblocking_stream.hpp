@@ -66,11 +66,21 @@ namespace irods::experimental::io
                     try {
                         switch (req->operation) {
                             case io_operation::read:
+                                // FIXME This will fail if fewer bytes are returned than what was expected.
+                                // This will happen if the data object being read does not divide evenly by the
+                                // buffer size.
+                                //
+                                // FIXME Potential race condition.
+                                // The reads must wait until the client processes the buffer results. If we
+                                // don't wait until the filled buffer has been consumed, then we risk overwriting
+                                // unconsumed data leading to data lost or incoreect results.
+                                /*
                                 if (const auto count = stream_.rdbuf()->sgetn(req->buffer, req->buffer_size);
                                     count != req->buffer_size)
                                 {
                                     throw nonblocking_stream_error{count, "read error"};
                                 }
+                                */
                                 req->promise.set_value();
                                 break;
 
@@ -140,7 +150,7 @@ namespace irods::experimental::io
         {
             auto req = std::make_shared<io_request>();
             req->operation = io_operation::write;
-            req->buffer = buffer;
+            req->buffer = const_cast<char_type*>(buffer);
             req->buffer_size = count;
 
             io_requests_.push_back(req);
