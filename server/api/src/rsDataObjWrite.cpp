@@ -130,7 +130,7 @@ int rsDataObjWrite(
             irods::log( ret );
             return ret.code();
         }
-#if 0
+#if 1
         if (COMPRESSION_SNAPPY == L1desc[l1descInx].compression) {
             auto* input = static_cast<char*>(dataObjWriteInpBBuf->buf);
 
