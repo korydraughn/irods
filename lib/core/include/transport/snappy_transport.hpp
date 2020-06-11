@@ -8,9 +8,7 @@
     #include "rs_set_stream_compression.hpp"
 
     #define NAMESPACE_IMPL              server
-
     #define rxComm                      rsComm
-
     #define rx_set_stream_compression   rs_set_stream_compression
 
     // Forward declarations
@@ -19,9 +17,7 @@
     #include "set_stream_compression.h"
 
     #define NAMESPACE_IMPL              client
-
     #define rxComm                      rcComm
-
     #define rx_set_stream_compression   rc_set_stream_compression
 
     // Forward declarations

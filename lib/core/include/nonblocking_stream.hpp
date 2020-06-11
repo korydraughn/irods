@@ -35,6 +35,12 @@ namespace irods::experimental::io
         long long ec_;
     };
 
+    struct io_result
+    {
+        std::streamsize bytes = 0;
+        bool consumed = false;
+    };
+
     template <typename Stream>
     class nonblocking_stream
     {
@@ -74,13 +80,11 @@ namespace irods::experimental::io
                                 // The reads must wait until the client processes the buffer results. If we
                                 // don't wait until the filled buffer has been consumed, then we risk overwriting
                                 // unconsumed data leading to data lost or incoreect results.
-                                /*
                                 if (const auto count = stream_.rdbuf()->sgetn(req->buffer, req->buffer_size);
                                     count != req->buffer_size)
                                 {
                                     throw nonblocking_stream_error{count, "read error"};
                                 }
-                                */
                                 req->promise.set_value();
                                 break;
 
