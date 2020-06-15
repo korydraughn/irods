@@ -13,6 +13,7 @@
 #include <atomic>
 #include <stdexcept>
 #include <memory>
+#include <vector>
 
 namespace irods::experimental::io
 {
@@ -38,7 +39,7 @@ namespace irods::experimental::io
     struct io_result
     {
         std::streamsize bytes = 0;
-        bool consumed = false;
+        std::atomic<bool>* consumed = nullptr;
     };
 
     template <typename Stream>
@@ -55,6 +56,8 @@ namespace irods::experimental::io
             : stream_{stream}
             , worker_thread_{}
             , io_requests_{backlog_size}
+            , consumed_(backlog_size)
+            , consumed_idx_{}
             , stop_worker_thread_{}
         {
             worker_thread_ = std::thread{[this] {
@@ -71,7 +74,7 @@ namespace irods::experimental::io
 
                     try {
                         switch (req->operation) {
-                            case io_operation::read:
+                            case io_operation::read: {
                                 // FIXME This will fail if fewer bytes are returned than what was expected.
                                 // This will happen if the data object being read does not divide evenly by the
                                 // buffer size.
@@ -80,18 +83,26 @@ namespace irods::experimental::io
                                 // The reads must wait until the client processes the buffer results. If we
                                 // don't wait until the filled buffer has been consumed, then we risk overwriting
                                 // unconsumed data leading to data lost or incoreect results.
-                                if (const auto count = stream_.rdbuf()->sgetn(req->buffer, req->buffer_size);
-                                    count != req->buffer_size)
-                                {
+
+                                // TODO Must block until the buffer to fill has been consumed by the client.
+                                while (!consumed_[consumed_idx_].load()) {
+                                    using namespace std::chrono_literals;
+                                    std::this_thread::sleep_for(1ms);
+                                }
+
+                                const auto count = stream_.rdbuf()->sgetn(req->buffer, req->buffer_size);
+
+                                if (count < 0) {
                                     throw nonblocking_stream_error{count, "read error"};
                                 }
-                                req->promise.set_value();
+
+                                req->promise.set_value({count, &consumed_[consumed_idx_]});
+
                                 break;
+                            }
 
                             case io_operation::write:
-                                if (const auto count = stream_.rdbuf()->sputn(req->buffer, req->buffer_size);
-                                    count != req->buffer_size)
-                                {
+                                if (const auto count = stream_.rdbuf()->sputn(req->buffer, req->buffer_size); count < 0) {
                                     throw nonblocking_stream_error{count, "write error"};
                                 }
                                 req->promise.set_value();
@@ -138,31 +149,38 @@ namespace irods::experimental::io
             worker_thread_.join();
         }
 
-        auto read(char_type* buffer, std::streamsize count) -> std::future<void>
+        auto read(char_type* buffer, std::streamsize count) -> std::future<io_result>
         {
             auto req = std::make_shared<io_request>();
             req->operation = io_operation::read;
             req->buffer = buffer;
             req->buffer_size = count;
+            req->consumed = &consumed_[consumed_idx_++];
 
             io_requests_.push_back(req);
 
             return req->promise.get_future();
         }
 
-        auto write(const char_type* buffer, std::streamsize count) -> std::future<void>
+        auto write(const char_type* buffer, std::streamsize count) -> std::future<io_result>
         {
+            while (!consumed_[consumed_idx_].load()) {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(1ms);
+            }
+
             auto req = std::make_shared<io_request>();
             req->operation = io_operation::write;
             req->buffer = const_cast<char_type*>(buffer);
             req->buffer_size = count;
+            req->consumed = &consumed_[consumed_idx_++];
 
             io_requests_.push_back(req);
 
             return req->promise.get_future();
         }
 
-        auto seek(pos_type pos) -> std::future<void>
+        auto seek(pos_type pos) -> std::future<io_result>
         {
             auto req = std::make_shared<io_request>();
             req->operation = io_operation::seek_position;
@@ -173,7 +191,7 @@ namespace irods::experimental::io
             return req->promise.get_future();
         }
 
-        auto seek(off_type offset, std::ios_base::seekdir dir) -> std::future<void>
+        auto seek(off_type offset, std::ios_base::seekdir dir) -> std::future<io_result>
         {
             auto req = std::make_shared<io_request>();
             req->operation = io_operation::seek_offset;
@@ -211,13 +229,16 @@ namespace irods::experimental::io
             std::streamsize buffer_size;
             std::ios_base::seekdir seek_dir;
             off_type offset;
-            std::promise<void> promise;
+            std::atomic<bool>* consumed;
+            std::promise<io_result> promise;
         };
 
         Stream& stream_;
         std::thread worker_thread_;
         // TODO ring_buffer does not support move-only objects.
         irods::experimental::circular_buffer<std::shared_ptr<io_request>> io_requests_;
+        std::vector<std::atomic<bool>> consumed_;
+        int consumed_idx_;
         std::atomic<bool> stop_worker_thread_;
     }; // nonblocking_stream
 } // namespace irods::experimental::io

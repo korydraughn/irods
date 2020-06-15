@@ -641,6 +641,7 @@ install(
     PATTERN */transport/transport.hpp
     PATTERN */transport/default_transport.hpp
     PATTERN */transport/snappy_transport.hpp
+    PATTERN */transport/statistical_transport.hpp
   )
 
 install(
