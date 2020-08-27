@@ -1,0 +1,116 @@
+Everything under this directory is considered experimental and is subject to change.
+
+This is the intended structure of submissions to this directory:
+
+```
+CMakeLists.txt
+client
+    include
+    src
+common
+    include
+    src
+services
+    api
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_api_service>
+            CMakeLists.txt
+            include
+            src
+    asynchronous
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_asynchronous_service>
+            CMakeLists.txt
+            include
+            src
+    authentication
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_authentication_service>
+            CMakeLists.txt
+            include
+            src
+    authorization
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_authorization_service>
+            CMakeLists.txt
+            include
+            src
+    configuration
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_configuration_service>
+            CMakeLists.txt
+            include
+            src
+    identity
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_identity_service>
+            CMakeLists.txt
+            include
+            src
+    metadata
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_metadata_service>
+            CMakeLists.txt
+            include
+            src
+    network
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_network_service>
+            CMakeLists.txt
+            include
+            src
+    resource
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_resource_service>
+            CMakeLists.txt
+            include
+            src
+    rule_engine
+        function_object_services (formerly known as microservices)
+            CMakeLists.txt
+            common
+                include
+                src
+            <my_function_object_service>
+                CMakeLists.txt
+                include
+                src
+        CMakeLists.txt
+        common
+            include
+            src
+        <my_rule_engine_service>
+            CMakeLists.txt
+            include
+            src
+server
+    include
+    src
+```
