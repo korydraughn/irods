@@ -104,10 +104,58 @@ namespace irods::v5
     auto server::read() -> void
     {
         // Parses the request header to determine what to do.
-        // May require becoming a secure connection.
         // Possibly reads config files.
         // Loads the shared library that corresponds to the operation.
-        write();
+
+        // Instead of the server instructing the client to use a secure port,
+        // the server could just serve a secure port and leave it up to the
+        // client to use the correct one. The server then only tells the client
+        // whether the request requires a secure port in order to carry it out.
+
+        while (true) {
+            try {
+                /*
+                    [First N bytes = length of request and encoding/compression algo]
+                    {
+                        "user": {
+                            "name": "kory",
+                            "session_id": "..."
+                        },
+                        "proxy_user": {
+                            "name": "rods",
+                            "session_id": "..."
+                        },
+                        "api_number": 1000,
+                        "api_arguments": {
+                            "path": "/tempZone/home/rods/foo",
+                            "replica_number": 2,
+                            "open_mode": bitwise_value,
+                            "replica_token": "..."
+                        }
+                    }
+                */
+                const auto [ec, req] = read_request_header(socket_);
+
+                // Verify that the API number is valid.
+                if (!is_valid_api_number(req)) {
+
+                }
+
+                // Verify that the user is real and has the correct permission
+                // to execute the operation.
+                if (!is_authorized_user(req)) {
+
+                }
+
+                // Trigger the REPF and do the actual operation.
+                const auto response = execute(socket_, req);
+
+                write(response);
+            }
+            catch (const std::exception& e) {
+                // TODO Log error and continue or shutdown handler.
+            }
+        }
     }
 
     auto server::write() -> void
