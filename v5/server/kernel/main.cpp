@@ -130,7 +130,7 @@ auto daemonize(boost::asio::io_context& _io_context) -> int
         // should also precede the second fork().
         exit(0);
     }
-    else {
+    else if (pid < 0) {
         // TODO Log error.
         return 1;
     }
@@ -153,7 +153,7 @@ auto daemonize(boost::asio::io_context& _io_context) -> int
     if (const auto pid = fork(); pid > 0) {
         exit(0);
     }
-    else {
+    else if (pid < 0) {
         // TODO Log error.
         return 1;
     }

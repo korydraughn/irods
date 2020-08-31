@@ -114,6 +114,13 @@ namespace irods::v5
 
         while (true) {
             try {
+                // - Moving binary data means you have to encode it (for safe transfer).
+                // - Look at Jason's 4.x proxy (see plugins/api/src/experimental_api_plugin.cpp).
+                // - This implementation will provide a new entry point to the 4.x API.
+                // - https://github.com/jasoncoposky/irods_client_rest_cpp
+                // - See https://github.com/jasoncoposky/irods_client_rest_cpp/blob/master/irods_specific_implementation/irods_rest_access_implementation.h
+                //   for JSON Web Tokens example with existing iRODS.
+
                 /*
                     [First N bytes = length of request and encoding/compression algo]
                     {
@@ -125,7 +132,7 @@ namespace irods::v5
                             "name": "rods",
                             "session_id": "..."
                         },
-                        "api_number": 1000,
+                        "api_number": "replica_open", //1000, // Use a string man!
                         "api_arguments": {
                             "path": "/tempZone/home/rods/foo",
                             "replica_number": 2,
