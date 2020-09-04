@@ -1,15 +1,15 @@
 #ifndef DATA_OBJ_REPL_H__
 #define DATA_OBJ_REPL_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "objInfo.h"
 
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjRepl - Replicate an iRODS data object.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      condInput - conditional Input
@@ -27,7 +27,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjRepl( rcComm_t *conn, dataObjInp_t *dataObjInp );
-int _rcDataObjRepl( rcComm_t *conn, dataObjInp_t *dataObjInp, transferStat_t **transferStat );
+int rcDataObjRepl( struct RcComm *conn, dataObjInp_t *dataObjInp );
+int _rcDataObjRepl( struct RcComm *conn, dataObjInp_t *dataObjInp, transferStat_t **transferStat );
 
 #endif

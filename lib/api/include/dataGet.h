@@ -1,9 +1,10 @@
 #ifndef DATA_GET_H__
 #define DATA_GET_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 
-int rcDataGet( rcComm_t *conn, dataOprInp_t *dataGetInp, portalOprOut_t **portalOprOut );
+struct RcComm;
+
+int rcDataGet( struct RcComm *conn, dataOprInp_t *dataGetInp, portalOprOut_t **portalOprOut );
 
 #endif

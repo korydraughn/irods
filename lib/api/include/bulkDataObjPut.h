@@ -10,11 +10,12 @@
 
 #include "rodsGenQuery.h"
 #include "rodsDef.h"
-#include "rcConnect.h"
+
+struct RcComm;
 
 #define TMP_PHY_BUN_DIR         "tmpPhyBunDir"
 
-typedef struct {
+typedef struct BulkOperationInput {
     char objPath[MAX_NAME_LEN];
     genQueryOut_t attriArray;   /* arrays of attrib - chksum */
     keyValPair_t condInput;   /* include chksum flag and value */
@@ -29,12 +30,11 @@ typedef struct RenamedPhyFiles {
 
 #define BulkOprInp_PI "str objPath[MAX_NAME_LEN]; struct GenQueryOut_PI; struct KeyValPair_PI;"
 
-
 /* prototype for the client call */
 /* rcBulkDataObjPut - Bulk Put (upload) a number of local files to iRODS.
  * bulkOprInpBBuf contains the bundled local files in tar format.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   bulkOprInp_t *bulkOprInp - generic dataObj input. Relevant items are:
  *      objPath - the collection path under which the files are to be untar.
  *      condInput - conditional Input
@@ -43,11 +43,9 @@ typedef struct RenamedPhyFiles {
  *          DEST_RESC_NAME_KW - "value" = The destination Resource.
  *   return value - The status of the operation.
  */
-
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcBulkDataObjPut( rcComm_t *conn, bulkOprInp_t *bulkOprInp, bytesBuf_t *bulkOprInpBBuf );
+int rcBulkDataObjPut( struct RcComm *conn, bulkOprInp_t *bulkOprInp, bytesBuf_t *bulkOprInpBBuf );
 
 #endif  // BULK_DATA_OBJ_PUT_H__

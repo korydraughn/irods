@@ -1,14 +1,15 @@
 #ifndef DATA_OBJ_UNLINK_H__
 #define DATA_OBJ_UNLINK_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "objInfo.h"
+
+struct RcComm;
 
 /* rcDataObjUnlink - Unlink a iRODS data object. By defult, the file will
  * be moved to the trash, but the FORCE_FLAG_KW will force the removal.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *	objPath - the path of the data object.
  *      condInput - conditional Input
@@ -23,6 +24,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjUnlink( rcComm_t *conn, dataObjInp_t *dataObjUnlinkInp );
+int rcDataObjUnlink( struct RcComm *conn, dataObjInp_t *dataObjUnlinkInp );
 
 #endif

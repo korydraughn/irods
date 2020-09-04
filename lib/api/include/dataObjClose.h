@@ -1,15 +1,16 @@
 #ifndef DATA_OBJ_CLOSE_H__
 #define DATA_OBJ_CLOSE_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "objInfo.h"
 #include "rodsType.h"
 
+struct RcComm;
+
 /* prototype for the client call */
 /* rcDataObjClose - Close an opened iRODS data object descriptor.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjCloseInp_t *dataObjCloseInp - Relevant items are:
  *      l1descInx - the iRODS data object descriptor to close.
  *
@@ -19,6 +20,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjClose( rcComm_t *conn, openedDataObjInp_t *dataObjCloseInp );
+int rcDataObjClose( struct RcComm *conn, openedDataObjInp_t *dataObjCloseInp );
 
 #endif

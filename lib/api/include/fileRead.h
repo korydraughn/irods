@@ -2,7 +2,8 @@
 #define FILE_READ_H__
 
 #include "rodsDef.h"
-#include "rcConnect.h"
+
+struct RcComm;
 
 typedef struct FileReadInp {
     int fileInx;
@@ -14,6 +15,6 @@ typedef struct FileReadInp {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileRead( rcComm_t *conn, fileReadInp_t *fileReadInp, bytesBuf_t *fileReadOutBBuf );
+int rcFileRead( struct RcComm *conn, fileReadInp_t *fileReadInp, bytesBuf_t *fileReadOutBBuf );
 
 #endif

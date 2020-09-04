@@ -2,9 +2,10 @@
 #define FILE_UNLINK_H__
 
 #include "rodsDef.h"
-#include "rcConnect.h"
 
-typedef struct {
+struct RcComm;
+
+typedef struct FileUnlinkInput {
     rodsHostAddr_t addr;
     char fileName[MAX_NAME_LEN];
     char rescHier[MAX_NAME_LEN];
@@ -16,6 +17,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileUnlink( rcComm_t *conn, fileUnlinkInp_t *fileUnlinkInp );
+int rcFileUnlink( struct RcComm *conn, fileUnlinkInp_t *fileUnlinkInp );
 
 #endif

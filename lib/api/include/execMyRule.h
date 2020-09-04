@@ -4,7 +4,8 @@
 #include "rodsDef.h"
 #include "objInfo.h"
 #include "msParam.h"
-#include "rcConnect.h"
+
+struct RcComm;
 
 typedef struct ExecMyRuleInp {
     char myRule[META_STR_LEN];
@@ -19,6 +20,6 @@ typedef struct ExecMyRuleInp {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcExecMyRule( rcComm_t *conn, execMyRuleInp_t *execMyRuleInp, msParamArray_t **outParamArray );
+int rcExecMyRule( struct RcComm *conn, execMyRuleInp_t *execMyRuleInp, msParamArray_t **outParamArray );
 
 #endif

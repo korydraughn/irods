@@ -8,16 +8,17 @@
 
 /* This is a Object File I/O API call */
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "objInfo.h"
 #include "msParam.h"
+
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjRsync - Synchronize the data between a  local  copy  (local file
  * system)  and the copy stored in iRODS or between two iRODS copies.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      condInput - conditional Input
@@ -39,7 +40,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp );
-int _rcDataObjRsync( rcComm_t *conn, dataObjInp_t *dataObjInp, msParamArray_t **outParamArray );
+int rcDataObjRsync( struct RcComm *conn, dataObjInp_t *dataObjInp );
+int _rcDataObjRsync( struct RcComm *conn, dataObjInp_t *dataObjInp, msParamArray_t **outParamArray );
 
 #endif

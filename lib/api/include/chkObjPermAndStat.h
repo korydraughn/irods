@@ -6,7 +6,7 @@
 // definition for flags
 #define CHK_COLL_FOR_BUNDLE_OPR      0x1
 
-typedef struct {
+typedef struct CheckObjPermAndStat {
     char objPath[MAX_NAME_LEN];
     char permission[NAME_LEN];
     int flags;
@@ -18,7 +18,7 @@ typedef struct {
 
 /* rcChkObjPermAndStat - Unregister a iRODS dataObject.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   chkObjPermAndStat_t *chkObjPermAndStatInp - the dataObjInfo to unregister
  *
  * OutPut -

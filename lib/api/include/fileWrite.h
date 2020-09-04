@@ -1,10 +1,11 @@
 #ifndef FILE_WRITE_H__
 #define FILE_WRITE_H__
 
-#include "rcConnect.h"
 #include "rodsDef.h"
 
-typedef struct {
+struct RcComm;
+
+typedef struct FileWriteInput {
     int fileInx;
     int len;
 } fileWriteInp_t;
@@ -14,6 +15,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileWrite( rcComm_t *conn, const fileWriteInp_t *fileWriteInp, const bytesBuf_t *fileWriteInpBBuf );
+int rcFileWrite( struct RcComm *conn, const fileWriteInp_t *fileWriteInp, const bytesBuf_t *fileWriteInpBBuf );
 
 #endif

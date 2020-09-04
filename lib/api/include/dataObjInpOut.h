@@ -26,7 +26,7 @@
 #define pthread_attr_default NULL
 #endif  /* aix_platform */
 
-typedef struct {
+typedef struct PortList {
     int portNum;       /* the port number */
     int cookie;
     int sock;           /* The server's sock number. no meaning for client */

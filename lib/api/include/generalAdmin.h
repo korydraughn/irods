@@ -1,9 +1,9 @@
 #ifndef GENERAL_ADMIN_H__
 #define GENERAL_ADMIN_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
-typedef struct {
+typedef struct GeneralAdminInput {
     const char *arg0;
     const char *arg1;
     const char *arg2;
@@ -20,6 +20,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGeneralAdmin( rcComm_t *conn, generalAdminInp_t *generalAdminInp );
+int rcGeneralAdmin( struct RcComm *conn, generalAdminInp_t *generalAdminInp );
 
 #endif

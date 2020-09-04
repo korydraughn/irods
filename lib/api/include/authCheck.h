@@ -1,7 +1,7 @@
 #ifndef AUTH_CHECK_H__
 #define AUTH_CHECK_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
 typedef struct {
     char *challenge;
@@ -18,10 +18,9 @@ typedef struct {
 #define authCheckInp_PI "str *challenge; str *response; str *username;"
 #define authCheckOut_PI "int privLevel; int clientPrivLevel; str *serverResponse;"
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcAuthCheck( rcComm_t *conn, authCheckInp_t *authCheckInp, authCheckOut_t **authCheckOut );
+int rcAuthCheck( struct RcComm *conn, authCheckInp_t *authCheckInp, authCheckOut_t **authCheckOut );
 
 #endif

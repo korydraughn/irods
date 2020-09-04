@@ -3,11 +3,12 @@
 
 #include "fileOpen.h"
 #include "rodsConnect.h"
-#include "rcConnect.h"
+
+struct RcComm;
 
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcChkNVPathPerm( rcComm_t *conn, fileOpenInp_t *chkNVPathPermInp );
+int rcChkNVPathPerm( struct RcComm *conn, fileOpenInp_t *chkNVPathPermInp );
 
 #endif

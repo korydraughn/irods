@@ -1,9 +1,9 @@
 #ifndef END_TRANSACTION_H__
 #define END_TRANSACTION_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
-typedef struct {
+typedef struct EndTransactionInput {
     char *arg0;
     char *arg1;
 } endTransactionInp_t;
@@ -12,6 +12,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcEndTransaction( rcComm_t *conn, endTransactionInp_t *endTransactionInp );
+int rcEndTransaction( struct RcComm *conn, endTransactionInp_t *endTransactionInp );
 
 #endif

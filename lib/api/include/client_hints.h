@@ -2,12 +2,12 @@
 #define CLIENT_HINTS_H__
 
 #include "rodsDef.h"
-#include "rcConnect.h"
 
+struct RcComm;
 
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcClientHints(rcComm_t* server_comm_ptr, bytesBuf_t** json_response);
+int rcClientHints(RcComm* server_comm_ptr, bytesBuf_t** json_response);
 
 #endif

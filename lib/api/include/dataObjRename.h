@@ -1,16 +1,16 @@
 #ifndef DATA_OBJ_RENAME_H__
 #define DATA_OBJ_RENAME_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "dataObjCopy.h"
 #include "objInfo.h"
 
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjRename - Rename a iRODS data object or collection.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjCopyInp_t *dataObjRenameInp - Relevant items are:
  *      dataObjInp_t srcDataObjInp - The source dataObj. Relevant items are:
  *          objPath - the source object path.
@@ -26,6 +26,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjRename( rcComm_t *conn, dataObjCopyInp_t *dataObjRenameInp );
+int rcDataObjRename( struct RcComm *conn, dataObjCopyInp_t *dataObjRenameInp );
 
 #endif

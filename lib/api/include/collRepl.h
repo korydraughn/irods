@@ -3,12 +3,13 @@
 
 #include "objInfo.h"
 #include "dataObjInpOut.h"
-#include "rcConnect.h"
+
+struct RcComm;
 
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcCollRepl( rcComm_t *conn, collInp_t *collReplInp, int vFlag );
-int _rcCollRepl( rcComm_t *conn, collInp_t *collReplInp, collOprStat_t **collOprStat );
+int rcCollRepl( struct RcComm *conn, collInp_t *collReplInp, int vFlag );
+int _rcCollRepl( struct RcComm *conn, collInp_t *collReplInp, collOprStat_t **collOprStat );
 
 #endif

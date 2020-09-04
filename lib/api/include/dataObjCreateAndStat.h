@@ -1,15 +1,16 @@
 #ifndef DATA_OBJ_CREATE_AND_STAT_H__
 #define DATA_OBJ_CREATE_AND_STAT_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "dataObjOpenAndStat.h"
+
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjCreateAndStat - Create And Stat a iRODS data object. This is the same
  * as the rcDataObjCreate call except it returns a openStat_t output.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      rescName - the input resource (optional)
@@ -35,6 +36,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjCreateAndStat( rcComm_t *conn, dataObjInp_t *dataObjInp, openStat_t **openStat );
+int rcDataObjCreateAndStat( struct RcComm *conn, dataObjInp_t *dataObjInp, openStat_t **openStat );
 
 #endif

@@ -11,7 +11,7 @@
 #define UNIQUE_REM_COMM_FLAG    0x2
 #define FORCE_FLAG              0x4
 
-typedef struct {
+typedef struct FileOpenInput {
     char resc_name_[MAX_NAME_LEN];
     char resc_hier_[MAX_NAME_LEN];
     char objPath[MAX_NAME_LEN];

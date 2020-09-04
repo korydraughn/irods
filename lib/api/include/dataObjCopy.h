@@ -3,7 +3,8 @@
 
 #include "objInfo.h"
 #include "dataObjInpOut.h"
-#include "rcConnect.h"
+
+struct RcComm;
 
 /**
  * \var dataObjCopyInp_t
@@ -26,12 +27,13 @@ typedef struct DataObjCopyInp {
     dataObjInp_t srcDataObjInp;
     dataObjInp_t destDataObjInp;
 } dataObjCopyInp_t;
+
 #define DataObjCopyInp_PI "struct DataObjInp_PI; struct DataObjInp_PI;"
 
 /* prototype for the client call */
 /* rcDataObjCopy - Copy a iRODS data object.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjCopyInp_t *dataObjCopyInp - Relevant items are:
  *      dataObjInp_t srcDataObjInp - The source dataObj. Relevant items are:
  *          objPath - the source object path.
@@ -56,7 +58,7 @@ typedef struct DataObjCopyInp {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjCopy( rcComm_t *conn, dataObjCopyInp_t *dataObjCopyInp );
-int _rcDataObjCopy( rcComm_t *conn, dataObjCopyInp_t *dataObjCopyInp, transferStat_t **transferStat );
+int rcDataObjCopy( struct RcComm *conn, dataObjCopyInp_t *dataObjCopyInp );
+int _rcDataObjCopy( struct RcComm *conn, dataObjCopyInp_t *dataObjCopyInp, transferStat_t **transferStat );
 
 #endif

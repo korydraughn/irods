@@ -5,7 +5,7 @@
 #include "rodsDef.h"
 #include "fileOpen.h"
 
-typedef struct {
+typedef struct FilePutOutput {
     char file_name[ MAX_NAME_LEN ];
 } filePutOut_t;
 #define filePutOut_PI "str file_name[MAX_NAME_LEN];"

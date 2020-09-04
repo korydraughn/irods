@@ -3,12 +3,12 @@
 
 #include "objInfo.h"
 #include "dataObjInpOut.h"
-#include "rcConnect.h"
 
+struct RcComm;
 
 /* rcCloseCollection - Close a iRODS collection.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   int handleInxInp - the handleInx (collection handle index) to close.
  *
  * Output -
@@ -17,6 +17,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcCloseCollection( rcComm_t *conn, int handleInxInp );
+int rcCloseCollection( struct RcComm *conn, int handleInxInp );
 
 #endif

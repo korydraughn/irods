@@ -7,7 +7,7 @@
 // definition for flags of fileRmdirInp_t
 #define RMDIR_RECUR     0x1
 
-typedef struct {
+typedef struct FileRemoveDirectoryInput {
     int flags;
     rodsHostAddr_t addr;
     char dirName[MAX_NAME_LEN];

@@ -1,8 +1,9 @@
 #ifndef FILE_CHKSUM_H__
 #define FILE_CHKSUM_H__
 
-#include "rcConnect.h"
 #include "rodsDef.h"
+
+struct RcComm;
 
 typedef struct FileChksumInp {
     rodsHostAddr_t addr;
@@ -20,6 +21,6 @@ typedef struct FileChksumInp {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileChksum( rcComm_t *conn, fileChksumInp_t *fileChksumInp, char **chksumStr );
+int rcFileChksum( struct RcComm *conn, fileChksumInp_t *fileChksumInp, char **chksumStr );
 
 #endif

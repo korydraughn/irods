@@ -1,4 +1,6 @@
 #include "procLog.h"
+
+#include "rcConnect.h"
 #include "miscUtil.h"
 #include "rsGlobalExtern.hpp"
 #include "rodsConnect.h"

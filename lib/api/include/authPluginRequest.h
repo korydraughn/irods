@@ -1,7 +1,9 @@
 #ifndef AUTH_PLUGIN_REQUEST_H__
 #define AUTH_PLUGIN_REQUEST_H__
 
-#include "rcConnect.h"
+#include "rodsDef.h"
+
+struct RcComm;
 
 typedef struct AuthPluginReqInp {
     char auth_scheme_[ MAX_NAME_LEN ];
@@ -14,10 +16,9 @@ typedef struct AuthPluginReqOut {
 } authPluginReqOut_t;
 #define authPlugReqOut_PI "str result_[MAX_NAME_LEN];"
 
-
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcAuthPluginRequest(rcComm_t* server_comm_ptr, authPluginReqInp_t* incoming_struct_with_scheme, authPluginReqOut_t** response_from_agent);
+int rcAuthPluginRequest(struct RcComm* server_comm_ptr, authPluginReqInp_t* incoming_struct_with_scheme, authPluginReqOut_t** response_from_agent);
 
 #endif

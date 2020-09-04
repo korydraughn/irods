@@ -3,12 +3,14 @@
 
 #include "rodsConnect.h"
 
+struct RsComm;
+
 int
 initAndClearProcLog();
 int
 initProcLog();
 int
-logAgentProc( rsComm_t* );
+logAgentProc( RsComm* );
 int
 readProcLog( int pid, procLog_t *procLog );
 int

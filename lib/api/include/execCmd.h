@@ -1,7 +1,7 @@
 #ifndef EXEC_CMD_H__
 #define EXEC_CMD_H__
 
-#include "rodsConnect.h"
+#include "rodsConnect.h" // TODO Investigate this (and the other headers)
 #include "procApiRequest.h"
 #include "dataObjInpOut.h"
 
@@ -29,6 +29,6 @@ typedef struct ExecCmdOut {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcExecCmd( rcComm_t *conn, execCmd_t *execCmdInp, execCmdOut_t **execCmdOut );
+int rcExecCmd( struct RcComm *conn, execCmd_t *execCmdInp, execCmdOut_t **execCmdOut );
 
 #endif

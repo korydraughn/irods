@@ -1,12 +1,13 @@
 #ifndef FILE_TRUNCATE_H__
 #define FILE_TRUNCATE_H__
 
-#include "rcConnect.h"
 #include "fileOpen.h"
+
+struct RcComm;
 
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileTruncate( rcComm_t *conn, fileOpenInp_t *fileTruncateInp );
+int rcFileTruncate( struct RcComm *conn, fileOpenInp_t *fileTruncateInp );
 
 #endif

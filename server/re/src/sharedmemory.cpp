@@ -5,6 +5,7 @@
 #include "sharedmemory.hpp"
 #include "rodsConnect.h"
 #include "irods_server_properties.hpp"
+#include "rodsLog.h"
 
 namespace bi = boost::interprocess;
 

@@ -2,8 +2,9 @@
 #define DATA_OBJ_OPEN_AND_STAT_H__
 
 #include "rodsType.h"
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
+
+struct RcComm;
 
 typedef struct OpenStat {
     rodsLong_t dataSize;
@@ -20,7 +21,7 @@ typedef struct OpenStat {
 /* rcDataObjOpenAndStat - Open And Stat a iRODS data object. This is the same
  * as the rcDataObjOpen call except it returns a openStat_t output.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      dataType - the data type of the object (optional).
@@ -45,6 +46,6 @@ typedef struct OpenStat {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjOpenAndStat( rcComm_t *conn, dataObjInp_t *dataObjInp, openStat_t **openStat );
+int rcDataObjOpenAndStat( struct RcComm *conn, dataObjInp_t *dataObjInp, openStat_t **openStat );
 
 #endif

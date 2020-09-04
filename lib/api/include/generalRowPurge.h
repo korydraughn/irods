@@ -1,9 +1,9 @@
 #ifndef GENERAL_ROW_PURGE_H__
 #define GENERAL_ROW_PURGE_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
-typedef struct {
+typedef struct GeneralRowPurgeInput {
     char *tableName;
     char *secondsAgo;
 } generalRowPurgeInp_t;
@@ -12,6 +12,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGeneralRowPurge( rcComm_t *conn, generalRowPurgeInp_t *generalRowPurgeInp );
+int rcGeneralRowPurge( struct RcComm *conn, generalRowPurgeInp_t *generalRowPurgeInp );
 
 #endif

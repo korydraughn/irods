@@ -1,9 +1,9 @@
 #ifndef FILE_CLOSEDIR_H__
 #define FILE_CLOSEDIR_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
-typedef struct {
+typedef struct FileCloseInput {
     int fileInx;
 } fileClosedirInp_t;
 #define fileClosedirInp_PI "int fileInx;"
@@ -11,6 +11,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileClosedir( rcComm_t *conn, fileClosedirInp_t *fileClosedirInp );
+int rcFileClosedir( struct RcComm *conn, fileClosedirInp_t *fileClosedirInp );
 
 #endif

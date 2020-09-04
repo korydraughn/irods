@@ -1,16 +1,16 @@
 #ifndef DATA_OBJ_LSEEK_H__
 #define DATA_OBJ_LSEEK_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "rodsType.h"
 #include "fileLseek.h"
 
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjLseek - Lseek an opened iRODS data object descriptor.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   fileLseekInp_t *dataObjLseekInp - Relevant items are:
  *      l1descInx - the iRODS data object descriptor to lseek.
  *	offset - the offset
@@ -25,6 +25,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjLseek( rcComm_t *conn, openedDataObjInp_t *dataObjLseekInp, fileLseekOut_t **dataObjLseekOut );
+int rcDataObjLseek( struct RcComm *conn, openedDataObjInp_t *dataObjLseekInp, fileLseekOut_t **dataObjLseekOut );
 
 #endif

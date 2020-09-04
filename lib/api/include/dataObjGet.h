@@ -1,15 +1,15 @@
 #ifndef DATA_OBJ_GET_H__
 #define DATA_OBJ_GET_H__
 
-#include "rcConnect.h"
 #include "rodsDef.h"
 #include "dataObjInpOut.h"
 
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjGet - Get (download) a iRODS data object.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      numThreads - Number of threads to use. NO_THREADING ==> no threading,
@@ -26,7 +26,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath );
-int _rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, portalOprOut_t **portalOprOut, bytesBuf_t *dataObjOutBBuf );
+int rcDataObjGet( struct RcComm *conn, dataObjInp_t *dataObjInp, char *locFilePath );
+int _rcDataObjGet( struct RcComm *conn, dataObjInp_t *dataObjInp, portalOprOut_t **portalOprOut, bytesBuf_t *dataObjOutBBuf );
 
 #endif

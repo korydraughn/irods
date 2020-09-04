@@ -1,9 +1,9 @@
 #ifndef GENERAL_ROW_INSERT_H__
 #define GENERAL_ROW_INSERT_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
-typedef struct {
+typedef struct GeneralRowInsertInput {
     const char *tableName;
     const char *arg1;
     const char *arg2;
@@ -22,6 +22,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGeneralRowInsert( rcComm_t *conn, generalRowInsertInp_t *generalRowInsertInp );
+int rcGeneralRowInsert( struct RcComm *conn, generalRowInsertInp_t *generalRowInsertInp );
 
 #endif

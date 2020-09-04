@@ -4,9 +4,11 @@
 #include "rodsType.h"
 #include "rodsDef.h"
 #include "objInfo.h"
-#include "rcConnect.h"
+//#include "rcConnect.h"
 
-typedef struct {
+struct RcComm;
+
+typedef struct FileStageSyncInput {
     int mode;
     int flags;
     rodsLong_t dataSize;
@@ -19,7 +21,7 @@ typedef struct {
 } fileStageSyncInp_t;
 #define fileStageSyncInp_PI "int mode; int flags; double dataSize; struct RHostAddr_PI; str filename[MAX_NAME_LEN]; str cacheFilename[MAX_NAME_LEN]; str objPath[MAX_NAME_LEN]; str rescHier[MAX_NAME_LEN]; struct KeyValPair_PI;"
 
-typedef struct {
+typedef struct FileSyncOutput {
     char file_name[ MAX_NAME_LEN ];
 } fileSyncOut_t;
 #define fileSyncOut_PI "str file_name[MAX_NAME_LEN];"
@@ -28,6 +30,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileStageToCache( rcComm_t *conn, fileStageSyncInp_t *fileStageToCacheInp );
+int rcFileStageToCache( struct RcComm *conn, fileStageSyncInp_t *fileStageToCacheInp );
 
 #endif

@@ -6,9 +6,10 @@
 #ifndef DATA_OBJ_OPEN_H__
 #define DATA_OBJ_OPEN_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "objInfo.h"
+
+struct RcComm;
 
 /* definition for phyOpenFlag */
 #define DO_PHYOPEN      0
@@ -18,7 +19,7 @@
 /* prototype for the client call */
 /* rcDataObjOpen - Open a iRODS data object.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *	objPath - the path of the data object.
  *	dataType - the data type of the object (optional).
@@ -44,6 +45,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjOpen( rcComm_t *conn, dataObjInp_t *dataObjInp );
+int rcDataObjOpen( struct RcComm *conn, dataObjInp_t *dataObjInp );
 
 #endif

@@ -2,9 +2,10 @@
 #define FILE_LSEEK_H__
 
 #include "rodsType.h"
-#include "rcConnect.h"
 #include "procApiRequest.h"
 #include "apiNumber.h"
+
+struct RcComm;
 
 /**
  * \var fileLseekInp_t

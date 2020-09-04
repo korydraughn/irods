@@ -17,6 +17,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcAuthRequest( rcComm_t *conn, authRequestOut_t **authRequestOut );
+int rcAuthRequest( struct RcComm *conn, authRequestOut_t **authRequestOut );
 
 #endif

@@ -3,10 +3,11 @@
 
 #include "rodsDef.h"
 #include "rodsType.h"
-#include "rcConnect.h"
 #include "msParam.h"
 
-typedef struct {
+struct RcComm;
+
+typedef struct ExecRuleExpression {
     bytesBuf_t      rule_text_;
     bytesBuf_t      packed_rei_;
     msParamArray_t* params_;
@@ -14,6 +15,6 @@ typedef struct {
 
 #define ExecRuleExpression_PI "struct BytesBuf_PI; struct BytesBuf_PI; struct *MsParamArray_PI;"
 
-int rcExecRuleExpression(rcComm_t*,exec_rule_expression_t*);
+int rcExecRuleExpression(struct RcComm*,exec_rule_expression_t*);
 
 #endif

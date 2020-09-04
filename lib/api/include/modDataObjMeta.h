@@ -4,10 +4,11 @@
 #include "rcConnect.h"
 #include "objInfo.h"
 
-typedef struct {
+typedef struct ModifyDataObjMetaInput {
     dataObjInfo_t *dataObjInfo;
     keyValPair_t *regParam;
 } modDataObjMeta_t;
+
 #define ModDataObjMeta_PI "struct *DataObjInfo_PI; struct *KeyValPair_PI;"
 
 

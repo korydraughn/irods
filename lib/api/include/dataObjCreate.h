@@ -3,12 +3,13 @@
 
 #include "objInfo.h"
 #include "dataObjInpOut.h"
-#include "rcConnect.h"
+
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjCreate - Create a iRODS data object.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      rescName - the input resource (optional)
@@ -34,6 +35,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjCreate( rcComm_t *conn, dataObjInp_t *dataObjInp );
+int rcDataObjCreate( struct RcComm *conn, dataObjInp_t *dataObjInp );
 
 #endif

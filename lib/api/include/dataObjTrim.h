@@ -1,13 +1,14 @@
 #ifndef DATA_OBJ_TRIM_H__
 #define DATA_OBJ_TRIM_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
+
+struct RcComm;
 
 /* prototype for the client call */
 /* rcDataObjTrim - Trim the copies (replica) of an iRODS data object.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      condInput - conditional Input
@@ -21,6 +22,6 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjTrim( rcComm_t *conn, dataObjInp_t *dataObjInp );
+int rcDataObjTrim( struct RcComm *conn, dataObjInp_t *dataObjInp );
 
 #endif

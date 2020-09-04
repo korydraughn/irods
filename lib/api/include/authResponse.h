@@ -1,9 +1,9 @@
 #ifndef AUTH_RESPONSE_H__
 #define AUTH_RESPONSE_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
-typedef struct {
+typedef struct AuthResponseInput {
     char *response;
     char *username;
 } authResponseInp_t;
@@ -12,6 +12,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcAuthResponse( rcComm_t *conn, authResponseInp_t *authResponseInp );
+int rcAuthResponse( struct RcComm *conn, authResponseInp_t *authResponseInp );
 
 #endif

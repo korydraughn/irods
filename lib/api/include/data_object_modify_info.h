@@ -4,6 +4,7 @@
 #include "modDataObjMeta.h"
 
 struct RcComm;
+struct ModifyDataObjMetaInput; // TODO Move include into cpp file.
 
 #ifdef __cplusplus
 extern "C" {

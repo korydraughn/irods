@@ -2,9 +2,10 @@
 #define FILE_CHMOD_H__
 
 #include "rodsDef.h"
-#include "rcConnect.h"
 
-typedef struct {
+struct RcComm;
+
+typedef struct FileChmodInput {
     rodsHostAddr_t addr;
     char fileName[MAX_NAME_LEN];
     int mode;
@@ -17,6 +18,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileChmod( rcComm_t *conn, fileChmodInp_t *fileChmodInp );
+int rcFileChmod( struct RcComm *conn, fileChmodInp_t *fileChmodInp );
 
 #endif

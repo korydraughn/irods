@@ -4,7 +4,7 @@
 #include "rodsDef.h"
 #include "rcConnect.h"
 
-typedef struct {
+typedef struct FileRenameInput {
     rodsHostAddr_t addr;
     char oldFileName[MAX_NAME_LEN];
     char newFileName[MAX_NAME_LEN];

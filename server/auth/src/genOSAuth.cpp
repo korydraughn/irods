@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <vector>
 
+#include "rodsDef.h"
 #include "authenticate.h"
 #include "osauth.h"
 

@@ -1,18 +1,14 @@
 #ifndef DATA_OBJ_CHKSUM_H__
 #define DATA_OBJ_CHKSUM_H__
 
-#include "rcConnect.h"
 #include "dataObjInpOut.h"
 #include "objInfo.h"
 
-#ifdef __cplusplus
-extern "C"
-#endif
-int rcDataObjChksum( rcComm_t *conn, dataObjInp_t *dataObjChksumInp, char **outChksum );
+struct RcComm;
 
 /* rcDataObjChksum - Chksum a iRODS data object.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *	objPath - the path of the data object.
  *	openFlags - should be set to O_RDONLY.
@@ -25,5 +21,9 @@ int rcDataObjChksum( rcComm_t *conn, dataObjInp_t *dataObjChksumInp, char **outC
  *   char **outChksum - the chksum string
  *   return value - The status of the operation.
  */
+#ifdef __cplusplus
+extern "C"
+#endif
+int rcDataObjChksum( struct RcComm *conn, dataObjInp_t *dataObjChksumInp, char **outChksum );
 
 #endif

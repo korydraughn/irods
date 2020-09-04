@@ -2,9 +2,10 @@
 #define FILE_READDIR_H__
 
 #include "rodsType.h"
-#include "rcConnect.h"
 
-typedef struct {
+struct RcComm;
+
+typedef struct FileReadDirectoryInput {
     int fileInx;
 } fileReaddirInp_t;
 #define fileReaddirInp_PI "int fileInx;"
@@ -13,6 +14,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcFileReaddir( rcComm_t *conn, fileReaddirInp_t *fileReaddirInp, rodsDirent_t **fileReaddirOut );
+int rcFileReaddir( struct RcComm *conn, fileReaddirInp_t *fileReaddirInp, rodsDirent_t **fileReaddirOut );
 
 #endif

@@ -1,12 +1,13 @@
 #ifndef FILE_CREATE_H__
 #define FILE_CREATE_H__
 
-#include "rcConnect.h"
 #include "fileOpen.h"
+
+struct RcComm;
 
 typedef fileOpenInp_t fileCreateInp_t;
 
-typedef struct {
+typedef struct FileCreateOutput {
     char file_name[ MAX_NAME_LEN ];
 } fileCreateOut_t;
 

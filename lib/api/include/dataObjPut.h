@@ -1,15 +1,16 @@
 #ifndef DATA_OBJ_PUT_H__
 #define DATA_OBJ_PUT_H__
 
-#include "rcConnect.h"
 #include "rodsDef.h"
 #include "procApiRequest.h"
 #include "dataObjInpOut.h"
 
+struct RcComm;
+
 /* prototype for the client call */
 /* rcDataObjPut - Put (upload) a local file to iRODS.
  * Input -
- *   rcComm_t *conn - The client connection handle.
+ *   RcComm *conn - The client connection handle.
  *   dataObjInp_t *dataObjInp - generic dataObj input. Relevant items are:
  *      objPath - the path of the data object.
  *      numThreads - Number of threads to use. NO_THREADING ==> no threading,
@@ -30,6 +31,7 @@
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcDataObjPut( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath );
-int _rcDataObjPut( rcComm_t *conn, dataObjInp_t *dataObjInp, bytesBuf_t *dataObjInpBBuf, portalOprOut_t **portalOprOut );
+int rcDataObjPut( struct RcComm *conn, dataObjInp_t *dataObjInp, char *locFilePath );
+int _rcDataObjPut( struct RcComm *conn, dataObjInp_t *dataObjInp, bytesBuf_t *dataObjInpBBuf, portalOprOut_t **portalOprOut );
+
 #endif

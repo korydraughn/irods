@@ -1,7 +1,7 @@
 #ifndef AUTHENTICATE_H__
 #define AUTHENTICATE_H__
 
-#include "rcConnect.h"
+struct RcComm;
 
 #define AUTH_SUBOP_REQ_AUTH "request challenge"
 #define AUTH_SUBOP_RESP "challenge response"
@@ -27,6 +27,6 @@ typedef struct {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcAuthenticate( rcComm_t *conn, AuthenticateInp_t *authenticateInp, AuthenticateOut_t **authenticateOut );
+int rcAuthenticate( struct RcComm *conn, AuthenticateInp_t *authenticateInp, AuthenticateOut_t **authenticateOut );
 
 #endif

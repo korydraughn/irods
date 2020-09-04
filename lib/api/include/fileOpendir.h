@@ -4,7 +4,7 @@
 #include "rodsDef.h"
 #include "rcConnect.h"
 
-typedef struct {
+typedef struct FileOpenDirectoryInput {
     char resc_name_[MAX_NAME_LEN];
     char resc_hier_[MAX_NAME_LEN];
     char objPath[MAX_NAME_LEN];
