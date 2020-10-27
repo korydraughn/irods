@@ -1305,57 +1305,64 @@ set(
   ${CMAKE_SOURCE_DIR}/server/core/src/irods_logger.cpp 
   )
 
-add_library(
-  RodsAPIs
-  STATIC
-  ${IRODS_LIB_CORE_SOURCES}
-  ${IRODS_LIB_API_SOURCES}
-  ${IRODS_LIB_RBUDP_SOURCES}
-  ${IRODS_LIB_HASHER_SOURCES}
-  ${IRODS_LIB_CLIENT_EXEC_SOURCES}
-  ${IRODS_SERVER_CORE_SOURCES}
-  $<TARGET_OBJECTS:irods_filesystem_path>
-  $<TARGET_OBJECTS:irods_filesystem_client>
-  $<TARGET_OBJECTS:irods_filesystem_server>
-  $<TARGET_OBJECTS:irods_user_administration_client>
-  $<TARGET_OBJECTS:irods_user_administration_server>
-  $<TARGET_OBJECTS:irods_resource_administration_client>
-  $<TARGET_OBJECTS:irods_resource_administration_server>
-  )
-target_link_libraries(
-  RodsAPIs
-  PRIVATE
-  ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_chrono.so
-  ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_filesystem.so
-  ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_regex.so
-  ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_system.so
-  ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_thread.so
-  ${IRODS_EXTERNALS_FULLPATH_FMT}/lib/libfmt.so
-  ${OPENSSL_SSL_LIBRARY}
-  ${OPENSSL_CRYPTO_LIBRARY}
-  ${CMAKE_DL_LIBS}
-  )
-target_include_directories(
-  RodsAPIs
-  PRIVATE
-  ${CMAKE_BINARY_DIR}/lib/core/include
-  ${CMAKE_SOURCE_DIR}/lib/core/include
-  ${CMAKE_SOURCE_DIR}/lib/api/include
-  ${CMAKE_SOURCE_DIR}/lib/hasher/include
-  ${CMAKE_SOURCE_DIR}/lib/rbudp/include
-  ${CMAKE_SOURCE_DIR}/lib/filesystem/include
-  ${CMAKE_SOURCE_DIR}/server/core/include
-  ${CMAKE_SOURCE_DIR}/server/icat/include
-  ${CMAKE_SOURCE_DIR}/server/re/include
-  ${CMAKE_SOURCE_DIR}/server/drivers/include
-  ${IRODS_EXTERNALS_FULLPATH_BOOST}/include
-  ${IRODS_EXTERNALS_FULLPATH_FMT}/include
-  ${IRODS_EXTERNALS_FULLPATH_JSON}/include
-  ${OPENSSL_INCLUDE_DIR}
-  )
-set_property(TARGET RodsAPIs PROPERTY CXX_STANDARD ${IRODS_CXX_STANDARD})
-target_compile_definitions(RodsAPIs PRIVATE ${IRODS_COMPILE_DEFINITIONS} IRODS_ENABLE_SYSLOG)
-target_compile_options(RodsAPIs PRIVATE -Wno-write-strings)
+if (BUILD_STATIC_LIB_RODSAPIS)
+    add_library(
+      RodsAPIs
+      STATIC
+      ${IRODS_LIB_CORE_SOURCES}
+      ${IRODS_LIB_API_SOURCES}
+      ${IRODS_LIB_RBUDP_SOURCES}
+      ${IRODS_LIB_HASHER_SOURCES}
+      ${IRODS_LIB_CLIENT_EXEC_SOURCES}
+      ${IRODS_SERVER_CORE_SOURCES}
+      $<TARGET_OBJECTS:irods_filesystem_path>
+      $<TARGET_OBJECTS:irods_filesystem_client>
+      $<TARGET_OBJECTS:irods_filesystem_server>
+      $<TARGET_OBJECTS:irods_user_administration_client>
+      $<TARGET_OBJECTS:irods_user_administration_server>
+      $<TARGET_OBJECTS:irods_resource_administration_client>
+      $<TARGET_OBJECTS:irods_resource_administration_server>
+      )
+
+    target_link_libraries(
+      RodsAPIs
+      PRIVATE
+      ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_chrono.so
+      ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_filesystem.so
+      ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_regex.so
+      ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_system.so
+      ${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_thread.so
+      ${IRODS_EXTERNALS_FULLPATH_FMT}/lib/libfmt.so
+      ${OPENSSL_SSL_LIBRARY}
+      ${OPENSSL_CRYPTO_LIBRARY}
+      ${CMAKE_DL_LIBS}
+      )
+
+    target_include_directories(
+      RodsAPIs
+      PRIVATE
+      ${CMAKE_BINARY_DIR}/lib/core/include
+      ${CMAKE_SOURCE_DIR}/lib/core/include
+      ${CMAKE_SOURCE_DIR}/lib/api/include
+      ${CMAKE_SOURCE_DIR}/lib/hasher/include
+      ${CMAKE_SOURCE_DIR}/lib/rbudp/include
+      ${CMAKE_SOURCE_DIR}/lib/filesystem/include
+      ${CMAKE_SOURCE_DIR}/server/core/include
+      ${CMAKE_SOURCE_DIR}/server/icat/include
+      ${CMAKE_SOURCE_DIR}/server/re/include
+      ${CMAKE_SOURCE_DIR}/server/drivers/include
+      ${IRODS_EXTERNALS_FULLPATH_BOOST}/include
+      ${IRODS_EXTERNALS_FULLPATH_FMT}/include
+      ${IRODS_EXTERNALS_FULLPATH_JSON}/include
+      ${OPENSSL_INCLUDE_DIR}
+      )
+
+    set_property(TARGET RodsAPIs PROPERTY CXX_STANDARD ${IRODS_CXX_STANDARD})
+    target_compile_definitions(RodsAPIs PRIVATE ${IRODS_COMPILE_DEFINITIONS} IRODS_ENABLE_SYSLOG)
+    target_compile_options(RodsAPIs PRIVATE -Wno-write-strings)
+
+    set(RODSAPIS_DEPENDENCY RodsAPIs)
+endif()
 
 set(
   IRODS_MAIN_EXECUTABLE_IRODSSERVER_SOURCES
@@ -1752,7 +1759,7 @@ foreach(DATABASE_PLUGIN postgres oracle mysql)
     COMMAND
     python ${CMAKE_SOURCE_DIR}/configuration_schemas/update_schema_ids_for_cmake.py ${CMAKE_INSTALL_PREFIX}/${IRODS_HOME_DIRECTORY}/configuration_schemas/v${IRODS_CONFIGURATION_SCHEMA_VERSION} ${CMAKE_INSTALL_PREFIX}/${IRODS_HOME_DIRECTORY}/configuration_schemas/v${IRODS_CONFIGURATION_SCHEMA_VERSION}
     DEPENDS
-    irodsServer irodsReServer irods_api_test_harness hostname_resolves_to_local_address irodsPamAuthCheck irods_client irods_server irods_common irods_plugin_dependencies RodsAPIs helloworld_server helloworld_client msisync_to_archive msi_update_unixfilesystem_resource_free_space compound deferred load_balanced mockarchive nonblocking passthru random replication structfile univmss unixfilesystem irods_rule_engine_plugin-irods_rule_language irods_rule_engine_plugin-cpp_default_policy irods_rule_engine_plugin-passthrough native_client native_server osauth_client osauth_server pam_client pam_server ssl_client ssl_server tcp_client tcp_server genOSAuth mytest
+    ${RODSAPIS_DEPENDENCY} irodsServer irodsReServer irods_api_test_harness hostname_resolves_to_local_address irodsPamAuthCheck irods_client irods_server irods_common irods_plugin_dependencies helloworld_server helloworld_client msisync_to_archive msi_update_unixfilesystem_resource_free_space compound deferred load_balanced mockarchive nonblocking passthru random replication structfile univmss unixfilesystem irods_rule_engine_plugin-irods_rule_language irods_rule_engine_plugin-cpp_default_policy irods_rule_engine_plugin-passthrough native_client native_server osauth_client osauth_server pam_client pam_server ssl_client ssl_server tcp_client tcp_server genOSAuth mytest
     ${DATABASE_PLUGIN} IRODS_PHONY_TARGET_icatSysTables_${DATABASE_PLUGIN}.sql
     )
 endforeach()
