@@ -1358,10 +1358,14 @@ if (BUILD_STATIC_LIB_RODSAPIS)
       )
 
     set_property(TARGET RodsAPIs PROPERTY CXX_STANDARD ${IRODS_CXX_STANDARD})
-    target_compile_definitions(RodsAPIs PRIVATE ${IRODS_COMPILE_DEFINITIONS} IRODS_ENABLE_SYSLOG)
+    target_compile_definitions(RodsAPIs PRIVATE ${IRODS_COMPILE_DEFINITIONS}) # IRODS_ENABLE_SYSLOG)
     target_compile_options(RodsAPIs PRIVATE -Wno-write-strings)
 
     set(RODSAPIS_DEPENDENCY RodsAPIs)
+
+    install(TARGETS RodsAPIs
+            ARCHIVE DESTINATION usr/lib
+            COMPONENT ${IRODS_PACKAGE_COMPONENT_DEVELOPMENT_NAME})
 endif()
 
 set(

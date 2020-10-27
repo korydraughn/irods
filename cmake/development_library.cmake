@@ -1,6 +1,7 @@
 # TODO static dev libraries?
 # TODO symlinks for h -> hpp headers?
 
+#[[
 install(
   TARGETS
     RodsAPIs
@@ -8,6 +9,7 @@ install(
     DESTINATION usr/lib
     COMPONENT ${IRODS_PACKAGE_COMPONENT_DEVELOPMENT_NAME}
   )
+#]]
 
 set(
   IRODS_GENERATED_HEADERS
