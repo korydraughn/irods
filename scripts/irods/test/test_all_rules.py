@@ -1057,3 +1057,10 @@ OUTPUT ruleExecOut
             # Show that even though no data object was created, the PEPs fired correctly.
             self.admin.assert_icommand(['imeta', 'ls', '-d', data_object], 'STDOUT', ['touch_pre_fired', 'touch_post_fired'])
 
+    @unittest.skipIf(test.settings.RUN_IN_TOPOLOGY, "Skip for Topology Testing")
+    def test_msi_report_error__issue_4463(self):
+        rep_name = 'irods_rule_engine_plugin-irods_rule_language-instance'
+        error_msg = '#4463: This message should appear on the client-side!'
+        rule_text = 'msi_report_error("{0}")'.format(error_msg)
+        self.admin.assert_icommand(['irule', '-r', rep_name, rule_text, 'null', 'ruleExecOut'], 'STDOUT', [error_msg])
+
