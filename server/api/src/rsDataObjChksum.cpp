@@ -19,6 +19,7 @@
 #include "key_value_proxy.hpp"
 #include "irods_rs_comm_query.hpp"
 #include "irods_at_scope_exit.hpp"
+#include "irods_exception.hpp"
 #include "irods_logger.hpp"
 
 #define IRODS_QUERY_ENABLE_SERVER_SIDE_API
@@ -123,6 +124,18 @@ namespace
         good_replicas.reserve(std::distance(begin(&_replicas), end(&_replicas)));
 
         for (auto& r : &_replicas) {
+            if (const auto err = irods::is_resc_live(r.rescId); err.ok()) {
+                if (err.code() == SYS_RESC_IS_DOWN) {
+                    log::api::warn("Replica [{}] will not be included in the result set "
+                                   "because it rests on a resource marked as down.",
+                                   r.replNum);
+                    continue;
+                }
+            }
+            else {
+                THROW(err.code(), err.result());
+            }
+
             if (is_replica_good(r) && !is_member_of_bundle_resource(r.rescId)) {
                 good_replicas.push_back(&r);
             }
@@ -240,11 +253,13 @@ namespace
 
         if (client_targeted_specific_replica) {
             // The client is allowed to verify checksum information for a single stale replica.
-            // Targeting a specific replica supports verifying the following:
-            // - The existence of a checksum for that replica.
-            // - The physical size of the replicas vs what is recorded in the catalog.
             if (const auto ec = sortObjInfoForOpen(&_replicas, &_dataObjInp.condInput, /* write flag */ 0); ec < 0) {
                 return ec;
+            }
+
+            if (const auto err = irods::is_resc_live(_replicas->rescId); err.code() == SYS_RESC_IS_DOWN) {
+                log::api::warn("Cannot verify checksum for replica [{}]. Resource is marked as [down].", _replicas->replNum);
+                return SYS_RESC_IS_DOWN;
             }
 
             if (const auto ec = check_replica_accessibility(*_replicas); ec < 0) {
@@ -278,7 +293,8 @@ namespace
         }
 
         //
-        // Process ALL replicas marked good and not a member of the bundle resource.
+        // Process ALL replicas on an available resource, marked good, and not a member of
+        // the bundle resource.
         //
 
         auto good_replicas = get_good_replicas(*_replicas);
@@ -286,6 +302,8 @@ namespace
         if (good_replicas.empty()) {
             return SYS_NO_GOOD_REPLICA;
         }
+
+        // TODO report and remove replicas on down resources.
 
         report_number_of_replicas_skipped(*_replicas, good_replicas.size(), _comm.rError);
         report_replicas_with_mismatch_size_info(_comm, good_replicas);
@@ -373,6 +391,11 @@ namespace
                 return 0;
             }
 
+            if (const auto err = irods::is_resc_live(_replicas->rescId); err.code() == SYS_RESC_IS_DOWN) {
+                log::api::warn("Cannot compute checksum for replica [{}]. Resource is marked as [down].", _replicas->replNum);
+                return SYS_RESC_IS_DOWN;
+            }
+
             if (client_set_admin_flag) {
                 ix::key_value_proxy{_replicas->condInput}[ADMIN_KW] = "";
             }
@@ -381,7 +404,8 @@ namespace
         }
 
         //
-        // Process ALL replicas marked good and not a member of the bundle resource.
+        // Process ALL replicas on an available resource, marked good, and not a member of
+        // the bundle resource.
         //
 
         const auto good_replicas = get_good_replicas(*_replicas);
@@ -520,14 +544,24 @@ int _rsDataObjChksum(RsComm* rsComm,
                      char** outChksumStr,
                      DataObjInfo** dataObjInfoHead)
 {
-    *dataObjInfoHead = nullptr;
-    *outChksumStr = nullptr;
+    try {
+        *dataObjInfoHead = nullptr;
+        *outChksumStr = nullptr;
 
-    if (ix::key_value_proxy{dataObjInp->condInput}.contains(VERIFY_CHKSUM_KW)) {
-        return do_verification(*rsComm, *dataObjInp, *dataObjInfoHead, outChksumStr);
+        if (ix::key_value_proxy{dataObjInp->condInput}.contains(VERIFY_CHKSUM_KW)) {
+            return do_verification(*rsComm, *dataObjInp, *dataObjInfoHead, outChksumStr);
+        }
+
+        return do_lookup_or_update(*rsComm, *dataObjInp, *dataObjInfoHead, outChksumStr);
     }
-
-    return do_lookup_or_update(*rsComm, *dataObjInp, *dataObjInfoHead, outChksumStr);
+    catch (const irods::exception& e) {
+        log::api::error(e.what());
+        return e.code();
+    }
+    catch (const std::exception& e) {
+        log::api::error(e.what());
+        return SYS_INTERNAL_ERR;
+    }
 }
 
 int dataObjChksumAndRegInfo(RsComm* rsComm,

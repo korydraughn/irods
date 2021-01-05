@@ -333,3 +333,41 @@ class Test_Ichksum(resource_suite.ResourceBase, unittest.TestCase):
         self.admin.assert_icommand(['ichksum', '-n0', data_object], 'STDERR', ['HIERARCHY_ERROR'])
         self.admin.assert_icommand(['ichksum', '-a', data_object], 'STDERR', ['HIERARCHY_ERROR'])
 
+    def test_ichksum_detects_and_handles_replicas_on_resources_marked_as_down__issue_5255(self):
+        data_object = os.path.join(self.admin.session_collection, 'foo')
+        self.admin.assert_icommand(['istream', 'write', data_object], input='some data')
+        self.admin.assert_icommand(['irepl', '-R', self.testresc, data_object])
+
+        try:
+            self.admin.assert_icommand(['iadmin', 'modresc', self.testresc, 'status', 'down'])
+
+            # Checksum the original replica.
+            self.admin.assert_icommand(['ichksum', data_object], 'STDOUT', [os.path.basename(data_object) + '    sha2:'])
+
+            # Show that not using -n or -a is equivalent to targeting the original replica and in this
+            # case results in an error due to the replica being on a resource marked as down.
+            self.admin.assert_icommand(['iadmin', 'modresc', 'demoResc', 'status', 'down'])
+            self.admin.assert_icommand(['ichksum', data_object], 'STDERR', ['SYS_RESC_IS_DOWN'])
+            self.admin.assert_icommand(['ichksum', '-n0', data_object], 'STDERR', ['SYS_RESC_IS_DOWN'])
+            self.admin.assert_icommand(['iadmin', 'modresc', 'demoResc', 'status', 'up'])
+
+            # Show that targeting a specific replica on a down resource results in an error.
+            self.admin.assert_icommand(['ichksum', '-n1', data_object], 'STDERR', ['SYS_RESC_IS_DOWN'])
+
+            # Show that the second replica is ignored because the resource is marked down.
+            self.admin.assert_icommand(['ichksum', '-a', data_object])
+
+            # Verification mode reports the number of replicas skipped in the multi-replica case.
+            # In this particular case, the replica skipped is the one on the resource marked as down.
+            self.admin.assert_icommand(['ichksum', '-K', data_object], 'STDOUT', ['INFO: Number of replicas skipped: 1'])
+
+            # Show that the original replica does not produce any output because everything checks out.
+            self.admin.assert_icommand(['ichksum', '-K', '-n0', data_object])
+
+            # Show that verification mode results in an error if the target replica rests on a resource
+            # marked as down.
+            self.admin.assert_icommand(['ichksum', '-K', '-n1', data_object], 'STDERR', ['SYS_RESC_IS_DOWN'])
+        finally:
+            self.admin.assert_icommand(['iadmin', 'modresc', 'demoResc', 'status', 'up'])
+            self.admin.assert_icommand(['iadmin', 'modresc', self.testresc, 'status', 'up'])
+
