@@ -107,18 +107,15 @@ namespace
         auto pos = _offset;
 
         while (true) {
-            if (pos == _offset) {
-                pos = _condition.find_first_of("'", pos);
-            }
-            else {
-                pos = _condition.find_first_of("'", pos + 1);
-            }
+            pos = _condition.find_first_of("'", _offset == pos ? pos : pos + 1);
 
-            if (pos == std::string::npos) {
+            if (_offset == pos || std::string::npos == pos) {
                 break;
             }
             
-            if (pos > 0 && '\\' != _condition[pos - 1]) {
+            // At this point, we know "pos" is greater than "_offset" so we don't need to do
+            // any bounds checking before accessing the previous character.
+            if ('\\' != _condition[pos - 1]) {
                 break;
             }
         }
@@ -159,7 +156,7 @@ namespace
             return -1;
         }
 
-        auto epos = find_unescaped_quote(_condition, bpos + 1);
+        const auto epos = find_unescaped_quote(_condition, bpos + 1);
 
         if (std::string_view::npos == epos) {
             return -1;
