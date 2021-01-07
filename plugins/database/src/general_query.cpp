@@ -1,5 +1,3 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
 /*
 
  These routines are the genSql routines, which are used to convert the
@@ -32,6 +30,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <string>
+#include <string_view>
 #include <algorithm>
 
 extern int logSQLGenQuery;
@@ -102,23 +101,70 @@ int debug2 = 0;
 
 namespace
 {
+    std::string_view::size_type find_unescaped_quote(const std::string_view _condition,
+                                                     std::string_view::size_type _offset) noexcept
+    {
+        auto pos = _offset;
+
+        while (true) {
+            if (pos == _offset) {
+                pos = _condition.find_first_of("'", pos);
+            }
+            else {
+                pos = _condition.find_first_of("'", pos + 1);
+            }
+
+            if (pos == std::string::npos) {
+                break;
+            }
+            
+            if (pos > 0 && '\\' != _condition[pos - 1]) {
+                break;
+            }
+        }
+
+        return pos;
+    }
+
     int mask_query_argument(std::string& _condition, std::string::size_type _offset)
     {
         if (_condition.empty() || _offset >= _condition.size()) {
             return -1;
         }
 
+#if 0
         const auto bpos = _condition.find_first_of("'", _offset);
 
         if (bpos == std::string::npos) {
             return -1;
         }
 
-        const auto epos = _condition.find_first_of("'", bpos + 1);
+        auto epos = bpos;
 
-        if (epos == std::string::npos) {
+        while (true) {
+            epos = _condition.find_first_of("'", epos + 1);
+
+            if (epos == std::string::npos) {
+                return -1;
+            }
+
+            if ('\\' != _condition[epos - 1]) {
+                break;
+            }
+        }
+#else
+        const auto bpos = find_unescaped_quote(_condition, _offset);
+
+        if (std::string_view::npos == bpos) {
             return -1;
         }
+
+        auto epos = find_unescaped_quote(_condition, bpos + 1);
+
+        if (std::string_view::npos == epos) {
+            return -1;
+        }
+#endif
 
         std::fill(&_condition[bpos + 1], &_condition[epos], ' ');
 
