@@ -108,16 +108,41 @@ namespace
 
         while (true) {
             pos = _condition.find_first_of("'", _offset == pos ? pos : pos + 1);
-
+#if 0
             if (_offset == pos || std::string::npos == pos) {
                 break;
             }
             
             // At this point, we know "pos" is greater than "_offset" so we don't need to do
             // any bounds checking before accessing the previous character.
-            if ('\\' != _condition[pos - 1]) {
+            if ('\'' != _condition[pos - 1]) {
                 break;
             }
+#else
+            if (std::string_view::npos == pos) {
+                break;
+            }
+
+            // Verify that the single quote is not part of an escaped single quote.
+            // Escaped single quotes are represented as two single quotes in SQL. This is
+            // common across Postgres, MySQL, and Oracle.
+
+            const auto next_pos = pos + 1;
+
+            // Make sure it is safe to access the next character in the sequence. We don't want
+            // to access memory outside of the string.
+            if (next_pos > _condition.size()) {
+                break;
+            }
+
+            // If the next character is not a single quote, then we know we've found an
+            // unescaped single quote.
+            if (_condition[next_pos] != '\'') {
+                break;
+            }
+
+            pos = next_pos;
+#endif
         }
 
         return pos;
@@ -129,27 +154,6 @@ namespace
             return -1;
         }
 
-#if 0
-        const auto bpos = _condition.find_first_of("'", _offset);
-
-        if (bpos == std::string::npos) {
-            return -1;
-        }
-
-        auto epos = bpos;
-
-        while (true) {
-            epos = _condition.find_first_of("'", epos + 1);
-
-            if (epos == std::string::npos) {
-                return -1;
-            }
-
-            if ('\\' != _condition[epos - 1]) {
-                break;
-            }
-        }
-#else
         const auto bpos = find_unescaped_quote(_condition, _offset);
 
         if (std::string_view::npos == bpos) {
@@ -161,7 +165,6 @@ namespace
         if (std::string_view::npos == epos) {
             return -1;
         }
-#endif
 
         std::fill(&_condition[bpos + 1], &_condition[epos], ' ');
 
@@ -1536,6 +1539,8 @@ insertWhere( char *condition, int option ) {
 
     cpFirstQuote = 0;
     cpSecondQuote = 0;
+
+    // The following block maintains escaped single quotes (i.e. double single quotes).
     for ( cp1 = condition; *cp1 != '\0'; cp1++ ) {
         if ( *cp1 == '\'' ) {
             if ( cpFirstQuote == 0 ) {
@@ -1546,18 +1551,21 @@ insertWhere( char *condition, int option ) {
             }
         }
     }
+
     if ( strcmp( condition, "IS NULL" ) == 0 ) {
         if ( !rstrcat( whereSQL, " ", MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
         if ( !rstrcat( whereSQL, condition, MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
         if ( !rstrcat( whereSQL, " ", MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
         return 0;
     }
+
     if ( strcmp( condition, "IS NOT NULL" ) == 0 ) {
         if ( !rstrcat( whereSQL, " ", MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
         if ( !rstrcat( whereSQL, condition, MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
         if ( !rstrcat( whereSQL, " ", MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
         return 0;
     }
+
     bindIx++;
     thisBindVar = ( char* )&bindVars[bindIx];
     if ( cpFirstQuote == 0 || cpSecondQuote == 0 ) {
