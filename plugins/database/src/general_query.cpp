@@ -102,6 +102,21 @@ int debug2 = 0;
 
 namespace
 {
+    // Transforms escaped GenQuery/SQL single quotes into actual single quotes (e.g. '' => ').
+    // If the range of characters defined by [_first, _last] contains adjacent single quotes,
+    // the range will be decreased by one and "_last" will be decremented by one.
+    void unescape_single_quotes(char* _first, char*& _last)
+    {
+        for (; _first < _last; ++_first) {
+            if ('\'' == *_first) {
+                if (auto* next_ch = _first + 1; next_ch < _last && *next_ch == '\'') {
+                    std::rotate(_first, _first + 1, _last);
+                    --_last;
+                }
+            }
+        }
+    }
+
     int mask_query_argument(std::string& _condition, std::string::size_type _offset)
     {
         if (_condition.empty() || _offset >= _condition.size()) {
@@ -1503,6 +1518,9 @@ insertWhere( char *condition, int option ) {
             }
         }
     }
+
+    unescape_single_quotes(cpFirstQuote, cpSecondQuote);
+
     if ( strcmp( condition, "IS NULL" ) == 0 ) {
         if ( !rstrcat( whereSQL, " ", MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
         if ( !rstrcat( whereSQL, condition, MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
