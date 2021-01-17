@@ -97,9 +97,20 @@ def build_irods(debug_build):
         cmake_build_type = 'Debug'
     else:
         cmake_build_type = 'Release'
-    irods_python_ci_utilities.subprocess_get_output('cmake -DCMAKE_BUILD_TYPE={0} -DIRODS_UNIT_TESTS_BUILD=YES {1} > cmake.output'.format(cmake_build_type, irods_source_dir), shell=True, cwd=irods_build_dir, check_rc=True)
+
+    _, out, err = irods_python_ci_utilities.subprocess_get_output('cmake -DCMAKE_BUILD_TYPE={0} -DIRODS_UNIT_TESTS_BUILD=YES {1} > cmake.output'.format(cmake_build_type, irods_source_dir), shell=True, cwd=irods_build_dir, check_rc=True)
+    print('CMAKE OUTPUT:')
+    print(out)
+    print(err)
+
     irods_python_ci_utilities.subprocess_get_output('make -j{0} > make.output'.format(str(multiprocessing.cpu_count())), shell=True, cwd=irods_build_dir, check_rc=True)
     irods_python_ci_utilities.subprocess_get_output('fakeroot make package >> make.output', shell=True, cwd=irods_build_dir, check_rc=True)
+
+    _, out, err = irods_python_ci_utilities.subprocess_get_output('cat make.output', shell=True, cwd=icommands_build_dir, check_rc=True)
+    print('MAKE OUTPUT:')
+    print(out)
+    print(err)
+
     return irods_build_dir
 
 def install_irods_dev_and_runtime(irods_build_dir):
@@ -117,9 +128,20 @@ def build_icommands(icommands_git_repository, icommands_git_commitish, debug_bui
         cmake_build_type = 'Debug'
     else:
         cmake_build_type = 'Release'
-    irods_python_ci_utilities.subprocess_get_output('cmake {0} -DCMAKE_BUILD_TYPE={1} > cmake.output'.format(icommands_source_dir, cmake_build_type), shell=True, cwd=icommands_build_dir, check_rc=True)
+
+    _, out, err = irods_python_ci_utilities.subprocess_get_output('cmake {0} -DCMAKE_BUILD_TYPE={1} > cmake.output'.format(icommands_source_dir, cmake_build_type), shell=True, cwd=icommands_build_dir, check_rc=True)
+    print('CMAKE OUTPUT:')
+    print(out)
+    print(err)
+
     irods_python_ci_utilities.subprocess_get_output('make -j{0} > make.output'.format(str(multiprocessing.cpu_count())), shell=True, cwd=icommands_build_dir, check_rc=True)
     irods_python_ci_utilities.subprocess_get_output('fakeroot make package >> make.output', shell=True, cwd=icommands_build_dir, check_rc=True)
+
+    _, out, err = irods_python_ci_utilities.subprocess_get_output('cat make.output', shell=True, cwd=icommands_build_dir, check_rc=True)
+    print('MAKE OUTPUT:')
+    print(out)
+    print(err)
+
     return icommands_build_dir
 
 def copy_output_packages(irods_build_dir, icommands_build_dir, output_root_directory):
