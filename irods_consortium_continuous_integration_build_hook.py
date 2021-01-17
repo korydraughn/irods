@@ -41,9 +41,12 @@ def install_building_dependencies(externals_directory):
         irods_python_ci_utilities.install_os_packages(externals_list)
     else:
         package_suffix = irods_python_ci_utilities.get_package_suffix()
+        print('package_suffix = ' + package_suffix)
         os_specific_directory = irods_python_ci_utilities.append_os_specific_directory(externals_directory)
+        print('os_specific_directory = ' + os_specific_directory)
         externals = []
         for irods_externals in externals_list:
+            print('glob list for ' + irods_externals + ' = ' + str(glob.glob(os.path.join(os_specific_directory, irods_externals + '*.{0}'.format(package_suffix)))))
             externals.append(glob.glob(os.path.join(os_specific_directory, irods_externals + '*.{0}'.format(package_suffix)))[0])
         irods_python_ci_utilities.install_os_packages_from_files(externals)
 
