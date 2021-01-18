@@ -69,7 +69,6 @@ find_package(LibCXX 6 REQUIRED)
 set(CMAKE_CXX_STANDARD_LIBRARIES "${LIBCXX_CMAKE_CXX_STANDARD_LIBRARIES}")
 set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${LIBCXX_INCLUDE_DIR})
 add_compile_options(-nostdinc++)
-link_libraries(-stdlib=libc++ ${LIBCXX_LIBRARY_DIR}/libc++.so ${LIBCXX_LIBRARY_DIR}/libc++abi.so)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
@@ -77,6 +76,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/InstallDirs.cmake)
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_INSTALL_RPATH "${LIBCXX_LIBRARY_DIR}")
+link_libraries(-stdlib=libc++ ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}/libc++.so ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}/libc++abi.so)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic -pthread") # export-dynamic so stacktrace entries from executables have function names
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,defs -pthread")
