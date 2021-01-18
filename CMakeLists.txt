@@ -1315,8 +1315,6 @@ foreach(EXECUTABLE ${IRODS_MAIN_EXECUTABLES})
     ${CMAKE_THREAD_LIBS_INIT}
     ${CMAKE_DL_LIBS}
     m
-    ${LIBCXX_LIBRARY_DIR}/libc++abi.so
-    ${LIBCXX_LIBRARY_DIR}/libc++.so
     )
   target_include_directories(
     ${EXECUTABLE}
