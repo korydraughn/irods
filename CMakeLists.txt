@@ -69,7 +69,7 @@ find_package(LibCXX 6 REQUIRED)
 set(CMAKE_CXX_STANDARD_LIBRARIES "${LIBCXX_CMAKE_CXX_STANDARD_LIBRARIES}")
 set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${LIBCXX_INCLUDE_DIR})
 add_compile_options(-nostdinc++)
-link_libraries(-stdlib=libc++ ${LIBCXX_LIBRARY_DIR}/libc++.so ${LIBCXX_LIBRARY_DIR}/libc++abi.so)
+link_libraries(-stdlib=libc++ ${IRODS_EXTERNALS_FULLPATH_CLANG}/lib/libc++.so ${IRODS_EXTERNALS_FULLPATH_CLANG}/lib/libc++abi.so)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
