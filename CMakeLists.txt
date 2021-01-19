@@ -77,12 +77,14 @@ include(${CMAKE_SOURCE_DIR}/cmake/InstallDirs.cmake)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_INSTALL_RPATH "${LIBCXX_LIBRARY_DIR}")
 
-# Apparently, only IRODS_EXTERNALS_FULLPATH_CLANG[_RUNTIME] work here.
-# Is LIBCXX_LIBRARY_DIR being populated?
+# Apparently, linking against libc++[abi].so.1 is recorded/captured in the RPATH.
+# Using the symlink does not appear to work for some reason. Or maybe the lib is not where
+# I think it is in the container.
 message(STATUS "LIBCXX_LIBRARY_DIR                     = ${LIBCXX_LIBRARY_DIR}")
 message(STATUS "IRODS_EXTERNALS_FULLPATH_CLANG         = ${IRODS_EXTERNALS_FULLPATH_CLANG}")
 message(STATUS "IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME = ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}")
-link_libraries(-stdlib=libc++ ${LIBCXX_LIBRARY_DIR}/libc++.so ${LIBCXX_LIBRARY_DIR}/libc++abi.so)
+#link_libraries(-stdlib=libc++ ${LIBCXX_LIBRARY_DIR}/libc++.so ${LIBCXX_LIBRARY_DIR}/libc++abi.so)
+link_libraries(-stdlib=libc++ ${LIBCXX_LIBRARY_DIR}/libc++.so.1 ${LIBCXX_LIBRARY_DIR}/libc++abi.so.1)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic -pthread") # export-dynamic so stacktrace entries from executables have function names
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,defs -pthread")
