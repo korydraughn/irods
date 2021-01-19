@@ -75,7 +75,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 include(${CMAKE_SOURCE_DIR}/cmake/InstallDirs.cmake)
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "${LIBCXX_LIBRARY_DIR}")
+#set(CMAKE_INSTALL_RPATH "${LIBCXX_LIBRARY_DIR}")
+set(CMAKE_INSTALL_RPATH "${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}/lib")
 
 # Apparently, linking against libc++[abi].so.1 is recorded/captured in the RPATH.
 # Using the symlink does not appear to work for some reason. Or maybe the lib is not where
