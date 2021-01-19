@@ -86,7 +86,7 @@ message(STATUS "IRODS_EXTERNALS_FULLPATH_CLANG         = ${IRODS_EXTERNALS_FULLP
 message(STATUS "IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME = ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}")
 # Turns out that /opt/irods-externals/clang6.0-0 is not installed. It makes sense now lol.
 # We don't provide symlinks without the ".1" suffix (e.g. libc++.so).
-link_libraries(-stdlib=libc++ ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}/libc++.so.1 ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}/libc++abi.so.1)
+link_libraries(-stdlib=libc++ ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}/lib/libc++.so.1 ${IRODS_EXTERNALS_FULLPATH_CLANG_RUNTIME}/lib/libc++abi.so.1)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic -pthread") # export-dynamic so stacktrace entries from executables have function names
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,defs -pthread")
