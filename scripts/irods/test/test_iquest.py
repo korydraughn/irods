@@ -107,7 +107,7 @@ class Test_Iquest(ResourceBase, unittest.TestCase):
         remove_large_hierarchy(self, LEAF_COUNT, directory)
 
     def test_iquest_can_match_names_containing_apostrophes_via_the_equals_operator__issue_4887(self):
-        data_object = "data'object.txt"
+        data_object = "data'object"
         self.admin.assert_icommand(['istream', 'write', data_object], input='hello, world')
         self.admin.assert_icommand(['iquest', "select DATA_NAME where DATA_NAME = 'data''object'"], 'STDOUT', ['DATA_NAME = ' + data_object])
 
