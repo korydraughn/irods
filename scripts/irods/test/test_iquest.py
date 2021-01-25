@@ -105,3 +105,13 @@ class Test_Iquest(ResourceBase, unittest.TestCase):
         os.remove(filename)
         self.admin.assert_icommand("irm -f " + filename)
         remove_large_hierarchy(self, LEAF_COUNT, directory)
+
+    def test_iquest_can_match_names_containing_apostrophes_via_the_equals_operator__issue_4887(self):
+        data_object = "data'object.txt"
+        self.admin.assert_icommand(['istream', 'write', data_object], input='hello, world')
+        self.admin.assert_icommand(['iquest', "select DATA_NAME where DATA_NAME = 'data''object'"], 'STDOUT', ['DATA_NAME = ' + data_object])
+
+        collection = "collect'ion"
+        self.admin.assert_icommand(['imkdir', collection])
+        self.admin.assert_icommand(['iquest', "select COLL_NAME where COLL_NAME = 'collect''ion'"], 'STDOUT', ['COLL_NAME = ' + collection])
+
