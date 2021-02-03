@@ -1,9 +1,5 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-/* sockComm.c - sock communication routines
- */
-
 #include "sockComm.h"
+
 #include "rcMisc.h"
 #include "rcGlobalExtern.h"
 #include "miscServerFunct.hpp"
@@ -14,20 +10,18 @@
 #include "rodsConnect.h"
 
 #ifdef windows_platform
-#include "irodsntutil.hpp"
+    #include "irodsntutil.hpp"
 #endif
 
 #ifdef _WIN32
-#include <mmsystem.h>
-int win_connect_timeout;
-MMRESULT win_connect_timer_id;
+    #include <mmsystem.h>
+    int win_connect_timeout;
+    MMRESULT win_connect_timer_id;
 #endif
 
 #ifndef _WIN32
-
-#include <setjmp.h>
-jmp_buf Jcenv;
-
+    #include <csetjmp>
+    jmp_buf Jcenv;
 #endif  /* _WIN32 */
 
 // =-=-=-=-=-=-=-
@@ -42,11 +36,10 @@ jmp_buf Jcenv;
 #include "sockCommNetworkInterface.hpp"
 #include "irods_random.hpp"
 
-// =-=-=-=-=-=-=-
-//
-irods::error sockClientStart(
-    irods::network_object_ptr _ptr,
-    rodsEnv*                   _env ) {
+#include "network_utilities.hpp" // For get_hostname_from_cache()
+
+irods::error sockClientStart(irods::network_object_ptr _ptr, rodsEnv* _env)
+{
     // =-=-=-=-=-=-=-
     // resolve a network interface plugin from the
     // network object
@@ -393,9 +386,20 @@ sockOpenForInConn( rsComm_t *rsComm, int *portNum, char **addr, int proto ) {
         return status;
     }
 
-    if ( addr != NULL ) {
-        *addr = ( char * )malloc( sizeof( char ) * LONG_NAME_LEN );
-        gethostname( *addr, LONG_NAME_LEN );
+    if (addr) {
+        *addr = static_cast<char*>(malloc(sizeof(char) * LONG_NAME_LEN));
+
+        if (CLIENT_PT == ProcessType) {
+            gethostname(*addr, LONG_NAME_LEN);
+        }
+        else {
+            if (const auto alias = irods::get_hostname_from_cache("localhost"); alias) {
+                rstrcpy(*addr, alias->data(), LONG_NAME_LEN);
+            }
+            else {
+                gethostname(*addr, LONG_NAME_LEN);
+            }
+        }
     }
 
     return sock;

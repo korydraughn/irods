@@ -1,8 +1,3 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-
-/* rcMisc.c - misc client routines
- */
 #ifndef windows_platform
     #include <sys/time.h>
     #include <sys/wait.h>
@@ -4506,7 +4501,7 @@ auto resolve_hostname_from_hosts_config(const std::string& name_to_resolve) -> s
         }
 
         for(const auto& entry : hosts_config.at("host_entries")) {
-            const auto addresses = entry.at("addresses");
+            const auto& addresses = entry.at("addresses");
             const std::string target_name{addresses.at(0).at("address")};
 
             for( json::size_type i = 1; i < addresses.size(); ++i) {
