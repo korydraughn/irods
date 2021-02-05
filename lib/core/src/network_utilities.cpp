@@ -69,6 +69,7 @@ namespace
             allocator_ = std::make_unique<void_allocator_type>(segment_->get_segment_manager());
             mutex_ = std::make_unique<bi::named_mutex>(bi::open_or_create, mutex_name_);
             map_ = segment_->construct<map_type>(map_name_)(std::less<key_type>{}, *allocator_);
+            read_hosts_config_file();
         }
 
         static auto deinit() noexcept -> void
@@ -89,6 +90,11 @@ namespace
                 bi::shared_memory_object::remove(segment_name_);
             }
             catch (...) {}
+        }
+
+        auto hosts_config() const noexcept -> json&
+        {
+            return hosts_config_;
         }
 
         auto insert_or_assign(const std::string_view _hostname, const std::string_view _long_hostname) -> void
@@ -134,6 +140,33 @@ namespace
         }
 
     private:
+        static auto read_hosts_config_file() -> void
+        {
+            try {
+                std::string config_path;
+
+                // Find the hosts_config.json file if it exists.
+                if (const auto error = irods::get_full_path_for_config_file("hosts_config.json", config_path); !error.ok()) {
+                    // TODO Handle error.
+                    return;
+                }
+
+                std::ifstream in{config_path};
+
+                if (!in) {
+                    // TODO Handle error.
+                    THROW(SYS_CONFIG_FILE_ERR, fmt::format("Could not open hosts_config.json for reading [path={}]", config_path));
+                    return;
+                }
+
+                in >> hosts_config_;
+            }
+            catch (const json::exception& e) {
+                // TODO Handle error.
+                THROW(SYS_CONFIG_FILE_ERR, e.what());
+            }
+        }
+
         // clang-format off
         inline static const char* const segment_name_ = "irods_hostname_cache";
         inline static const char* const mutex_name_   = "irods_hostname_cache_mutex";
@@ -145,27 +178,8 @@ namespace
         inline static std::unique_ptr<bi::named_mutex> mutex_;
         inline static map_type* map_;
         inline static pid_t owner_pid_;
+        inline static json hosts_config_;
     }; // class hostname_cache
-
-    auto read_json_from_file(const std::string_view _filename) -> json
-    {
-        json config;
-
-        try {
-            std::ifstream in{_filename.data()};
-
-            if (!in) {
-                THROW(SYS_CONFIG_FILE_ERR, fmt::format("Could not open file for reading [path={}]", _filename));
-            }
-
-            in >> config;
-
-            return config;
-        }
-        catch (const json::exception& e) {
-            THROW(SYS_CONFIG_FILE_ERR, e.what());
-        }
-    }
 
     // The private hostname_cache instance shared by all hostname_cache-related functions.
     hostname_cache hostname_cache;
@@ -197,35 +211,9 @@ namespace irods
 
         rodsLog(LOG_NOTICE, fmt::format("Hostname not in cache [hostname={}].", _hostname).data());
 
-        std::string config_path;
-
-        if (_hosts_config.empty()) {
-            // Find the hosts_config.json file if it exists.
-            if (const auto error = irods::get_full_path_for_config_file("hosts_config.json", config_path); !error.ok()) {
-                // SYS_INVALID_INPUT_PARAM means the config file was not found.
-                // If the config file was not found and _hostname is equal to "localhost", then
-                // return the result of gethostname().
-                if (error.code() == SYS_INVALID_INPUT_PARAM && _hostname == "localhost") {
-                    char hostname[256]{};
-
-                    if (const auto ec = gethostname(hostname, sizeof(hostname)); ec < 0) {
-                        const auto msg = fmt::format("gethostname() failed [error_code={}, errno={}]", ec, errno);
-                        rodsLog(LOG_ERROR, msg.data());
-                        return std::nullopt;
-                    }
-
-                    hostname_cache.insert_or_assign(_hostname, hostname);
-
-                    return hostname;
-                }
-
-                return std::nullopt;
-            }
-        }
-
         try {
-            const auto hosts_config = [_hosts_config, &config_path] {
-                return _hosts_config.empty() ? read_json_from_file(config_path) : json::parse(_hosts_config);
+            const auto&& hosts_config = [_hosts_config] {
+                return _hosts_config.empty() ? hostname_cache.hosts_config() : json::parse(_hosts_config);
             }();
 
             const auto& host_entries = hosts_config.at("host_entries");

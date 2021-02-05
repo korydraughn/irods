@@ -389,16 +389,11 @@ sockOpenForInConn( rsComm_t *rsComm, int *portNum, char **addr, int proto ) {
     if (addr) {
         *addr = static_cast<char*>(malloc(sizeof(char) * LONG_NAME_LEN));
 
-        if (CLIENT_PT == ProcessType) {
-            gethostname(*addr, LONG_NAME_LEN);
+        if (const auto alias = irods::get_hostname_from_cache("localhost"); alias) {
+            rstrcpy(*addr, alias->data(), LONG_NAME_LEN);
         }
         else {
-            if (const auto alias = irods::get_hostname_from_cache("localhost"); alias) {
-                rstrcpy(*addr, alias->data(), LONG_NAME_LEN);
-            }
-            else {
-                gethostname(*addr, LONG_NAME_LEN);
-            }
+            gethostname(*addr, LONG_NAME_LEN);
         }
     }
 

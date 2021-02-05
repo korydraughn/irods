@@ -660,6 +660,7 @@ target_compile_definitions(irods_client_api_functions PRIVATE ${IRODS_COMPILE_DE
 
 set(
   IRODS_LIBIRODS_CLIENT_SOURCES
+  ${CMAKE_SOURCE_DIR}/lib/core/src/hostname_cache.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/procApiRequest.cpp # relies on RODS_SERVER/CLERVER
   ${CMAKE_SOURCE_DIR}/lib/core/src/network_utilities.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/rcConnect.cpp # relies on RODS_CLERVER
@@ -1172,6 +1173,7 @@ set(
   ${CMAKE_SOURCE_DIR}/lib/core/src/base64.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/getRodsEnv.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/hashtable.cpp
+  ${CMAKE_SOURCE_DIR}/lib/core/src/hostname_cache.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/irods_buffer_encryption.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/irods_children_parser.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/irods_configuration_keywords.cpp
