@@ -4470,69 +4470,58 @@ hasSymlinkInPath( const char * myPath ) {
 }
 
 
-static std::string stringify_addrinfo_hints(const struct addrinfo *_hints) {
-    std::string ret;
+static std::string stringify_addrinfo_hints(const struct addrinfo *_hints)
+{
     if (!_hints) {
-        ret = "null hint pointer";
-    } else {
-        std::stringstream stream;
-        stream << "ai_flags: [" << _hints->ai_flags << "] ai_family: [" << _hints->ai_family << "] ai_socktype: [" << _hints->ai_socktype << "] ai_protocol: [" << _hints->ai_protocol << "]";
-        ret = stream.str();
+        return "null hint pointer";
     }
-    return ret;
+
+    std::stringstream stream;
+    stream << "ai_flags: [" << _hints->ai_flags << "] ai_family: [" << _hints->ai_family << "] ai_socktype: [" << _hints->ai_socktype << "] ai_protocol: [" << _hints->ai_protocol << "]";
+    return stream.str();
 }
 
-auto resolve_hostname_from_hosts_config(const std::string& name_to_resolve) -> std::string
+auto resolve_hostname_from_hosts_config(const std::string_view _name_to_resolve) -> std::string
 {
     using json = nlohmann::json;
-    static json hosts_config{};
 
-    std::string resolved_name{name_to_resolve};
+    static json hosts_config;
 
     try {
-        if(hosts_config.empty()) {
+        if (hosts_config.empty()) {
             std::string cfg_file;
-            irods::error err = irods::get_full_path_for_config_file(HOST_CONFIG_FILE, cfg_file);
-            if(!err.ok()) {
-                return name_to_resolve;
+            if (const auto err = irods::get_full_path_for_config_file(HOST_CONFIG_FILE, cfg_file); !err.ok()) {
+                return _name_to_resolve.data();
             }
 
             hosts_config = json::parse(std::ifstream{cfg_file});
         }
 
-        for(const auto& entry : hosts_config.at("host_entries")) {
+        for (const auto& entry : hosts_config.at("host_entries")) {
             const auto& addresses = entry.at("addresses");
-            const std::string target_name{addresses.at(0).at("address")};
 
-            for( json::size_type i = 1; i < addresses.size(); ++i) {
-                const auto alias{addresses.at(i).at("address")};
-                if(alias == name_to_resolve) {
-                    resolved_name = target_name;
-                    break;
+            for (const auto& address : addresses) {
+                if (address.at("address").get<std::string>() == _name_to_resolve) {
+                    return addresses.at(0).get<std::string>();
                 }
             } // for alias
         } // for entry
     }
-    catch(const json::exception& e) {
-        rodsLog(
-            LOG_ERROR,
-            "%s :: caught exception: ",
-            __FUNCTION__,
-            e.what());
+    catch (const json::exception& e) {
+        rodsLog(LOG_ERROR, "%s :: caught exception: %s", __FUNCTION__, e.what());
     }
-    catch(...) {
-        rodsLog(
-            LOG_ERROR,
-            "%s :: caught unknown exception",
-            __FUNCTION__);
+    catch (...) {
+        rodsLog(LOG_ERROR, "%s :: caught unknown exception", __FUNCTION__);
     }
 
-    return resolved_name;
-
+    return _name_to_resolve.data();
 } // resolve_hostname_from_hosts_config
 
-int
-getaddrinfo_with_retry(const char *_node, const char *_service, const struct addrinfo *_hints, struct addrinfo **_res) {
+int getaddrinfo_with_retry(const char *_node,
+                           const char *_service,
+                           const struct addrinfo *_hints,
+                           struct addrinfo **_res)
+{
     // "_node" is the hostname to resolve.
     if (!_node || std::strlen(_node) == 0) {
         rodsLog(LOG_ERROR, "getaddrinfo_with_retry: hostname is null or empty");

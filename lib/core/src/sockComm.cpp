@@ -35,8 +35,7 @@
 #include "irods_server_properties.hpp"
 #include "sockCommNetworkInterface.hpp"
 #include "irods_random.hpp"
-
-#include "network_utilities.hpp" // For get_hostname_from_cache()
+#include "hostname_cache.hpp"
 
 irods::error sockClientStart(irods::network_object_ptr _ptr, rodsEnv* _env)
 {
@@ -387,13 +386,21 @@ sockOpenForInConn( rsComm_t *rsComm, int *portNum, char **addr, int proto ) {
     }
 
     if (addr) {
-        *addr = static_cast<char*>(malloc(sizeof(char) * LONG_NAME_LEN));
+        namespace net = irods::experimental::net;
 
-        if (const auto alias = irods::get_hostname_from_cache("localhost"); alias) {
-            rstrcpy(*addr, alias->data(), LONG_NAME_LEN);
+        if (const auto hostname = net::hnc_lookup("localhost"); hostname) {
+            *addr = static_cast<char*>(std::malloc(sizeof(char) * hostname->size() + 1));
+            addr[hostname->size()] = 0;
+            rstrcpy(*addr, hostname->data(), LONG_NAME_LEN);
         }
         else {
+            *addr = static_cast<char*>(malloc(sizeof(char) * LONG_NAME_LEN));
             gethostname(*addr, LONG_NAME_LEN);
+
+            const auto alias = resolve_hostname_from_hosts_config(addr);
+            net::hnc_insert_or_assign("localhost", alias, std::chrono::seconds{60});
+
+            rstrcpy(*addr, alias->data(), LONG_NAME_LEN);
         }
     }
 

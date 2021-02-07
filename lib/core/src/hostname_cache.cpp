@@ -131,7 +131,7 @@ namespace irods::experimental::net
         bi::scoped_lock lk{*g_mutex};
         key_type key{_hostname.data(), *g_allocator};
         const auto expiration = clock_type::now() + _expires_after;
-        mapped_type value{_alias, expiration.time_since_epoch().count(), _expires_at.count()};
+        mapped_type value{_alias, expiration.time_since_epoch().count(), _expires_after.count()};
         const auto [iter, inserted] = g_map->insert_or_assign(key, value);
         return inserted;
     } // hnc_insert_or_assign

@@ -662,7 +662,6 @@ set(
   IRODS_LIBIRODS_CLIENT_SOURCES
   ${CMAKE_SOURCE_DIR}/lib/core/src/hostname_cache.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/procApiRequest.cpp # relies on RODS_SERVER/CLERVER
-  ${CMAKE_SOURCE_DIR}/lib/core/src/network_utilities.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/rcConnect.cpp # relies on RODS_CLERVER
   $<TARGET_OBJECTS:irods_client_api_functions>
   $<TARGET_OBJECTS:irods_filesystem_path>
@@ -1205,7 +1204,6 @@ set(
   ${CMAKE_SOURCE_DIR}/lib/core/src/packStruct.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/parseCommandLine.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/procApiRequest.cpp
-  ${CMAKE_SOURCE_DIR}/lib/core/src/network_utilities.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/rcConnect.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/rcGlobal.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/rcMisc.cpp
