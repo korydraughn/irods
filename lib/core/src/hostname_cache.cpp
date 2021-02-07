@@ -46,6 +46,9 @@ namespace
             std::strncpy(hostname, _hostname.data(), _hostname.size());
         }
 
+        alias(const alias&) = default;
+        auto operator=(const alias&) -> alias& = default;
+
         char hostname[256];         // FQDN are 253 characters long.
         std::int64_t expiration;    // The seconds since epoch representing when this alias expires.
         std::int64_t expires_after; // The number of seconds to apply to expiration after successful lookup.
