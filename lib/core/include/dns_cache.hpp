@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <optional>
+#include <chrono>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -20,30 +21,26 @@ namespace irods::experimental::net
     /// Initializes the dns cache.
     ///
     /// \since 4.2.9
-    auto dnsc_init() -> void;
+    auto dnsc_init(const std::string_view _shm_name = "irods_dns_cache",
+                   std::size_t _shm_size = 5'000'000) -> void;
 
-    /// Initializes the dns cache.
-    ///
     /// \since 4.2.9
-    auto dnsc_insert_or_assign(const std::string_view _hostname, const addrinfo& _info) -> bool;
+    auto dnsc_deinit() -> void;
 
-    /// Initializes the dns cache.
-    ///
     /// \since 4.2.9
-    auto dnsc_lookup() -> std::optional<addrinfo*>;
+    auto dnsc_insert_or_assign(const std::string_view _hostname,
+                               const addrinfo& _info,
+                               std::chrono::seconds _expires_after) -> bool;
 
-    /// Initializes the dns cache.
-    ///
     /// \since 4.2.9
-    auto dnsc_erase() -> void;
+    auto dnsc_lookup(const std::string_view _hostname) -> std::optional<addrinfo*>;
 
-    /// Initializes the dns cache.
-    ///
+    /// \since 4.2.9
+    auto dnsc_erase(const std::string_view _hostname) -> void;
+
     /// \since 4.2.9
     auto dnsc_erase_expired_entries() -> void;
 
-    /// Initializes the dns cache.
-    ///
     /// \since 4.2.9
     auto dnsc_clear_cache() -> void;
 } // namespace irods::experimental::net

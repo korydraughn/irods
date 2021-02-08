@@ -39,6 +39,7 @@
 #include "irods_random.hpp"
 #include "irods_path_recursion.hpp"
 #include "irods_get_full_path_for_config_file.hpp"
+#include "dns_cache.hpp"
 
 // =-=-=-=-=-=-=-
 // boost includes
@@ -4581,7 +4582,20 @@ int getaddrinfo_with_retry(const char *_node,
 }
 
 
-int get_canonical_name(const char *_hostname, char* _buf, size_t _len) {
+int get_canonical_name(const char *_hostname, char* _buf, size_t _len)
+{
+    namespace net = irods::experimental::net;
+
+    std::string target = _hostname; target += "_gcn";
+
+    if (CLIENT_PT != ::ProcessType) {
+        if (auto entry = net::dnsc_lookup(target); entry) {
+            snprintf(_buf, _len, "%s", (*entry)->ai_canonname);
+            freeaddrinfo(*entry);
+            return 0;
+        }
+    }
+
     struct addrinfo hint;
     memset(&hint, 0, sizeof(hint));
     hint.ai_flags = AI_CANONNAME;
@@ -4590,12 +4604,32 @@ int get_canonical_name(const char *_hostname, char* _buf, size_t _len) {
     if (ret_getaddrinfo_with_retry ) {
         return ret_getaddrinfo_with_retry;
     }
+
     snprintf(_buf, _len, "%s", p_addrinfo->ai_canonname);
+
+    if (CLIENT_PT != ::ProcessType) {
+        net::dnsc_insert_or_assign(target, *p_addrinfo, std::chrono::seconds{60});
+    }
+
     freeaddrinfo(p_addrinfo);
+
     return 0;
 }
 
-int load_in_addr_from_hostname(const char* _hostname, struct in_addr* _out) {
+int load_in_addr_from_hostname(const char* _hostname, struct in_addr* _out)
+{
+    namespace net = irods::experimental::net;
+
+    std::string target = _hostname; target += "_liafh";
+
+    if (CLIENT_PT != ::ProcessType) {
+        if (auto entry = net::dnsc_lookup(target); entry) {
+            *_out = reinterpret_cast<struct sockaddr_in*>((*entry)->ai_addr)->sin_addr;
+            freeaddrinfo(*entry);
+            return 0;
+        }
+    }
+
     struct addrinfo hint;
     memset(&hint, 0, sizeof(hint));
     hint.ai_family = AF_INET;
@@ -4604,8 +4638,15 @@ int load_in_addr_from_hostname(const char* _hostname, struct in_addr* _out) {
     if (ret_getaddrinfo_with_retry) {
         return ret_getaddrinfo_with_retry;
     }
+
     *_out = reinterpret_cast<struct sockaddr_in*>(p_addrinfo->ai_addr)->sin_addr;
+
+    if (CLIENT_PT != ::ProcessType) {
+        net::dnsc_insert_or_assign(target, *p_addrinfo, std::chrono::seconds{60});
+    }
+
     freeaddrinfo(p_addrinfo);
+
     return 0;
 }
 

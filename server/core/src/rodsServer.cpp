@@ -23,6 +23,7 @@
 #include "irods_random.hpp"
 #include "replica_access_table.hpp"
 #include "hostname_cache.hpp"
+#include "dns_cache.hpp"
 
 #include <pthread.h>
 #include <sys/socket.h>
@@ -352,6 +353,9 @@ int main(int argc, char** argv)
 
     ix::net::hnc_init();
     irods::at_scope_exit deinit_hostname_cache{[] { ix::net::hnc_deinit(); }};
+
+    ix::net::dnsc_init();
+    irods::at_scope_exit deinit_dns_cache{[] { ix::net::dnsc_deinit(); }};
 
     irods::experimental::replica_access_table::init();
     irods::at_scope_exit deinit_fd_table{[] { irods::experimental::replica_access_table::deinit(); }};

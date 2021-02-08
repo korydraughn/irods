@@ -47,12 +47,7 @@ namespace
         {
             std::strncpy(hostname, _hostname.data(), _hostname.size());
         }
-#if 0
-        alias(const alias&) = default;
-        auto operator=(const alias&) -> alias& = default;
 
-        ~alias() = default;
-#endif
         char hostname[256];         // FQDN are 253 characters long.
         std::int64_t expiration;    // The seconds since epoch representing when this alias expires.
         std::int64_t expires_after; // The number of seconds to apply to expiration after successful lookup.
@@ -110,6 +105,8 @@ namespace irods::experimental::net
         }
 
         try {
+            g_owner_pid = 0;
+
             // clang-format off
             if (g_map)       { g_map = nullptr; }
             if (g_mutex)     { g_mutex.reset(); }
@@ -135,8 +132,8 @@ namespace irods::experimental::net
     {
         bi::scoped_lock lk{*g_mutex};
         key_type key{_hostname.data(), *g_allocator};
-        const auto expiration = clock_type::now() + _expires_after;
-        mapped_type value{_alias, expiration.time_since_epoch().count(), _expires_after.count()};
+        const auto expiration = (clock_type::now() + _expires_after).time_since_epoch().count();
+        mapped_type value{_alias, expiration, _expires_after.count()};
         const auto [iter, inserted] = g_map->insert_or_assign(std::move(key), std::move(value));
         return inserted;
     } // hnc_insert_or_assign
@@ -169,7 +166,7 @@ namespace irods::experimental::net
 
         if (auto iter = g_map->find(key_type{_hostname.data(), *g_allocator}); iter != g_map->end()) {
             if (clock_type::now().time_since_epoch().count() < iter->second.expiration) {
-                iter->second.expiration += iter->second.expires_after;
+                iter->second.expiration = clock_type::now().time_since_epoch().count() + iter->second.expires_after;
                 return iter->second.hostname;
             }
         }

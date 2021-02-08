@@ -660,6 +660,7 @@ target_compile_definitions(irods_client_api_functions PRIVATE ${IRODS_COMPILE_DE
 
 set(
   IRODS_LIBIRODS_CLIENT_SOURCES
+  ${CMAKE_SOURCE_DIR}/lib/core/src/dns_cache.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/hostname_cache.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/procApiRequest.cpp # relies on RODS_SERVER/CLERVER
   ${CMAKE_SOURCE_DIR}/lib/core/src/rcConnect.cpp # relies on RODS_CLERVER
@@ -1007,6 +1008,7 @@ target_compile_options(irods_server PRIVATE -Wno-write-strings -Wno-ignored-qual
 set(
   IRODS_LIBIRODS_COMMON_SOURCES
   ${CMAKE_SOURCE_DIR}/lib/core/src/base64.cpp
+  ${CMAKE_SOURCE_DIR}/lib/core/src/dns_cache.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/getRodsEnv.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/hashtable.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/irods_buffer_encryption.cpp
@@ -1073,6 +1075,7 @@ target_link_libraries(
   ${OPENSSL_SSL_LIBRARY}
   ${OPENSSL_CRYPTO_LIBRARY}
   ${CMAKE_DL_LIBS}
+  rt
   )
 target_include_directories(
   irods_common
@@ -1170,6 +1173,7 @@ target_compile_options(irods_plugin_dependencies PRIVATE -Wno-write-strings)
 set(
   IRODS_LIB_CORE_SOURCES
   ${CMAKE_SOURCE_DIR}/lib/core/src/base64.cpp
+  ${CMAKE_SOURCE_DIR}/lib/core/src/dns_cache.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/getRodsEnv.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/hashtable.cpp
   ${CMAKE_SOURCE_DIR}/lib/core/src/hostname_cache.cpp

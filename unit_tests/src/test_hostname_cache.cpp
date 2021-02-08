@@ -9,52 +9,12 @@
 
 namespace net = irods::experimental::net;
 
+using namespace std::chrono_literals;
+
 TEST_CASE("hostname_cache")
 {
-#if 0
-    std::string_view hosts_config = R"({
-        "host_entries": [
-            {
-                "address_type" : "local",
-                "addresses" : [
-                    {"address" : "xx.yy.nn.zz"},
-                    {"address" : "longname.example.org"}
-                ]
-            },
-            {
-                "address_type" : "remote",
-                "addresses" : [
-                    {"address" : "aa.bb.cc.dd"},
-                    {"address" : "fqdn.example.org"},
-                    {"address" : "morefqdn.example.org"}
-                ]
-            },
-            {
-                "address_type" : "remote",
-                "addresses" : [
-                    {"address" : "ddd.eee.fff.xxx"},
-                    {"address" : "another.example.org"}
-                ]
-            }
-        ]
-    })";
-
-    net::hnc_init();
-    irods::at_scope_exit cleanup{[] { net::hnc_deinit(); }};
-
-    // clang-format off
-    REQUIRE(*irods::get_hostname_from_cache("localhost", hosts_config)            == "longname.example.org");
-    REQUIRE(*irods::get_hostname_from_cache("morefqdn.example.org", hosts_config) == "morefqdn.example.org");
-    REQUIRE(*irods::get_hostname_from_cache("fqdn.example.org", hosts_config)     == "morefqdn.example.org");
-    REQUIRE(*irods::get_hostname_from_cache("ddd.eee.fff.xxx", hosts_config)      == "another.example.org");
-    // clang-format on
-
-    REQUIRE_FALSE(irods::get_hostname_from_cache("does.not.exist.irods.org", hosts_config));
-#else
     net::hnc_init("irods_hostname_cache_test", 100'000);
     irods::at_scope_exit cleanup{[] { net::hnc_deinit(); }};
-
-    using namespace std::chrono_literals;
 
     SECTION("insert / update / expiration")
     {
@@ -74,10 +34,10 @@ TEST_CASE("hostname_cache")
 
     SECTION("erasure operations")
     {
-        REQUIRE(net::hnc_insert_or_assign("foo", "foo.irods.org", 2s));
-        REQUIRE(net::hnc_insert_or_assign("bar", "bar.irods.org", 2s));
-        REQUIRE(net::hnc_insert_or_assign("baz", "baz.irods.org", 2s));
-        REQUIRE(net::hnc_insert_or_assign("jar", "jar.irods.org", 2s));
+        REQUIRE(net::hnc_insert_or_assign("foo", "foo.irods.org", 3s));
+        REQUIRE(net::hnc_insert_or_assign("bar", "bar.irods.org", 3s));
+        REQUIRE(net::hnc_insert_or_assign("baz", "baz.irods.org", 3s));
+        REQUIRE(net::hnc_insert_or_assign("jar", "jar.irods.org", 3s));
 
         // Erase the "baz" entry.
         const char* key = "baz";
@@ -97,6 +57,5 @@ TEST_CASE("hostname_cache")
         REQUIRE_FALSE(net::hnc_lookup("bar"));
         REQUIRE_FALSE(net::hnc_lookup("jar"));
     }
-#endif
 }
 
