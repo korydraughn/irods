@@ -397,10 +397,10 @@ sockOpenForInConn( rsComm_t *rsComm, int *portNum, char **addr, int proto ) {
             *addr = static_cast<char*>(malloc(sizeof(char) * LONG_NAME_LEN));
             gethostname(*addr, LONG_NAME_LEN);
 
-            const auto alias = resolve_hostname_from_hosts_config(addr);
+            const auto alias = resolve_hostname_from_hosts_config(*addr);
             net::hnc_insert_or_assign("localhost", alias, std::chrono::seconds{60});
 
-            rstrcpy(*addr, alias->data(), LONG_NAME_LEN);
+            rstrcpy(*addr, alias.data(), LONG_NAME_LEN);
         }
     }
 

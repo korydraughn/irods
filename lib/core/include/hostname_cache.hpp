@@ -14,8 +14,12 @@ namespace irods::experimental::net
     ///
     /// This function should only be called on startup of the server.
     ///
+    /// \param[in] _shm_name The name of the shared memory to create.
+    /// \param[in] _shm_size The size of the shared memory to allocate in bytes.
+    ///
     /// \since 4.2.9
-    auto hnc_init() -> void;
+    auto hnc_init(const std::string_view _shm_name = "irods_hostname_cache",
+                  std::size_t _shm_size = 1'000'000) -> void;
 
     /// Cleans up any resources created via hnc_init().
     ///

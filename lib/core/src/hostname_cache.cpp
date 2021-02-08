@@ -11,6 +11,8 @@
 #include <fmt/format.h>
 
 #include <cstring>
+#include <utility>
+#include <algorithm>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -45,10 +47,12 @@ namespace
         {
             std::strncpy(hostname, _hostname.data(), _hostname.size());
         }
-
+#if 0
         alias(const alias&) = default;
         auto operator=(const alias&) -> alias& = default;
 
+        ~alias() = default;
+#endif
         char hostname[256];         // FQDN are 253 characters long.
         std::int64_t expiration;    // The seconds since epoch representing when this alias expires.
         std::int64_t expires_after; // The number of seconds to apply to expiration after successful lookup.
@@ -58,16 +62,11 @@ namespace
     // Global Variables
     //
 
-    // clang-format off
     // The following variables define the names of shared memory objects and other properties.
-    const char* const g_segment_name = "irods_hostname_cache";
-    const std::size_t g_segment_size = 1'000'000; // TODO This could be a knob.
-    const char* const g_mutex_name   = "irods_hostname_cache_mutex";
-    const char* const g_map_name     = "irods_hostname_cache_map";
-    // clang-format on
-
-    // A flag used to indicate whether the hostname cache has been initialized or not.
-    bool g_initialized = false;
+    std::string g_segment_name;
+    std::size_t g_segment_size;
+    std::string g_mutex_name;
+    std::string g_map_name;
 
     // On initialization, holds the PID of the process that initialized the hostname cache.
     // This ensures that only the process that initialized the system can deinitialize it.
@@ -83,27 +82,30 @@ namespace
 
 namespace irods::experimental::net
 {
-    auto hnc_init() -> void
+    auto hnc_init(const std::string_view _shm_name, std::size_t _shm_size) -> void
     {
-        if (g_initialized) {
+        if (getpid() == g_owner_pid) {
             return;
         }
 
-        g_initialized = true;
+        g_segment_name = _shm_name.data();
+        g_segment_size = _shm_size;
+        g_mutex_name = g_segment_name + "_mutex";
+        g_map_name = g_segment_name + "_map";
 
-        bi::named_mutex::remove(g_mutex_name);
-        bi::shared_memory_object::remove(g_segment_name);
+        bi::named_mutex::remove(g_mutex_name.data());
+        bi::shared_memory_object::remove(g_segment_name.data());
 
         g_owner_pid = getpid();
-        g_segment = std::make_unique<bi::managed_shared_memory>(bi::create_only, g_segment_name, g_segment_size);
+        g_segment = std::make_unique<bi::managed_shared_memory>(bi::create_only, g_segment_name.data(), g_segment_size);
         g_allocator = std::make_unique<void_allocator_type>(g_segment->get_segment_manager());
-        g_mutex = std::make_unique<bi::named_mutex>(bi::create_only, g_mutex_name);
-        g_map = g_segment->construct<map_type>(g_map_name)(std::less<key_type>{}, *g_allocator);
+        g_mutex = std::make_unique<bi::named_mutex>(bi::create_only, g_mutex_name.data());
+        g_map = g_segment->construct<map_type>(g_map_name.data())(std::less<key_type>{}, *g_allocator);
     } // hnc_init
 
     auto hnc_deinit() -> void
     {
-        if (!g_initialized || getpid() != g_owner_pid) {
+        if (getpid() != g_owner_pid) {
             return;
         }
 
@@ -115,8 +117,8 @@ namespace irods::experimental::net
             if (g_segment)   { g_segment.reset(); }
             // clang-format on
 
-            bi::named_mutex::remove(g_mutex_name);
-            bi::shared_memory_object::remove(g_segment_name);
+            bi::named_mutex::remove(g_mutex_name.data());
+            bi::shared_memory_object::remove(g_segment_name.data());
         }
         catch (...) {}
     } // hnc_deinit
@@ -135,7 +137,7 @@ namespace irods::experimental::net
         key_type key{_hostname.data(), *g_allocator};
         const auto expiration = clock_type::now() + _expires_after;
         mapped_type value{_alias, expiration.time_since_epoch().count(), _expires_after.count()};
-        const auto [iter, inserted] = g_map->insert_or_assign(key, value);
+        const auto [iter, inserted] = g_map->insert_or_assign(std::move(key), std::move(value));
         return inserted;
     } // hnc_insert_or_assign
 
@@ -149,11 +151,16 @@ namespace irods::experimental::net
     {
         bi::scoped_lock lk{*g_mutex};
 
-        const auto p = [now = clock_type::now()](const value_type& _v) {
-            return now.time_since_epoch().count() >= _v.second.expiration;
-        };
+        const auto now = clock_type::now().time_since_epoch().count();
 
-        g_map->erase(std::remove_if(g_map->begin(), g_map->end(), p), g_map->end());
+        for (auto iter = g_map->begin(), end = g_map->end(); iter != end;) {
+            if (now >= iter->second.expiration) {
+                iter = g_map->erase(iter);
+            }
+            else {
+                ++iter;
+            }
+        }
     } // hnc_erase_expired_entries
 
     auto hnc_lookup(const std::string_view _hostname) -> std::optional<std::string>

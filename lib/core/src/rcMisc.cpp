@@ -49,6 +49,8 @@
 #include <boost/format.hpp>
 #include <boost/generator_iterator.hpp>
 
+#include <fmt/format.h>
+
 /* check with the input path is a valid path -
  * 1 - valid
  * 0 - not valid
@@ -4469,16 +4471,14 @@ hasSymlinkInPath( const char * myPath ) {
     return status;
 }
 
-
 static std::string stringify_addrinfo_hints(const struct addrinfo *_hints)
 {
     if (!_hints) {
         return "null hint pointer";
     }
 
-    std::stringstream stream;
-    stream << "ai_flags: [" << _hints->ai_flags << "] ai_family: [" << _hints->ai_family << "] ai_socktype: [" << _hints->ai_socktype << "] ai_protocol: [" << _hints->ai_protocol << "]";
-    return stream.str();
+    return fmt::format("ai_flags: [{}] ai_family: [{}] ai_socktype: [{}] ai_protocol: [{}]",
+                       _hints->ai_flags, _hints->ai_family, _hints->ai_socktype, _hints->ai_protocol);
 }
 
 auto resolve_hostname_from_hosts_config(const std::string_view _name_to_resolve) -> std::string
@@ -4532,15 +4532,18 @@ int getaddrinfo_with_retry(const char *_node,
 
     *_res = 0;
     const int max_retry = 300;
+
     for (int i=0; i<max_retry; ++i) {
         const int ret_getaddrinfo = getaddrinfo(hostname.c_str(), _service, _hints, _res);
-        if (   ret_getaddrinfo == EAI_AGAIN
-            || ret_getaddrinfo == EAI_NONAME
-            || ret_getaddrinfo == EAI_NODATA) { // retryable errors
 
+        if (ret_getaddrinfo == EAI_AGAIN  ||
+            ret_getaddrinfo == EAI_NONAME ||
+            ret_getaddrinfo == EAI_NODATA) // retryable errors
+        {
             struct timespec ts_requested;
             ts_requested.tv_sec = 0;
             ts_requested.tv_nsec = 100 * 1000 * 1000; // 100 milliseconds
+
             while (0 != nanosleep(&ts_requested, &ts_requested)) {
                 const int errno_copy = errno;
                 if (errno_copy != EINTR) {
@@ -4548,23 +4551,32 @@ int getaddrinfo_with_retry(const char *_node,
                     return USER_RODS_HOSTNAME_ERR - errno_copy;
                 }
             }
-        } else if (ret_getaddrinfo != 0) { // non-retryable error
+        }
+        else if (ret_getaddrinfo != 0) { // non-retryable error
             if (ret_getaddrinfo == EAI_SYSTEM) {
                 const int errno_copy = errno;
                 std::string hint_str = stringify_addrinfo_hints(_hints);
-                rodsLog(LOG_ERROR, "getaddrinfo_with_retry: getaddrinfo non-recoverable system error [%d] [%s] [%d] [%s] [%s]", ret_getaddrinfo, gai_strerror(ret_getaddrinfo), errno_copy, hostname.c_str(), hint_str.c_str());
-            } else {
-                std::string hint_str = stringify_addrinfo_hints(_hints);
-                rodsLog(LOG_ERROR, "getaddrinfo_with_retry: getaddrinfo non-recoverable error [%d] [%s] [%s] [%s]", ret_getaddrinfo, gai_strerror(ret_getaddrinfo), hostname.c_str(), hint_str.c_str());
+                rodsLog(LOG_ERROR, "getaddrinfo_with_retry: getaddrinfo non-recoverable system error [%d] [%s] [%d] [%s] [%s]",
+                        ret_getaddrinfo, gai_strerror(ret_getaddrinfo), errno_copy, hostname.c_str(), hint_str.c_str());
             }
+            else {
+                std::string hint_str = stringify_addrinfo_hints(_hints);
+                rodsLog(LOG_ERROR, "getaddrinfo_with_retry: getaddrinfo non-recoverable error [%d] [%s] [%s] [%s]",
+                        ret_getaddrinfo, gai_strerror(ret_getaddrinfo), hostname.c_str(), hint_str.c_str());
+            }
+
             return USER_RODS_HOSTNAME_ERR;
-        } else {
+        }
+        else {
             return 0;
         }
+
         rodsLog(LOG_DEBUG, "getaddrinfo_with_retry retrying getaddrinfo. retry count [%d] hostname [%s]", i, hostname.c_str());
     }
+
     std::string hint_str = stringify_addrinfo_hints(_hints);
     rodsLog(LOG_ERROR, "getaddrinfo_with_retry address resolution timeout [%s] [%s]", hostname.c_str(), hint_str.c_str());
+
     return USER_RODS_HOSTNAME_ERR;
 }
 
