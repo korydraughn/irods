@@ -19,6 +19,9 @@ namespace
 {
     namespace bi = boost::interprocess;
 
+    using std::chrono::duration_cast;
+    using std::chrono::seconds;
+
     struct address_info;
 
     // clang-format off
@@ -69,6 +72,24 @@ namespace
     std::unique_ptr<void_allocator_type> g_allocator;
     std::unique_ptr<bi::named_mutex> g_mutex;
     map_type* g_map;
+
+    auto free_address_info(addrinfo* _p) -> void
+    {
+        for (addrinfo* current = _p, *prev = nullptr; current;) {
+            if (current->ai_addr)      { std::free(current->ai_addr); }
+            if (current->ai_canonname) { std::free(current->ai_canonname); }
+
+            prev = current;
+            current = current->ai_next;
+
+            std::free(prev);
+        }
+    }
+
+    auto current_timestamp_in_seconds() noexcept -> std::int64_t
+    {
+        return duration_cast<seconds>(clock_type::now().time_since_epoch()).count();
+    }
 } // anonymous namespace
 
 namespace irods::experimental::net
@@ -118,7 +139,7 @@ namespace irods::experimental::net
 
     auto dnsc_insert_or_assign(const std::string_view _hostname,
                                const addrinfo& _info,
-                               std::chrono::seconds _expires_after) -> bool
+                               seconds _expires_after) -> bool
     {
         bi::scoped_lock lk{*g_mutex};
 
@@ -129,16 +150,18 @@ namespace irods::experimental::net
         for (const auto* p = &_info; p; p = p->ai_next) {
             current = static_cast<address_info*>(g_segment->allocate(sizeof(address_info)));
 
+            std::memset(current.get(), 0, sizeof(address_info));
+
             // clang-format off
-            current->flags         = p->ai_flags,
-            current->family        = p->ai_family,
-            current->socktype      = p->ai_socktype,
-            current->protocol      = p->ai_protocol,
-            current->addrlen       = p->ai_addrlen,
-            current->addr          = nullptr,
-            current->canonname     = nullptr,
-            current->next          = nullptr,
-            current->expiration    = 0,
+            current->flags         = p->ai_flags;
+            current->family        = p->ai_family;
+            current->socktype      = p->ai_socktype;
+            current->protocol      = p->ai_protocol;
+            current->addrlen       = p->ai_addrlen;
+            current->addr          = nullptr;
+            current->canonname     = nullptr;
+            current->next          = nullptr;
+            current->expiration    = 0;
             current->expires_after = _expires_after.count();
             // clang-format on
 
@@ -165,7 +188,7 @@ namespace irods::experimental::net
         }
 
         key_type key{_hostname.data(), *g_allocator};
-        first->expiration = (clock_type::now() + _expires_after).time_since_epoch().count();
+        first->expiration = duration_cast<seconds>((clock_type::now() + _expires_after).time_since_epoch()).count();
         const auto [iter, inserted] = g_map->insert_or_assign(std::move(key), std::move(first));
 
         return inserted;
@@ -177,42 +200,43 @@ namespace irods::experimental::net
         g_map->erase(key_type{_hostname.data(), *g_allocator});
     } // dnsc_erase
 
-    auto dnsc_lookup(const std::string_view _hostname) -> std::optional<addrinfo*>
+    auto dnsc_lookup(const std::string_view _hostname) -> std::unique_ptr<addrinfo, address_info_deleter_type>
     {
         bi::scoped_lock lk{*g_mutex};
 
         if (auto iter = g_map->find(key_type{_hostname.data(), *g_allocator}); iter != g_map->end()) {
-            if (auto& [k, v] = *iter; clock_type::now().time_since_epoch().count() < v->expiration) {
+            if (auto& [k, v] = *iter; current_timestamp_in_seconds() < v->expiration) {
                 addrinfo* current{};
                 addrinfo* first{};
                 addrinfo* prev{};
 
-                for (auto* p = v.get(); p; p = p->next.get()) {
+                for (auto p = v; p; p = p->next) {
                     current = static_cast<addrinfo*>(std::malloc(sizeof(addrinfo)));
 
+                    std::memset(current, 0, sizeof(addrinfo));
+
                     // clang-format off
-                    current->ai_flags     = v->flags;
-                    current->ai_family    = v->family;
-                    current->ai_socktype  = v->socktype;
-                    current->ai_protocol  = v->protocol;
-                    current->ai_addrlen   = v->addrlen;
+                    current->ai_flags     = p->flags;
+                    current->ai_family    = p->family;
+                    current->ai_socktype  = p->socktype;
+                    current->ai_protocol  = p->protocol;
+                    current->ai_addrlen   = p->addrlen;
+                    current->ai_addr      = nullptr;
+                    current->ai_canonname = nullptr;
+                    current->ai_next      = nullptr;
                     // clang-format on
 
-                    if (v->addr) {
+                    if (p->addr) {
                         current->ai_addr = static_cast<sockaddr*>(std::malloc(sizeof(sockaddr)));
                         std::memcpy(current->ai_addr, p->addr.get(), sizeof(sockaddr));
                     }
 
-                    if (v->canonname) {
-                        const auto size = std::strlen(v->canonname.get());
+                    if (p->canonname) {
+                        const auto size = std::strlen(p->canonname.get());
                         current->ai_canonname = static_cast<char*>(std::malloc(sizeof(char) * size + 1));
-                        std::strncpy(current->ai_canonname, v->canonname.get(), size);
+                        std::strncpy(current->ai_canonname, p->canonname.get(), size);
                         current->ai_canonname[size] = 0;
                     }
-
-                    //if (v->next) {
-                        //t->ai_next = static_cast<addrinfo*>(std::malloc(sizeof(addrinfo)));
-                    //}
 
                     if (!prev) {
                         first = current;
@@ -224,20 +248,20 @@ namespace irods::experimental::net
                     prev = current;
                 }
 
-                v->expiration = clock_type::now().time_since_epoch().count() + v->expires_after;
+                v->expiration = current_timestamp_in_seconds() + v->expires_after;
 
-                return first;
+                return {first, free_address_info};
             }
         }
 
-        return std::nullopt;
+        return {nullptr, nullptr};
     } // dnsc_lookup
 
     auto dnsc_erase_expired_entries() -> void
     {
         bi::scoped_lock lk{*g_mutex};
 
-        const auto now = clock_type::now().time_since_epoch().count();
+        const auto now = current_timestamp_in_seconds();
 
         for (auto iter = g_map->begin(), end = g_map->end(); iter != end;) {
             if (now >= iter->second->expiration) {
@@ -256,7 +280,7 @@ namespace irods::experimental::net
                     prev = current;
                     current = current->next;
 
-                    g_segment->deallocate(current.get());
+                    g_segment->deallocate(prev.get());
 
                     iter = g_map->erase(iter);
                 }

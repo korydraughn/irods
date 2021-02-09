@@ -35,7 +35,6 @@ TEST_CASE("dns_cache")
         REQUIRE(net::dnsc_insert_or_assign(google, *cname, 3s));
         auto gai_info = net::dnsc_lookup(google);
         REQUIRE(gai_info);
-        std::free(*gai_info);
 
         const char* yahoo = "yahoo.com";
         auto ip = resolve_ip(yahoo);
@@ -43,12 +42,11 @@ TEST_CASE("dns_cache")
         REQUIRE(net::dnsc_insert_or_assign(yahoo, *ip, 3s));
         gai_info = net::dnsc_lookup(yahoo);
         REQUIRE(gai_info);
-        const auto* src = &reinterpret_cast<sockaddr_in*>((*gai_info)->ai_addr)->sin_addr;
+        const auto* src = &reinterpret_cast<sockaddr_in*>(gai_info->ai_addr)->sin_addr;
         char dst[INET_ADDRSTRLEN]{};
         if (inet_ntop(AF_INET, src, dst, sizeof(dst))) {
             std::cout << dst << '\n';
         }
-        std::free(*gai_info);
 
         std::this_thread::sleep_for(4s);
         REQUIRE_FALSE(net::dnsc_lookup(google));

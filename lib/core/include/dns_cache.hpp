@@ -5,19 +5,17 @@
 
 #include <string>
 #include <string_view>
-#include <optional>
+#include <memory>
 #include <chrono>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 
-// In order to store the results of getaddrinfo() in shared memory,
-// the addrinfo structure will need to be flatten or use offset_ptr<T>'s
-// due to the member pointers.
-
 namespace irods::experimental::net
 {
+    using address_info_deleter_type = void(*)(addrinfo*);
+
     /// Initializes the dns cache.
     ///
     /// \since 4.2.9
@@ -33,7 +31,7 @@ namespace irods::experimental::net
                                std::chrono::seconds _expires_after) -> bool;
 
     /// \since 4.2.9
-    auto dnsc_lookup(const std::string_view _hostname) -> std::optional<addrinfo*>;
+    auto dnsc_lookup(const std::string_view _hostname) -> std::unique_ptr<addrinfo, address_info_deleter_type>;
 
     /// \since 4.2.9
     auto dnsc_erase(const std::string_view _hostname) -> void;

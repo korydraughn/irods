@@ -4586,12 +4586,13 @@ int get_canonical_name(const char *_hostname, char* _buf, size_t _len)
 {
     namespace net = irods::experimental::net;
 
-    std::string target = _hostname; target += "_gcn";
+    std::string target = _hostname;
+    target += "_gcn";
 
     if (CLIENT_PT != ::ProcessType) {
         if (auto entry = net::dnsc_lookup(target); entry) {
-            snprintf(_buf, _len, "%s", (*entry)->ai_canonname);
-            freeaddrinfo(*entry);
+            rodsLog(LOG_NOTICE, "%s :: Returning cached addrinfo for [hostname=%s].", __func__, _hostname);
+            snprintf(_buf, _len, "%s", entry->ai_canonname);
             return 0;
         }
     }
@@ -4608,6 +4609,7 @@ int get_canonical_name(const char *_hostname, char* _buf, size_t _len)
     snprintf(_buf, _len, "%s", p_addrinfo->ai_canonname);
 
     if (CLIENT_PT != ::ProcessType) {
+        rodsLog(LOG_NOTICE, "%s :: Caching addrinfo for [hostname=%s].", __func__, _hostname);
         net::dnsc_insert_or_assign(target, *p_addrinfo, std::chrono::seconds{60});
     }
 
@@ -4620,12 +4622,13 @@ int load_in_addr_from_hostname(const char* _hostname, struct in_addr* _out)
 {
     namespace net = irods::experimental::net;
 
-    std::string target = _hostname; target += "_liafh";
+    std::string target = _hostname;
+    target += "_liafh";
 
     if (CLIENT_PT != ::ProcessType) {
         if (auto entry = net::dnsc_lookup(target); entry) {
-            *_out = reinterpret_cast<struct sockaddr_in*>((*entry)->ai_addr)->sin_addr;
-            freeaddrinfo(*entry);
+            rodsLog(LOG_NOTICE, "%s :: Returning cached addrinfo for [hostname=%s].", __func__, _hostname);
+            *_out = reinterpret_cast<struct sockaddr_in*>(entry->ai_addr)->sin_addr;
             return 0;
         }
     }
@@ -4642,6 +4645,7 @@ int load_in_addr_from_hostname(const char* _hostname, struct in_addr* _out)
     *_out = reinterpret_cast<struct sockaddr_in*>(p_addrinfo->ai_addr)->sin_addr;
 
     if (CLIENT_PT != ::ProcessType) {
+        rodsLog(LOG_NOTICE, "%s :: Caching addrinfo for [hostname=%s].", __func__, _hostname);
         net::dnsc_insert_or_assign(target, *p_addrinfo, std::chrono::seconds{60});
     }
 
