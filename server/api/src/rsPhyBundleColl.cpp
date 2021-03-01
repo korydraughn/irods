@@ -404,10 +404,8 @@ bundleAndRegSubFiles( rsComm_t *rsComm, int l1descInx, char *phyBunDir,
     dataObjCloseInp.l1descInx = l1descInx;
     if ( bunReplCacheHeader->numSubFiles == 0 ) {
         bzero( &dataObjUnlinkInp, sizeof( dataObjUnlinkInp ) );
-        rstrcpy( dataObjUnlinkInp.objPath,
-                 L1desc[l1descInx].dataObjInfo->objPath, MAX_NAME_LEN );
-        dataObjUnlinkS( rsComm, &dataObjUnlinkInp,
-                        L1desc[l1descInx].dataObjInfo );
+        rstrcpy( dataObjUnlinkInp.objPath, L1desc[l1descInx].dataObjInfo->objPath, MAX_NAME_LEN );
+        dataObjUnlinkS( rsComm, &dataObjUnlinkInp, L1desc[l1descInx].dataObjInfo );
         L1desc[l1descInx].bytesWritten = 0;
         rsDataObjClose( rsComm, &dataObjCloseInp );
         bzero( bunReplCacheHeader, sizeof( bunReplCacheHeader_t ) );
@@ -443,10 +441,8 @@ bundleAndRegSubFiles( rsComm_t *rsComm, int l1descInx, char *phyBunDir,
     if ( tmpBunReplCache == NULL ) {
         rmdir( phyBunDir );
         bzero( &dataObjUnlinkInp, sizeof( dataObjUnlinkInp ) );
-        rstrcpy( dataObjUnlinkInp.objPath,
-                 L1desc[l1descInx].dataObjInfo->objPath, MAX_NAME_LEN );
-        dataObjUnlinkS( rsComm, &dataObjUnlinkInp,
-                        L1desc[l1descInx].dataObjInfo );
+        rstrcpy( dataObjUnlinkInp.objPath, L1desc[l1descInx].dataObjInfo->objPath, MAX_NAME_LEN );
+        dataObjUnlinkS( rsComm, &dataObjUnlinkInp, L1desc[l1descInx].dataObjInfo );
         L1desc[l1descInx].bytesWritten = 0;
         rsDataObjClose( rsComm, &dataObjCloseInp );
         bzero( bunReplCacheHeader, sizeof( bunReplCacheHeader_t ) );
@@ -461,12 +457,9 @@ bundleAndRegSubFiles( rsComm_t *rsComm, int l1descInx, char *phyBunDir,
     addKeyVal( &regReplicaInp.condInput, ADMIN_KW, "" );
     rstrcpy( regReplicaInp.destDataObjInfo->rescName, BUNDLE_RESC, NAME_LEN );
     // XXXX - JMC :: filePath was copied into objPath??? #1111 by hcjiv
-    rstrcpy( regReplicaInp.destDataObjInfo->objPath,
-             L1desc[l1descInx].dataObjInfo->objPath, MAX_NAME_LEN );
-    rstrcpy( regReplicaInp.destDataObjInfo->filePath,
-             L1desc[l1descInx].dataObjInfo->filePath, MAX_NAME_LEN );
-    rstrcpy( regReplicaInp.destDataObjInfo->rescHier,
-             L1desc[l1descInx].dataObjInfo->rescHier, MAX_NAME_LEN );
+    rstrcpy( regReplicaInp.destDataObjInfo->objPath, L1desc[l1descInx].dataObjInfo->objPath, MAX_NAME_LEN );
+    rstrcpy( regReplicaInp.destDataObjInfo->filePath, L1desc[l1descInx].dataObjInfo->filePath, MAX_NAME_LEN );
+    rstrcpy( regReplicaInp.destDataObjInfo->rescHier, L1desc[l1descInx].dataObjInfo->rescHier, MAX_NAME_LEN );
 
     regReplicaInp.destDataObjInfo->rescId = L1desc[l1descInx].dataObjInfo->rescId;
 
@@ -493,8 +486,13 @@ bundleAndRegSubFiles( rsComm_t *rsComm, int l1descInx, char *phyBunDir,
         // =-=-=-=-=-=-=-
         // JMC - backport 4528
         if ( chksumFlag != 0 ) {
-            status = fileChksum( rsComm, regReplicaInp.destDataObjInfo->filePath,
-                                 subPhyPath, regReplicaInp.destDataObjInfo->rescHier, 0, tmpBunReplCache->chksumStr );
+            status = file_checksum(rsComm,
+                                   regReplicaInp.destDataObjInfo->filePath,
+                                   subPhyPath,
+                                   regReplicaInp.destDataObjInfo->rescHier,
+                                   nullptr,
+                                   regReplicaInp.destDataObjInfo->dataSize, // TODO Should this come from the source data object info?
+                                   tmpBunReplCache->chksumStr);
             if ( status < 0 ) {
                 savedStatus = status;
                 rodsLogError( LOG_ERROR, status, "bundleAndRegSubFiles: fileChksum error for %s", tmpBunReplCache->objPath );
@@ -503,11 +501,8 @@ bundleAndRegSubFiles( rsComm_t *rsComm, int l1descInx, char *phyBunDir,
         // =-=-=-=-=-=-=-
         unlink( subPhyPath );
         /* register the replica */
-        rstrcpy( regReplicaInp.srcDataObjInfo->objPath,
-                 tmpBunReplCache->objPath, MAX_NAME_LEN );
-        regReplicaInp.srcDataObjInfo->dataId =
-            regReplicaInp.destDataObjInfo->dataId =
-                tmpBunReplCache->dataId;
+        rstrcpy( regReplicaInp.srcDataObjInfo->objPath, tmpBunReplCache->objPath, MAX_NAME_LEN );
+        regReplicaInp.srcDataObjInfo->dataId = regReplicaInp.destDataObjInfo->dataId = tmpBunReplCache->dataId;
         regReplicaInp.srcDataObjInfo->replNum = tmpBunReplCache->srcReplNum;
 
         status = rsRegReplica( rsComm, &regReplicaInp );

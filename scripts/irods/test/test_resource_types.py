@@ -77,17 +77,21 @@ class Test_Resource_RandomWithinReplication(ResourceSuite, ChunkyDevTest, unitte
 
     @unittest.skipIf(test.settings.RUN_IN_TOPOLOGY, "local filesystem check")
     def test_ichksum_no_file_modified_under_replication__4099(self):
+        #
+        # TODO IS THIS TEST NEEDED ANYMORE? WHAT DOES THIS TEST MEAN?
+        #
+
         filename = 'test_ichksum_no_file_modified_under_replication__4099'
         filepath = lib.create_local_testfile(filename)
         with open(filepath, 'r') as f:
             original_checksum = hashlib.sha256(f.read()).digest().encode("base64").strip()
 
-        # put file into iRODS and clean up local
+        # Put file into iRODS and clean up local
         self.admin.assert_icommand(['iput', '-K', filepath, filename])
         os.unlink(filename)
         self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
 
-        # corrupt data in replica 0
+        # Corrupt data in replica 0
         _,out,_ = self.admin.assert_icommand(['iquest', '''"select DATA_RESC_HIER where DATA_NAME = '{0}' and DATA_REPL_NUM = '0'"'''.format(filename)], 'STDOUT_SINGLELINE', 'DATA_RESC_HIER')
         replica_0_resc = out.splitlines()[0].split()[-1].split(';')[-1]
         phypath_for_data_obj = os.path.join(self.admin.get_vault_session_path(replica_0_resc), filename)
@@ -96,17 +100,23 @@ class Test_Resource_RandomWithinReplication(ResourceSuite, ChunkyDevTest, unitte
         with open(phypath_for_data_obj, 'r') as f:
             new_checksum = hashlib.sha256(f.read()).digest().encode("base64").strip()
 
-        # forcibly re-calculate corrupted checksum and ensure that original checksum was not overwritten
-        self.admin.assert_icommand(['ichksum', '-f', '-n0', filename], 'STDOUT_SINGLELINE', 'sha2:' + new_checksum)
-        self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + new_checksum)
+        # Show that the checksum cannot be re-calculated due to the data corruption. Therefore, the checksum
+        # information is unchanged. The next assertion succeeds because the overwrite causes the physical object
+        # to have a smaller size than what is recorded in the catalog.
+        self.admin.assert_icommand(['ichksum', '-f', '-n0', filename], 'STDERR_SINGLELINE', '-512000 UNIX_FILE_READ_ERR')
+        _, out, _ = self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
+        self.assertNotIn(new_checksum, out)
+
+        # FIXME comment
+        # Forcibly re-calculate all checksums and ensure that original checksum was not changed
+        out, err, ec = self.admin.run_icommand(['ichksum', '-f', '-a', filename])
+        self.assertNotEqual(ec, 0)
+        self.assertIn('Level 0: Could not compute/update checksum for replica [0].', out)
+        self.assertIn('-512000 UNIX_FILE_READ_ERR', err)
+        self.assertNotIn(new_checksum, out)
         self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
 
-        # forcibly re-calculate all checksums and ensure that original checksum was not changed
-        self.admin.assert_icommand(['ichksum', '-f', '-a', filename], 'STDOUT_SINGLELINE', 'WARNING: Data object has replicas with different checksums.')
-        self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + new_checksum)
-        self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
-
-        #cleanup
+        # Cleanup
         self.admin.assert_icommand(['irm', '-f', filename])
 
     def test_ibun_creation_to_replication(self):
@@ -3678,17 +3688,21 @@ class Test_Resource_Replication(ChunkyDevTest, ResourceSuite, unittest.TestCase)
 
     @unittest.skipIf(test.settings.RUN_IN_TOPOLOGY, "local filesystem check")
     def test_ichksum_no_file_modified_under_replication__4099(self):
+        #
+        # TODO IS THIS TEST NEEDED ANYMORE? WHAT DOES THIS TEST MEAN?
+        #
+
         filename = 'test_ichksum_no_file_modified_under_replication__4099'
         filepath = lib.create_local_testfile(filename)
         with open(filepath, 'r') as f:
             original_checksum = hashlib.sha256(f.read()).digest().encode("base64").strip()
 
-        # put file into iRODS and clean up local
+        # Put file into iRODS and clean up local
         self.admin.assert_icommand(['iput', '-K', filepath, filename])
         os.unlink(filename)
         self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
 
-        # corrupt data in replica 0
+        # Corrupt data in replica 0
         _,out,_ = self.admin.assert_icommand(['iquest', '''"select DATA_RESC_HIER where DATA_NAME = '{0}' and DATA_REPL_NUM = '0'"'''.format(filename)], 'STDOUT_SINGLELINE', 'DATA_RESC_HIER')
         replica_0_resc = out.splitlines()[0].split()[-1].split(';')[-1]
         phypath_for_data_obj = os.path.join(self.admin.get_vault_session_path(replica_0_resc), filename)
@@ -3697,17 +3711,23 @@ class Test_Resource_Replication(ChunkyDevTest, ResourceSuite, unittest.TestCase)
         with open(phypath_for_data_obj, 'r') as f:
             new_checksum = hashlib.sha256(f.read()).digest().encode("base64").strip()
 
-        # forcibly re-calculate corrupted checksum and ensure that original checksum was not overwritten
-        self.admin.assert_icommand(['ichksum', '-f', '-n0', filename], 'STDOUT', filename + '    sha2:' + new_checksum)
-        self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + new_checksum)
+        # Show that the checksum cannot be re-calculated due to the data corruption. Therefore, the checksum
+        # information is unchanged. The next assertion succeeds because the overwrite causes the physical object
+        # to have a smaller size than what is recorded in the catalog.
+        self.admin.assert_icommand(['ichksum', '-f', '-n0', filename], 'STDERR_SINGLELINE', '-512000 UNIX_FILE_READ_ERR')
+        _, out, _ = self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
+        self.assertNotIn(new_checksum, out)
+
+        # FIXME comment
+        # Forcibly re-calculate all checksums and ensure that original checksum was not changed
+        out, err, ec = self.admin.run_icommand(['ichksum', '-f', '-a', filename])
+        self.assertNotEqual(ec, 0)
+        self.assertIn('Level 0: Could not compute/update checksum for replica [0].', out)
+        self.assertIn('-512000 UNIX_FILE_READ_ERR', err)
+        self.assertNotIn(new_checksum, out)
         self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
 
-        # forcibly re-calculate all checksums and ensure that original checksum was not changed
-        self.admin.assert_icommand(['ichksum', '-f', '-a', filename], 'STDOUT', 'WARNING: Data object has replicas with different checksums.')
-        self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + new_checksum)
-        self.admin.assert_icommand(['ils', '-L', filename], 'STDOUT_SINGLELINE', "sha2:" + original_checksum)
-
-        #cleanup
+        # Cleanup
         self.admin.assert_icommand(['irm', '-f', filename])
 
     def test_ibun_creation_to_replication(self):
@@ -3843,7 +3863,7 @@ OUTPUT ruleExecOut
 
         time.sleep(1)
 
-        self.admin.assert_icommand("ichksum -f " + filename, 'STDOUT_SINGLELINE', '    sha2:')
+        self.admin.assert_icommand("ichksum -f " + filename, 'STDERR', '-512000 UNIX_FILE_READ_ERR')
 
         u1_time2 = os.path.getmtime(u1_path)
         u2_time2 = os.path.getmtime(u2_path)
