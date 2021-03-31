@@ -474,6 +474,7 @@ _cllExecSqlNoResult(
         rodsLog( LOG_ERROR, "_cllExecSqlNoResult: SQLAllocHandle failed for statement: %d", stat );
         return -1;
     }
+    rodsLog(LOG_NOTICE, "%s:%d - SQLAllocHandle() = %p", __func__, __LINE__, (void*) myHstmt);
 
     if ( option == 0 && bindTheVariables( myHstmt, sql ) != 0 ) {
         return -1;
@@ -576,6 +577,7 @@ cllExecSqlWithResult( icatSessionStruct *icss, int *stmtNum, const char *sql ) {
                  stat );
         return -1;
     }
+    rodsLog(LOG_NOTICE, "%s:%d - SQLAllocHandle() = %p", __func__, __LINE__, (void*) hstmt);
 
     // Issue 3862:  Set stmtNum to -1 and in cllFreeStatement if the stmtNum is negative do nothing
     *stmtNum = UNINITIALIZED_STATEMENT_NUMBER;
@@ -595,6 +597,7 @@ cllExecSqlWithResult( icatSessionStruct *icss, int *stmtNum, const char *sql ) {
     icatStmtStrct * myStatement = ( icatStmtStrct * )malloc( sizeof( icatStmtStrct ) );
     memset( myStatement, 0, sizeof( icatStmtStrct ) );
 
+    rodsLog(LOG_NOTICE, "%s:%d - icss->stmtPtr[%d] = %p", __func__, __LINE__, statementNumber, (void*) hstmt);
     icss->stmtPtr[statementNumber] = myStatement;
     *stmtNum = statementNumber;
 
@@ -750,6 +753,7 @@ cllExecSqlWithResultBV(
                  stat );
         return -1;
     }
+    rodsLog(LOG_NOTICE, "%s:%d - SQLAllocHandle() = %p", __func__, __LINE__, (void*) hstmt);
 
     // Issue 3862:  Set stmtNum to -1 and in cllFreeStatement if the stmtNum is negative do nothing
     *stmtNum = UNINITIALIZED_STATEMENT_NUMBER;
@@ -768,6 +772,7 @@ cllExecSqlWithResultBV(
 
     icatStmtStrct * myStatement = ( icatStmtStrct * )malloc( sizeof( icatStmtStrct ) );
     memset( myStatement, 0, sizeof( icatStmtStrct ) );
+    rodsLog(LOG_NOTICE, "%s:%d - icss->stmtPtr[%d] = %p", __func__, __LINE__, statementNumber, (void*) hstmt);
     icss->stmtPtr[statementNumber] = myStatement;
 
     *stmtNum = statementNumber;
@@ -990,11 +995,13 @@ cllFreeStatement( icatSessionStruct *icss, int& statementNumber ) {
 
     _cllFreeStatementColumns( icss, statementNumber );
 
+    rodsLog(LOG_NOTICE, "%s:%d - Calling SQLFreeHandle(%p) ...", __func__, __LINE__, (void*) myStatement->stmtPtr);
     SQLRETURN stat = SQLFreeHandle( SQL_HANDLE_STMT, myStatement->stmtPtr );
     if ( stat != SQL_SUCCESS ) {
         statementNumber = UNINITIALIZED_STATEMENT_NUMBER;
         rodsLog( LOG_ERROR, "cllFreeStatement SQLFreeHandle for statement error: %d", stat );
     }
+    rodsLog(LOG_NOTICE, "%s:%d - SQLFreeHandle(%p) = OK", __func__, __LINE__, (void*) myStatement->stmtPtr);
 
     free( myStatement );
     icss->stmtPtr[statementNumber] = NULL; /* indicate that the statement is free */
