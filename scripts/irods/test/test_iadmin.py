@@ -1537,6 +1537,93 @@ class Test_Iadmin(resource_suite.ResourceBase, unittest.TestCase):
             if os.path.exists(filename):
                 os.remove(filename)
 
+    def test_setparentresc_detects_cycles_in_resource_hierarchy__issue_5481(self):
+        resource_names = ['pt_5481_0', 'pt_5481_1', 'pt_5481_2']
+
+        try:
+            # Create passthru resources.
+            for name in resource_names:
+                self.admin.assert_icommand(['iadmin', 'mkresc', name, 'passthru'], 'STDOUT', [name])
+
+            # Create resource hierarchy: pt0;pt1;...ptN
+            for i in range(len(resource_names) - 1):
+                self.admin.assert_icommand(['iadmin', 'setparentresc', resource_names[i], resource_names[i + 1]])
+
+            #
+            # Verify that the resource hierarchy is what we expect.
+            #
+
+            # The root resource must not have a parent.
+            self.admin.assert_icommand(['ilsresc', '-l', resource_names[0]], 'STDOUT', ['parent: \n'])
+
+            # Check each child resource's parent resource id.
+            for name in resource_names[1:]:
+                # Get the resource id of the parent resource.
+                gql = "select RESC_PARENT where RESC_NAME = '{0}'".format(name)
+                print("Running iquest: [{0}]".format(gql))
+                resc_id, err, ec = self.admin.run_icommand(['iquest', '%s', gql])
+
+                # We should not see any errors.
+                resc_id = resc_id.strip()
+                self.assertEqual(ec, 0)
+                self.assertEqual(len(err.strip()), 0)
+                self.assertGreater(len(resc_id), 0)
+
+                # Show that the child resource has the expect resource parent.
+                self.admin.assert_icommand(['ilsresc', '-l', name], 'STDOUT', ['parent: ' + resc_id + '\n'])
+
+            #
+            # Now, run the real test!
+            #
+
+            # Show that "iadmin setparentresc" does not allow ancestor resources to be children
+            # of a descendant resource.
+            self.admin.assert_icommand(['iadmin', 'setparentresc', resource_names[2], resource_names[0]],
+                                       'STDERR', ['-1803000 HIERARCHY_ERROR'])
+
+        finally:
+            # Tear down resource hierarchy.
+            for i in range(len(resource_names) - 1):
+                self.admin.run_icommand(['iadmin', 'rmchildfromresc', resource_names[i], resource_names[i + 1]])
+
+            # Remove passthru resources.
+            for name in resource_names:
+                self.admin.run_icommand(['iadmin', 'rmresc', name])
+
+    def test_setparentresc_does_not_accept_invalid_context_strings__issue_5481(self):
+        pt_resc = 'pt_5481'
+        ufs_resc = 'ufs_5481'
+
+        try:
+            self.admin.assert_icommand(['iadmin', 'mkresc', pt_resc, 'passthru'], 'STDOUT', [pt_resc])
+            lib.create_ufs_resource(ufs_resc, self.admin)
+
+            self.admin.assert_icommand(['iadmin', 'setparentresc', pt_resc, ufs_resc, 'test_context;'], 'STDERR', ['-130000 SYS_INVALID_INPUT_PARAM'])
+            self.admin.assert_icommand(['iadmin', 'setparentresc', pt_resc, ufs_resc, '{test_context'], 'STDERR', ['-130000 SYS_INVALID_INPUT_PARAM'])
+            self.admin.assert_icommand(['iadmin', 'setparentresc', pt_resc, ufs_resc, 'test_context}'], 'STDERR', ['-130000 SYS_INVALID_INPUT_PARAM'])
+
+        finally:
+            self.admin.run_icommand(['iadmin', 'rmchildfromresc', pt_resc, ufs_resc])
+            self.admin.run_icommand(['iadmin', 'rmresc', pt_resc])
+            self.admin.run_icommand(['iadmin', 'rmresc', ufs_resc])
+
+    def test_setparentresc_does_not_accept_identical_resource_names_for_each_parameter__issue_5481(self):
+        self.admin.assert_icommand(['iadmin', 'setparentresc', 'demoResc', 'demoResc'], 'STDERR', ['-32000 SYS_INVALID_RESC_INPUT'])
+
+    def test_setparentresc_does_not_accept_invalid_resource_names__issue_5481(self):
+        # Do not accept empty resource names.
+        self.admin.assert_icommand(['iadmin', 'setparentresc', '', 'demoResc'], 'STDERR', ['-859000 CAT_INVALID_RESOURCE_NAME'])
+        self.admin.assert_icommand(['iadmin', 'setparentresc', 'demoResc', ''], 'STDERR', ['-859000 CAT_INVALID_RESOURCE_NAME'])
+
+        # Do not accept non-existent resources.
+        self.admin.assert_icommand(['iadmin', 'setparentresc', 'invalid_resc', 'demoResc'], 'STDERR', ['-78000 SYS_RESC_DOES_NOT_EXIST'])
+        self.admin.assert_icommand(['iadmin', 'setparentresc', 'demoResc', 'invalid_resc'], 'STDERR', ['-78000 SYS_RESC_DOES_NOT_EXIST'])
+
+        # Do not accept resources with a resource class matching "bundle".
+        # Basically, do not allow a user to specify the bundleResc resource.
+        self.admin.assert_icommand(['iadmin', 'setparentresc', 'bundleResc', 'demoResc'], 'STDERR', ['-130000 SYS_INVALID_INPUT_PARAM'])
+        self.admin.assert_icommand(['iadmin', 'setparentresc', 'demoResc', 'bundleResc'], 'STDERR', ['-130000 SYS_INVALID_INPUT_PARAM'])
+
 class Test_Iadmin_Resources(resource_suite.ResourceBase, unittest.TestCase):
 
     def setUp(self):
