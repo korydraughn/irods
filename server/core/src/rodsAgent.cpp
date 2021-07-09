@@ -34,6 +34,7 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 #include <syslog.h>
+#include <sys/prctl.h>
 
 #include <cstring>
 #include <memory>
@@ -360,7 +361,12 @@ runIrodsAgentFactory( sockaddr_un agent_addr ) {
 
             // Data is ready on conn_socket, fork a child process to handle it
             pid_t child_pid = fork();
-            if ( child_pid == 0 ) {
+            if (child_pid == 0) {
+                // Rename the agent to something more distinguishable.
+                if (prctl(PR_SET_NAME, (unsigned long) "irodsAgent") < 0) {
+                    rodsLog(LOG_ERROR, "Failed to rename process to [irodsAgent].");
+                }
+
                 // Child process - reload properties and receive data from server process
                 irods::environment_properties::instance().capture();
 
@@ -388,7 +394,8 @@ runIrodsAgentFactory( sockaddr_un agent_addr ) {
                 }
 
                 break;
-            } else if ( child_pid > 0 ) {
+            }
+            else if (child_pid > 0) {
                 // Parent process - want to return to select() call
                 status = close( conn_tmp_socket );
                 if ( status < 0 ) {
@@ -401,7 +408,8 @@ runIrodsAgentFactory( sockaddr_un agent_addr ) {
                 }
 
                 continue;
-            } else {
+            }
+            else {
                 rodsLog( LOG_ERROR, "fork() failed in rodsAgent process factory" );
 
                 status = close( conn_socket );

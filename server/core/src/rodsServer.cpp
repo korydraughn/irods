@@ -32,6 +32,7 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/prctl.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -246,29 +247,31 @@ int daemonize( char *logDir )
     LogFd = open( logFile, O_CREAT | O_WRONLY | O_APPEND, 0644 );
 #endif
 
-    if ( LogFd < 0 ) {
-        rodsLog( LOG_NOTICE, "logFileOpen: Unable to open %s. errno = %d",
-                 logFile, errno );
-        free( logFile );
+    if (LogFd < 0) {
+        rodsLog(LOG_NOTICE, "logFileOpen: Unable to open %s. errno = %d", logFile, errno);
+        free(logFile);
         return -1;
     }
 
-    free( logFile );
-    if ( fork() ) {     /* parent */
-        exit( 0 );
+    free(logFile);
+
+    // Parent process
+    if (fork()) {
+        // Close the parent process immediately.
+        exit(0);
     }
-    else {      /* child */
-        if ( setsid() < 0 ) {
-            rodsLog( LOG_NOTICE,
-                     "daemonize: setsid failed, errno = %d\n", errno );
-            exit( 1 );
+    // Child process
+    else {
+        if (setsid() < 0) {
+            rodsLog(LOG_NOTICE, "daemonize: setsid failed, errno = %d\n", errno);
+            exit(1);
         }
 
 #ifndef SYSLOG
-        ( void ) dup2( LogFd, 0 );
-        ( void ) dup2( LogFd, 1 );
-        ( void ) dup2( LogFd, 2 );
-        close( LogFd );
+        (void) dup2(LogFd, 0);
+        (void) dup2(LogFd, 1);
+        (void) dup2(LogFd, 2);
+        close(LogFd);
         LogFd = 2;
 #endif
     }
@@ -422,15 +425,22 @@ int main(int argc, char** argv)
 
     if (agent_spawning_pid == 0) {
         // Agent factory process (child)
+        
+        // Rename the agent factory to something more distinguishable.
+        if (prctl(PR_SET_NAME, (unsigned long) "irodsAgtFactory") < 0) {
+            rodsLog(LOG_ERROR, "Failed to rename process to [irodsAgtFactory].");
+        }
+        
         ProcessType = AGENT_PT;
-        free( logDir );
-        return runIrodsAgentFactory( local_addr );
+        free(logDir);
+
+        return runIrodsAgentFactory(local_addr);
     }
     
     // Main iRODS server (parent)
     if (agent_spawning_pid < 0) {
-        rodsLog( LOG_ERROR, "fork() failed when attempting to create agent factory process" );
-        free( logDir );
+        rodsLog(LOG_ERROR, "fork() failed when attempting to create agent factory process");
+        free(logDir);
         return SYS_FORK_ERROR;
     }
 
