@@ -363,8 +363,11 @@ runIrodsAgentFactory( sockaddr_un agent_addr ) {
             pid_t child_pid = fork();
             if (child_pid == 0) {
                 // Rename the agent to something more distinguishable.
-                if (prctl(PR_SET_NAME, (unsigned long) "irodsAgent") < 0) {
+                if (prctl(PR_SET_NAME, "irodsAgent") < 0) {
                     rodsLog(LOG_ERROR, "Failed to rename process to [irodsAgent].");
+                }
+                else {
+                    rodsLog(LOG_NOTICE, "Renamed process to [irodsAgent].");
                 }
 
                 // Child process - reload properties and receive data from server process

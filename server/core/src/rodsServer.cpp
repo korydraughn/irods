@@ -427,8 +427,11 @@ int main(int argc, char** argv)
         // Agent factory process (child)
         
         // Rename the agent factory to something more distinguishable.
-        if (prctl(PR_SET_NAME, (unsigned long) "irodsAgtFactory") < 0) {
+        if (prctl(PR_SET_NAME, "irodsAgtFactory") < 0) {
             rodsLog(LOG_ERROR, "Failed to rename process to [irodsAgtFactory].");
+        }
+        else {
+            rodsLog(LOG_NOTICE, "Renamed process to [irodsAgtFactory].");
         }
         
         ProcessType = AGENT_PT;
