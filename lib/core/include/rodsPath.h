@@ -11,55 +11,50 @@
 extern "C" {
 #endif
 
-#define STDOUT_FILE_NAME	"-"	/* pipe to stdout */
+#define STDOUT_FILE_NAME	"-"	// pipe to stdout.
+#define ALLOW_NO_SRC_FLAG	0x1     // definition for flag in parseCmdLinePath.
 
 typedef struct RodsPath {
     objType_t objType;
     objStat_t objState;
     rodsLong_t size;
     uint objMode;
-    char inPath[MAX_NAME_LEN];	 /* input from command line */
-    char outPath[MAX_NAME_LEN];	 /* the path after parsing the inPath */
+    char inPath[MAX_NAME_LEN];	 // input from command line.
+    char outPath[MAX_NAME_LEN];	 // the path after parsing the inPath.
     char dataId[NAME_LEN];
     char chksum[NAME_LEN];
     rodsObjStat_t *rodsObjStat;
 } rodsPath_t;
 
-/* This is the struct for a command line path input. Normally it contains
- * one or more source input paths and 0 or 1 destination paths */
+// This is the struct for a command line path input. Normally it contains
+// one or more source input paths and 0 or 1 destination paths.
 
 typedef struct RodsPathInp {
     int numSrc;
-    rodsPath_t *srcPath;	/* pointr to an array of rodsPath_t */
+    rodsPath_t *srcPath;	// pointr to an array of rodsPath_t.
     rodsPath_t *destPath;
-    rodsPath_t *targPath;	/* This is a target path for a
-                                  * source/destination type command */
+    rodsPath_t *targPath;	// This is a target path for a source/destination type command.
     int resolved;
 } rodsPathInp_t;
 
-/* definition for flag in parseCmdLinePath */
+int parseRodsPath(rodsPath_t *rodsPath, rodsEnv *myRodsEnv);
 
-#define	ALLOW_NO_SRC_FLAG	0x1
+int parseRodsPathStr(const char *inPath, rodsEnv *myRodsEnv, char *outPath);
 
-int
-parseRodsPath( rodsPath_t *rodsPath, rodsEnv *myRodsEnv );
-int
-parseRodsPathStr( const char *inPath, rodsEnv *myRodsEnv, char *outPath );
-int
-addSrcInPath( rodsPathInp_t *rodsPathInp, const char *inPath );
-int
-parseLocalPath( rodsPath_t *rodsPath );
-int
-parseCmdLinePath( int argc, char **argv, int optInd, rodsEnv *myRodsEnv,
-                  int srcFileType, int destFileType, int flag, rodsPathInp_t *rodsPathInp );
+int addSrcInPath(rodsPathInp_t *rodsPathInp, const char *inPath);
 
-int
-getLastPathElement( char *inPath, char *lastElement );
+int parseLocalPath(rodsPath_t *rodsPath);
 
-int
-getFileType( rodsPath_t *rodsPath );
-void
-clearRodsPath( rodsPath_t *rodsPath );
+int parseCmdLinePath(int argc, char **argv, int optInd, rodsEnv *myRodsEnv,
+                     int srcFileType, int destFileType, int flag, rodsPathInp_t *rodsPathInp);
+
+int getLastPathElement(char *inPath, char *lastElement);
+
+int getFileType(rodsPath_t *rodsPath);
+
+void clearRodsPath(rodsPath_t *rodsPath);
+
+void clearRodsPathInp(struct RodsPathInp* _input);
 
 // Returns a new path with the following special characters escaped:
 //   - '\f'
@@ -88,6 +83,7 @@ void remove_trailing_path_separators(char* path);
 /// \retval non-zero If \p path starts with \p prefix.
 /// \retval 0        If \p path does not start with \p prefix or \p prefix is an empty string.
 int has_prefix(const char* path, const char* prefix);
+
 #ifdef __cplusplus
 }
 #endif

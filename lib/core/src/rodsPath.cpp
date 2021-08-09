@@ -505,6 +505,25 @@ clearRodsPath( rodsPath_t *rodsPath ) {
     return;
 }
 
+void clearRodsPathInp(RodsPathInp* _input)
+{
+    if (!_input) {
+        return;
+    }
+
+    for (int i = 0; i < _input->numSrc; ++i) {
+        if (_input->srcPath[i].rodsObjStat) {
+            clearRodsPath(&_input->srcPath[i]);
+        }
+    }
+
+    // clang-format off
+    if (_input->srcPath)  { std::free(_input->srcPath); }
+    if (_input->destPath) { std::free(_input->destPath); }
+    if (_input->targPath) { std::free(_input->targPath); }
+    // clang-format on
+}
+
 char* escape_path(const char* _path)
 {
     static const std::map<char, std::string> special_char_mappings{
