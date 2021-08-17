@@ -264,26 +264,38 @@ splitPathByKey( const char * srcPath, char * dir, size_t maxDirLen,
     return 0;
 
 }
-int
-trimWS( char * s ) {
-    char *t;
 
-    t = s;
-    while ( isspace( *t ) ) {
+int trimWS(char* s)
+{
+    char* t = s;
+
+    // Skip all leading whitespace.
+    while (isspace(*t)) {
         t++;
     }
-    if ( s != t ) {
-        memmove( s, t, strlen( t ) + 1 );
+
+    // If leading whitespace was skipped, copy the characters pointed
+    // to by "t" to "s". This essentially shifts the characters left
+    // erasing the leading whitespace characters.
+    if (s != t) {
+        memmove(s, t, strlen(t) + 1);
     }
-    t = s + strlen( s ) - 1;
-    while ( isspace( *t ) ) {
+
+    // Make "t" point to the last byte of the string "s".
+    t = s + strlen(s) - 1;
+
+    // Iterate over the string in reverse skipping all whitespace
+    // until a non-whitespace character is encountered.
+    while (isspace(*t)) {
         t--;
     }
-    *( t + 1 ) = '\0';
 
-    /*TODO Please return appropriate value*/
+    // Add the null terminator byte.
+    *(t + 1) = '\0';
+
     return 0;
 }
+
 int
 trimQuotes( char * s ) {
     char *t;

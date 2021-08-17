@@ -41,6 +41,7 @@
 #include "dns_cache.hpp"
 #include "irods_configuration_keywords.hpp"
 #include "irods_server_properties.hpp"
+#include "irods_at_scope_exit.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -2667,15 +2668,14 @@ setStateForRestart( rodsRestart_t * rodsRestart, rodsPath_t * targPath,
 
 
 
-int
-getAttrIdFromAttrName( char * cname ) {
-
-    int i;
-    for ( i = 0; i < NumOfColumnNames ; i++ ) {
-        if ( !strcmp( columnNames[i].columnName, cname ) ) {
+int getAttrIdFromAttrName(char* column_name)
+{
+    for (int i = 0; i < NumOfColumnNames; ++i) {
+        if (strcmp(columnNames[i].columnName, column_name) == 0) {
             return columnNames[i].columnId;
         }
     }
+
     return NO_COLUMN_NAME_FOUND;
 }
 
@@ -2688,55 +2688,77 @@ showAttrNames() {
     return 0;
 }
 
-int
-separateSelFuncFromAttr( char * t, char **aggOp, char **colNm ) {
-    char *s;
+int separateSelFuncFromAttr(char* t, char** aggregate_operator, char** column_name)
+{
+    // Look for an open parenthesis.
+    char *s = strchr(t, '(');
 
-    if ( ( s = strchr( t, '(' ) ) == NULL ) {
-        *colNm = t;
-        *aggOp = NULL;
+    // If we didn't find an open parenthesis, there is no aggregate operation
+    // being performed on the column. Therefore, our column name is equal to
+    // the string that was passed in and we can return immediately.
+    if (!s) {
+        *column_name = t;
+        *aggregate_operator = nullptr;
         return 0;
     }
-    *aggOp = t;
+
+    // At this point, we know the aggregate operation is at "t".
+    *aggregate_operator = t;
+
+    // Insert a null terminator at the location of the open parenthesis. This
+    // helps us identify the name of the aggregate operation.
     *s = '\0';
-    s++;
-    *colNm = s;
-    if ( ( s = strchr( *colNm, ')' ) ) == NULL ) {
+
+    // Increment the "s" pointer's position so that we can capture the name of
+    // the column.
+    *column_name = ++s;
+
+    // Look for the closing parenthesis.
+    s = strchr(*column_name, ')');
+
+    if (!s) {
         return NO_COLUMN_NAME_FOUND;
     }
+
+    // Add the null terminator byte so that we have a proper column name.
     *s = '\0';
+
     return 0;
 }
 
-int
-getSelVal( char * c ) {
+int getSelVal(char* c)
+{
     if ( c == NULL ) {
         return 1;
     }
+
     if ( !strcmp( c, "sum" ) || !strcmp( c, "SUM" ) ) {
         return SELECT_SUM;
     }
+
     if ( !strcmp( c, "min" ) || !strcmp( c, "MIN" ) ) {
         return SELECT_MIN;
     }
+
     if ( !strcmp( c, "max" ) || !strcmp( c, "MAX" ) ) {
         return SELECT_MAX;
     }
+
     if ( !strcmp( c, "avg" ) || !strcmp( c, "AVG" ) ) {
         return SELECT_AVG;
     }
+
     if ( !strcmp( c, "count" ) || !strcmp( c, "COUNT" ) ) {
         return SELECT_COUNT;
     }
-    // =-=-=-=-=-=-=-
-    // JMC - backport 4795
+
     if ( !strcmp( c, "order" ) || !strcmp( c, "ORDER" ) ) {
         return ORDER_BY;
     }
+
     if ( !strcmp( c, "order_desc" ) || !strcmp( c, "ORDER_DESC" ) ) {
         return ORDER_BY_DESC;
     }
-    // =-=-=-=-=-=-=-
 
     return 1;
 }
@@ -2754,168 +2776,279 @@ getAttrNameFromAttrId( int cid ) {
     return NULL;
 }
 
-int
-goodStrExpr( char * expr ) {
-    int qcnt = 0;
-    int qqcnt = 0;
-    int bcnt = 0;
-    int i = 0;
-    int inq =  0;
-    int inqq =  0;
-    while ( expr[i] != '\0' ) {
-        if ( inq ) {
-            if ( expr[i] == '\'' ) {
+int goodStrExpr(char* expr)
+{
+    int qcnt = 0;   // Single quote counter.
+    int qqcnt = 0;  // Double quote counter.
+    int bcnt = 0;   // Parenthesis counter.
+    int inq = 0;    // Indicates single quotes context.
+    int inqq = 0;   // Indicates double quotes context.
+
+#if 0
+    const auto is_escaped = [expr](int _i)
+    {
+        return _i > 0 && expr[_i - 1] == '\\';
+    };
+#endif
+
+    for (int i = 0; expr[i] != '\0'; ++i) {
+        if (inq) {
+#if 0
+            if (expr[i] == '\'' && !is_escaped(i)) {
+#else
+            if (expr[i] == '\'') {
+#endif
                 inq--;
                 qcnt++;
             }
         }
-        else if ( inqq ) {
-            if ( expr[i] == '"' ) {
+        else if (inqq) {
+            if (expr[i] == '"') {
                 inqq--;
                 qqcnt++;
             }
         }
-        else if ( expr[i] == '\'' ) {
+        else if (expr[i] == '\'') {
             inq++;
             qcnt++;
         }
-        else if ( expr[i] == '"' ) {
+        else if (expr[i] == '"') {
             inqq++;
             qqcnt++;
         }
-        else if ( expr[i] == '(' ) {
+        else if (expr[i] == '(') {
             bcnt++;
         }
-        else if ( expr[i] == ')' )
-            if ( bcnt > 0 ) {
+        else if (expr[i] == ')') {
+            if (bcnt > 0) {
                 bcnt--;
             }
-        i++;
+        }
     }
-    if ( bcnt != 0 || qcnt % 2 != 0 || qqcnt % 2 != 0 ) {
+
+    if (bcnt != 0 || qcnt % 2 != 0 || qqcnt % 2 != 0) {
         return -1;
     }
-    return 0;
 
+    return 0;
 }
 
+char* getCondFromString(char* t)
+{
+    char* u;
+    char* u1;
+    char* u2;
+    char* s = t;
 
-char *getCondFromString( char * t ) {
-    char *u;
-    char *u1, *u2;
-    char *s;
-
-    s = t;
-    for ( ;; ) {
-        /* Search for an 'and' string, either case, and use the one
-           that appears first. */
-        u1 = strstr( s, " and " );
-        u2 = strstr( s, " AND " );
+    while (true) {
+        // Search for an 'and' string, either case, and use the one
+        // that appears first.
+        u1 = strstr(s, " and ");
+        u2 = strstr(s, " AND ");
         u = u1;
-        if ( u1 == NULL ) {
+
+        // If "u1" is null, assume that "u2" points at a valid string.
+        if (!u1) {
             u = u2;
         }
-        if ( u1 != NULL && u2 != NULL ) {
-            if ( strlen( u2 ) > strlen( u1 ) ) {
-                u = u2;    /* both are present, use the first */
+        else if (u2) {
+            // If "u2" points to a longer string than "u1", then "u1" has
+            // possibly skipped too many characters.
+            if (strlen(u2) > strlen(u1)) {
+                u = u2;
             }
         }
 
-        if ( u != NULL ) {
-            *u = '\0';
-            if ( goodStrExpr( t ) == 0 ) {
-                *u = ' ';
-                return u;
-            }
-            *u = ' ';
-            s = u + 1;
-        }
-        else {
+        if (!u) {
             break;
         }
+
+        // Insert a null terminator byte to delimit the current condition.
+        *u = '\0';
+
+        // XXX The use of "goodStrExpr" is why embedded single quotes aren't
+        // supported through this interface. Removing this function call will
+        // allow any number of single quotes to be passed giving us the option
+        // to add full support for things such as character escaping.
+        //
+        // Verify that the current expression is valid.
+        // This means checking that if parentheses appear in the string,
+        // then there must be a closing parenthesis for every open parenthesis.
+        // This applies for single and double quotes as well.
+        if (goodStrExpr(t) == 0) {
+            *u = ' '; // Restore the character before returning.
+            return u;
+        }
+
+        // Restore the character before continuing.
+        *u = ' ';
+
+        // Jump past the current token pointed at by "u".
+        s = u + 1;
     }
-    return NULL;
+
+    return nullptr;
 }
 
-int
-fillGenQueryInpFromStrCond( char * str, genQueryInp_t * genQueryInp ) {
+namespace
+{
+    void unescape_single_quotes(char* _s)
+    {
+        auto* p = _s;
 
-    int  n, m;
-    char *p, *t, *f, *u, *a, *c;
-    char *s;
-    s = strdup( str );
-    if ( ( t = strstr( s, "select" ) ) != NULL ||
-            ( t = strstr( s, "SELECT" ) ) != NULL ) {
+        // Include the null terminator. This is required so that std::rotate
+        // shifts the null terminator as we process the string.
+        auto* q = _s + std::strlen(_s) + 1; 
 
-        if ( ( f = strstr( t, "where" ) ) != NULL ||
-                ( f = strstr( t, "WHERE" ) ) != NULL ) {
-            /* Where Condition Found*/
-            *f = '\0';
-        }
-        t = t +  7;
-        while ( ( u = strchr( t, ',' ) ) != NULL ) {
-            *u = '\0';
-            trimWS( t );
-            separateSelFuncFromAttr( t, &a, &c );
-            m = getSelVal( a );
-            n = getAttrIdFromAttrName( c );
-            if ( n < 0 ) {
-                free( s );
-                return n;
+        while ((p = std::strchr(p == _s ? p : p + 1, '\\'))) {
+            if (p < q && '\'' == *(p + 1)) {
+                std::rotate(p, p + 1, q);
             }
-            addInxIval( &genQueryInp->selectInp, n, m );
-            t  = u + 1;
         }
-        trimWS( t );
-        separateSelFuncFromAttr( t, &a, &c );
-        m = getSelVal( a );
-        n = getAttrIdFromAttrName( c );
-        if ( n < 0 ) {
-            free( s );
-            return n;
+    } // unescape_single_quotes
+
+    int add_column(GenQueryInp& _gq_input, char* _gql_fragment)
+    {
+        // Trim any leading/trailing whitespace before processing the string.
+        trimWS(_gql_fragment);
+
+        char* aggregate_operator;
+        char* column_name;
+
+        // Extract the aggregate operator (if available) and column name.
+        separateSelFuncFromAttr(_gql_fragment, &aggregate_operator, &column_name);
+
+        // Convert the string based names to GenQuery identifiers.
+        const auto aggregate_op_id = getSelVal(aggregate_operator);
+        const auto column_id = getAttrIdFromAttrName(column_name);
+
+        if (column_id < 0) {
+            return column_id;
         }
-        addInxIval( &genQueryInp->selectInp, n, m );
-        if ( f == NULL ) {
-            free( s );
-            return 0;
-        }
-    }
-    else {
-        free( s );
-        return INPUT_ARG_NOT_WELL_FORMED_ERR;
-    }
-    t = f + 6;
-    while ( ( u = getCondFromString( t ) ) != NULL ) {
-        *u = '\0';
-        trimWS( t );
-        if ( ( p = strchr( t, ' ' ) ) == NULL ) {
-            free( s );
+
+        // Update the GenQuery input structure with the new information.
+        // This line specifically adds a new field to the "select" clause
+        // of the GenQuery input structure.
+        addInxIval(&_gq_input.selectInp, column_id, aggregate_op_id);
+
+        return 0;
+    } // add_column
+
+    int add_condition(GenQueryInp& _gq_input, char* _gql_fragment)
+    {
+        // Trim any leading/trailing whitespace before processing the string.
+        trimWS(_gql_fragment);
+
+        // Given a GQL fragment such as "DATA_NAME = 'foo'", "delimiter"
+        // represents the address used to delimit "DATA_NAME" from "= 'foo'".
+        char* delimiter;
+
+        // Find the end of the left-hand side of the condition statement
+        // (i.e. <lhs> <rhs>). Based on the example, we're interested in
+        // the whitespace following <lhs>.
+        if (!(delimiter = strchr(_gql_fragment, ' '))) {
             return INPUT_ARG_NOT_WELL_FORMED_ERR;
         }
-        *p = '\0';
-        n = getAttrIdFromAttrName( t );
-        if ( n < 0 ) {
-            free( s );
-            return n;
+
+        // Insert a null terminator. This makes "_gql_fragment" point at
+        // a null terminated string. The character following this address
+        // will represent the start of the condition's value.
+        *delimiter = '\0';
+
+        const int column_id = getAttrIdFromAttrName(_gql_fragment);
+
+        if (column_id < 0) {
+            return column_id;
         }
-        addInxVal( &genQueryInp->sqlCondInp, n, p + 1 );
-        t = u + 5;
-    }
-    trimWS( t );
-    if ( ( p = strchr( t, ' ' ) ) == NULL ) {
-        free( s );
+
+        // "delimiter + 1" points at the the condition's value fragment
+        // (e.g. "<op> <value>").
+        addInxVal(&_gq_input.sqlCondInp, column_id, delimiter + 1);
+
+        return 0;
+    } // add_condition
+} // anonymous namespace
+
+int fillGenQueryInpFromStrCond(char* str, genQueryInp_t* genQueryInp)
+{
+    char* s = strdup(str);
+    irods::at_scope_exit free_query_string{[&s] { std::free(s); }};
+
+    char* gql_fragment;
+
+    // Find the "select" clause.
+    if (!((gql_fragment = strstr(s, "select")) || (gql_fragment = strstr(s, "SELECT")))) {
         return INPUT_ARG_NOT_WELL_FORMED_ERR;
     }
-    *p = '\0';
-    n = getAttrIdFromAttrName( t );
-    if ( n < 0 ) {
-        free( s );
-        return n;
+
+    char* where_clause;
+
+    // Find the "where" clause.
+    if ((where_clause = strstr(gql_fragment, "where")) ||
+        (where_clause = strstr(gql_fragment, "WHERE")))
+    {
+        // This creates a null terminated string for the "select" clause.
+        *where_clause = '\0';
     }
-    addInxVal( &genQueryInp->sqlCondInp, n, p + 1 );
-    free( s );
+
+    // Skip the first 7 characters (i.e. "select ").
+    gql_fragment += 7;
+
+    char* delimiter;
+
+    while ((delimiter = strchr(gql_fragment, ','))) {
+        // Insert a null terminator byte. This makes what "gql_fragment" currently points
+        // to a null terminated string. Remember, "delimiter" points at the
+        // end of a token.
+        *delimiter = '\0';
+
+        if (const auto ec = add_column(*genQueryInp, gql_fragment); ec < 0) {
+            return ec;
+        }
+
+        // Skip the previously processed tokens.
+        gql_fragment = delimiter + 1;
+    }
+
+    // Handle the final column of the "select" clause.
+    if (const auto ec = add_column(*genQueryInp, gql_fragment); ec < 0) {
+        return ec;
+    }
+
+    // If we didn't find a "where" clause in the string, then we're done.
+    if (!where_clause) {
+        return 0;
+    }
+
+    //
+    // At this point, we've processed all of the columns of the "select" clause
+    // and now we must handle the "where" clause.
+    //
+
+    // Skip the first 6 characters (i.e. "where ").
+    gql_fragment = where_clause + 6;
+
+    while ((delimiter = getCondFromString(gql_fragment))) {
+        // Insert a null terminator byte. This makes what "gql_fragment" currently points
+        // to a null terminated string. Remember, "delimiter" points at the
+        // end of a token.
+        *delimiter = '\0';
+
+        if (const auto ec = add_condition(*genQueryInp, gql_fragment); ec < 0) {
+            return ec;
+        }
+
+        // Skip the previously processed tokens.
+        gql_fragment = delimiter + 5;
+    }
+
+    // Handle the final condition of the "where" clause.
+    if (const auto ec = add_condition(*genQueryInp, gql_fragment); ec < 0) {
+        return ec;
+    }
+
     return 0;
-}
+} // fillGenQueryInpFromStrCond
 
 int
 printGenQueryOut( FILE * fd, char * format, char * hint, genQueryOut_t * genQueryOut ) {

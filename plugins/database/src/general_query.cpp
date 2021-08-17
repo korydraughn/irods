@@ -1334,11 +1334,11 @@ addInClauseToWhereForParentOf( char *inArg )
     return 0;
 }
 
-/*
-add an IN clause to the whereSQL string for a client IN request
- */
-int
-addInClauseToWhereForIn( char *inArg, int option ) {
+// add an IN clause to the whereSQL string for a client IN request.
+// "option" is the reinitialize structures flag. Setting "option" to 1
+// instructs the function to reset the function's state and return.
+int addInClauseToWhereForIn(char* inArg, int option)
+{
     int i, len;
     int startIx, endIx;
     int nput = 0;
@@ -1352,6 +1352,7 @@ addInClauseToWhereForIn( char *inArg, int option ) {
         inStrIx = 0;
         return 0;
     }
+
     if ( !rstrcat( whereSQL, " IN (", MAX_SQL_SIZE_GQ ) ) { return USER_STRLEN_TOOLONG; }
     len = strlen( inArg );
     for ( i = 0; i < len + 1; i++ ) {
@@ -1484,6 +1485,7 @@ insertWhere( char *condition, int option ) {
     if ( cp == NULL ) {
         cp = strstr( condition, "IN" );
     }
+
     if ( cp != NULL && cp == condStart ) {
         return addInClauseToWhereForIn( condition, 0 );
     }

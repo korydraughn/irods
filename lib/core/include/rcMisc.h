@@ -239,7 +239,7 @@ int appendToByteBuf(bytesBuf_t* bytesBuf, char* str);
 
 char* getAttrNameFromAttrId(int cid);
 
-int getAttrIdFromAttrName(char* cname);
+int getAttrIdFromAttrName(char* column_name);
 
 int showAttrNames();
 
