@@ -492,7 +492,7 @@ set(
   ${CMAKE_SOURCE_DIR}/server/core/include/fileOpr.hpp
   ${CMAKE_SOURCE_DIR}/server/core/include/finalize_utilities.hpp
   ${CMAKE_SOURCE_DIR}/server/core/include/initServer.hpp
-  ${CMAKE_SOURCE_DIR}/server/core/include/irodsReServer.hpp
+  ${CMAKE_SOURCE_DIR}/server/core/include/irodsDelayServer.hpp
   ${CMAKE_SOURCE_DIR}/server/core/include/irods_api_calling_functions.hpp
   ${CMAKE_SOURCE_DIR}/server/core/include/irods_collection_object.hpp
   ${CMAKE_SOURCE_DIR}/server/core/include/irods_data_object.hpp

@@ -3,7 +3,7 @@
 install(
   TARGETS
   irodsServer
-  irodsReServer
+  irodsDelayServer
   irods_api_test_harness
   irods_configuration_test_harness
   hostname_resolves_to_local_address

@@ -1,3 +1,4 @@
+#include "irodsDelayServer.hpp"
 #include "connection_pool.hpp"
 #include "client_connection.hpp"
 #include "initServer.hpp"
@@ -11,7 +12,6 @@
 #include "rcGlobalExtern.h"
 #include "rodsDef.h"
 #include "thread_pool.hpp"
-#include "irodsReServer.hpp"
 #include "miscServerFunct.hpp"
 #include "msParam.h"
 #include "objInfo.h"
