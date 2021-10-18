@@ -3,7 +3,7 @@
 #include "rcConnect.h"
 #include "rodsPackInstruct.h"
 #include "apiHandler.hpp"
-#include "client_api_whitelist.hpp"
+#include "client_api_allowlist.hpp"
 
 #include <functional>
 
@@ -506,7 +506,7 @@ auto plugin_factory(const std::string& _instance_name,
                     const std::string& _context) -> irods::api_entry*
 {
 #ifdef RODS_SERVER
-    irods::client_api_whitelist::instance().add(TOUCH_APN);
+    irods::client_api_allowlist::instance().add(TOUCH_APN);
 #endif // RODS_SERVER
 
     // clang-format off

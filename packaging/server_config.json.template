@@ -22,7 +22,7 @@
             "eviction_age_in_seconds": 3600
         }
     },
-    "client_api_whitelist_policy": "enforce",
+    "client_api_allowlist_policy": "enforce",
     "default_dir_mode": "0750",
     "default_file_mode": "0600",
     "default_hash_scheme": "SHA256",

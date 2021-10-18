@@ -1,7 +1,7 @@
 #include "apiHandler.hpp"
 #include "api_plugin_number.h"
 #include "experimental_plugin_framework.hpp"
-#include "client_api_whitelist.hpp"
+#include "client_api_allowlist.hpp"
 #include "json.hpp"
 
 #include "irods_re_namespaceshelper.hpp"
@@ -292,9 +292,9 @@ namespace {
 extern "C" {
     irods::api_entry* plugin_factory(const std::string&, const std::string&)
     {
-        #ifdef RODS_SERVER
-        irods::client_api_whitelist::instance().add(ADAPTER_APN);
-        #endif
+#ifdef RODS_SERVER
+        irods::client_api_allowlist::instance().add(ADAPTER_APN);
+#endif
 
         // =-=-=-=-=-=-=-
         // create a api def object

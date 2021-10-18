@@ -206,11 +206,11 @@ class Test_Auth(resource_suite.ResourceBase, unittest.TestCase):
         l.debug("final contents:\n%s", final_contents)
         assert initial_contents == final_contents
 
-    def test_blacklist(self):
+    def test_denylist(self):
         with lib.file_backed_up(paths.server_config_path()):
             server_config_update = {
                 'controlled_user_connection_list' : {
-                    'control_type' : 'blacklist',
+                    'control_type' : 'denylist',
                     'users' : [
                         'user1#tempZone',
                         'user2#otherZone',
@@ -221,17 +221,18 @@ class Test_Auth(resource_suite.ResourceBase, unittest.TestCase):
             }
             lib.update_json_file_from_dict(paths.server_config_path(), server_config_update)
 
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
             self.user_sessions[0].assert_icommand( 'ils', 'STDERR_SINGLELINE', 'SYS_USER_NOT_ALLOWED_TO_CONN' )
             self.user_sessions[1].assert_icommand( 'ils', 'STDOUT_SINGLELINE', '/home' )
-        IrodsController().restart()
 
-    def test_whitelist(self):
+        IrodsController().restart(test_mode=True)
+
+    def test_allowlist(self):
         with lib.file_backed_up(paths.server_config_path()):
             service_account = IrodsConfig().client_environment
             server_config_update = {
                 'controlled_user_connection_list' : {
-                    'control_type' : 'whitelist',
+                    'control_type' : 'allowlist',
                     'users' : [
                         'user1#tempZone',
                         'user2#otherZone',
@@ -243,8 +244,9 @@ class Test_Auth(resource_suite.ResourceBase, unittest.TestCase):
             }
             lib.update_json_file_from_dict(paths.server_config_path(), server_config_update)
 
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
             self.user_sessions[0].assert_icommand( 'ils', 'STDOUT_SINGLELINE', '/home' )
             self.user_sessions[1].assert_icommand( 'ils', 'STDERR_SINGLELINE', 'SYS_USER_NOT_ALLOWED_TO_CONN' )
-        IrodsController().restart()
+
+        IrodsController().restart(test_mode=True)
 
