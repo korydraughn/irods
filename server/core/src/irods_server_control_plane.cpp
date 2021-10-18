@@ -399,7 +399,7 @@ namespace irods {
         json obj{
             {"hostname", my_env.rodsHost},
             {"irods_server_pid", my_pid}, // Should be int
-            {"re_server_pid", re_pid} // Should be int
+            {"delay_server_pid", re_pid}  // Should be int
         };
 
         server_state& s = server_state::instance();
