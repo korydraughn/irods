@@ -246,12 +246,13 @@ namespace
     auto to_upper_copy(const std::string& _s) -> std::string;
 
     template <typename Container>
-    auto at(const Container& _data, const std::string_view _column_name) -> std::string;
+    auto required_value(const Container& _data, const std::string_view _column_name)
+        -> std::string_view;
 
     template <typename Container>
-    auto value(const Container& _data,
-               const std::string_view _column_name,
-               const std::string_view _fallback_value) -> std::string;
+    auto optional_value(const Container& _data,
+                        const std::string_view _column_name,
+                        const std::string_view _default_value) -> std::string_view;
 
     auto init_conditionals(const std::string_view _table_name,
                            const std::vector<dml::condition>& _conditions)
@@ -317,29 +318,29 @@ namespace
 
             const auto timestamp = current_timestamp();
 
+            const auto parent_coll_name = required_value(_op.data, "parent_coll_name");
+            const auto coll_name = required_value(_op.data, "coll_name");
+            const auto coll_owner_name = required_value(_op.data, "coll_owner_name");
+            const auto coll_owner_zone = required_value(_op.data, "coll_owner_zone");
+            const auto coll_map_id = optional_value(_op.data, "coll_map_id", "0");
+            const auto coll_inheritance = optional_value(_op.data, "coll_inheritance", "");
+            const auto coll_type = optional_value(_op.data, "coll_type", "");
+            const auto coll_info_1 = optional_value(_op.data, "coll_info1", "");
+            const auto coll_info_2 = optional_value(_op.data, "coll_info2", "");
+            const auto coll_expiry_ts = optional_value(_op.data, "coll_expiry_ts", "");
+            const auto r_comment = optional_value(_op.data, "r_comment", "");
+            const auto create_ts = optional_value(_op.data, "create_ts", timestamp);
+            const auto modify_ts = optional_value(_op.data, "modify_ts", timestamp);
+
             nanodbc::statement stmt{_db_conn};
             nanodbc::prepare(stmt, sql.data());
-
-            const auto& parent_coll_name = at(_op.data, "parent_coll_name");          // Cannot be null
-            const auto& coll_name = at(_op.data, "coll_name");                        // Cannot be null
-            const auto& coll_owner_name = at(_op.data, "coll_owner_name");            // Cannot be null
-            const auto& coll_owner_zone = at(_op.data, "coll_owner_zone");            // Cannot be null
-            const auto coll_map_id = std::stoi(value(_op.data, "coll_map_id", "0"));  // Cannot be null
-            const auto coll_inheritance = value(_op.data, "coll_inheritance", "");
-            const auto coll_type = value(_op.data, "coll_type", "");
-            const auto coll_info_1 = value(_op.data, "coll_info1", "");
-            const auto coll_info_2 = value(_op.data, "coll_info2", "");
-            const auto coll_expiry_ts = value(_op.data, "coll_expiry_ts", "");
-            const auto r_comment = value(_op.data, "r_comment", "");
-            const auto create_ts = value(_op.data, "create_ts", timestamp);
-            const auto modify_ts = value(_op.data, "modify_ts", timestamp);
 
             int i = 0;
             stmt.bind(  i, parent_coll_name.data());
             stmt.bind(++i, coll_name.data());
             stmt.bind(++i, coll_owner_name.data());
             stmt.bind(++i, coll_owner_zone.data());
-            stmt.bind(++i, &coll_map_id);
+            stmt.bind(++i, coll_map_id.data());
             stmt.bind(++i, coll_inheritance.data());
             stmt.bind(++i, coll_type.data());
             stmt.bind(++i, coll_info_1.data());
@@ -426,36 +427,36 @@ namespace
 
             const auto timestamp = current_timestamp();
 
+            const auto coll_id = required_value(_op.data, "coll_id");
+            const auto data_name = required_value(_op.data, "data_name");
+            const auto data_repl_num = required_value(_op.data, "data_repl_num");
+            const auto data_version = optional_value(_op.data, "data_version", "0");
+            const auto data_type_name = required_value(_op.data, "data_type_name");
+            const auto data_size = optional_value(_op.data, "data_size", "0");
+            const auto resc_group_name = optional_value(_op.data, "resc_group_name", "EMPTY_RESC_GROUP_NAME");
+            const auto resc_name = optional_value(_op.data, "resc_name", "EMPTY_RESC_NAME");
+            const auto data_path = required_value(_op.data, "data_path");
+            const auto data_owner_name = required_value(_op.data, "data_owner_name");
+            const auto data_owner_zone = required_value(_op.data, "data_owner_zone");
+            const auto data_is_dirty = optional_value(_op.data, "data_is_dirty", "0");
+            const auto data_status = optional_value(_op.data, "data_status", "");
+            const auto data_checksum = optional_value(_op.data, "data_checksum", "");
+            const auto data_expiry_ts = optional_value(_op.data, "data_expiry_ts", "");
+            const auto data_map_id = optional_value(_op.data, "data_map_id", "0");
+            const auto data_mode = optional_value(_op.data, "data_mode", "");
+            const auto r_comment = optional_value(_op.data, "r_comment", "");
+            const auto create_ts = optional_value(_op.data, "create_ts", timestamp);
+            const auto modify_ts = optional_value(_op.data, "modify_ts", timestamp);
+            const auto resc_hier = optional_value(_op.data, "resc_hier", "EMPTY_RESC_HIER");
+            const auto resc_id = required_value(_op.data, "resc_id");
+
             nanodbc::statement stmt{_db_conn};
             nanodbc::prepare(stmt, sql.data());
 
-            const auto coll_id = std::stoi(at(_op.data, "coll_id"));                           // Cannot be null
-            const auto& data_name = at(_op.data, "data_name");                                 // Cannot be null
-            const auto data_repl_num = std::stoi(at(_op.data, "data_repl_num"));               // Cannot be null
-            const auto data_version = value(_op.data, "data_version", "0");
-            const auto& data_type_name = at(_op.data, "data_type_name");                       // Cannot be null
-            const auto data_size = value(_op.data, "data_size", "0");                          // Cannot be null
-            const auto resc_group_name = value(_op.data, "resc_group_name", "EMPTY_RESC_GROUP_NAME");
-            const auto resc_name = value(_op.data, "resc_name", "EMPTY_RESC_NAME");            // Cannot be null
-            const auto& data_path = at(_op.data, "data_path");                                 // Cannot be null
-            const auto& data_owner_name = at(_op.data, "data_owner_name");                     // Cannot be null
-            const auto& data_owner_zone = at(_op.data, "data_owner_zone");                     // Cannot be null
-            const auto data_is_dirty = std::stoi(value(_op.data, "data_is_dirty", "0"));
-            const auto data_status = value(_op.data, "data_status", "");
-            const auto data_checksum = value(_op.data, "data_checksum", "");
-            const auto data_expiry_ts = value(_op.data, "data_expiry_ts", "");
-            const auto data_map_id = std::stoll(value(_op.data, "data_map_id", "0"));
-            const auto data_mode = value(_op.data, "data_mode", "");
-            const auto r_comment = value(_op.data, "r_comment", "");
-            const auto create_ts = value(_op.data, "create_ts", timestamp);
-            const auto modify_ts = value(_op.data, "modify_ts", timestamp);
-            const auto resc_hier = value(_op.data, "resc_hier", "EMPTY_RESC_HIER");
-            const auto resc_id = std::stoi(at(_op.data, "resc_id"));                          // This is required.
-
             int i = 0;
-            stmt.bind(  i, &coll_id);
+            stmt.bind(  i, coll_id.data());
             stmt.bind(++i, data_name.data());
-            stmt.bind(++i, &data_repl_num);
+            stmt.bind(++i, data_repl_num.data());
             stmt.bind(++i, data_version.data());
             stmt.bind(++i, data_type_name.data());
             stmt.bind(++i, data_size.data());
@@ -464,17 +465,17 @@ namespace
             stmt.bind(++i, data_path.data());
             stmt.bind(++i, data_owner_name.data());
             stmt.bind(++i, data_owner_zone.data());
-            stmt.bind(++i, &data_is_dirty);
+            stmt.bind(++i, data_is_dirty.data());
             stmt.bind(++i, data_status.data());
             stmt.bind(++i, data_checksum.data());
             stmt.bind(++i, data_expiry_ts.data());
-            stmt.bind(++i, &data_map_id);
+            stmt.bind(++i, data_map_id.data());
             stmt.bind(++i, data_mode.data());
             stmt.bind(++i, r_comment.data());
             stmt.bind(++i, create_ts.data());
             stmt.bind(++i, modify_ts.data());
             stmt.bind(++i, resc_hier.data());
-            stmt.bind(++i, &resc_id);
+            stmt.bind(++i, resc_id.data());
 
             nanodbc::execute(stmt);
         }
@@ -532,16 +533,16 @@ namespace
 
             const auto timestamp = current_timestamp();
 
+            const auto meta_namespace = optional_value(_op.data, "meta_namespace", "");
+            const auto meta_attr_name = required_value(_op.data, "meta_attr_name");
+            const auto meta_attr_value = required_value(_op.data, "meta_attr_value");
+            const auto meta_attr_unit = optional_value(_op.data, "meta_attr_unit", "");
+            const auto r_comment = optional_value(_op.data, "r_comment", "");
+            const auto create_ts = optional_value(_op.data, "create_ts", timestamp);
+            const auto modify_ts = optional_value(_op.data, "modify_ts", timestamp);
+
             nanodbc::statement stmt{_db_conn};
             nanodbc::prepare(stmt, sql.data());
-
-            const auto meta_namespace = value(_op.data, "meta_namespace", "");
-            const auto& meta_attr_name = at(_op.data, "meta_attr_name");   // Cannot be null
-            const auto& meta_attr_value = at(_op.data, "meta_attr_value"); // Cannot be null
-            const auto meta_attr_unit = value(_op.data, "meta_attr_unit", "");
-            const auto r_comment = value(_op.data, "r_comment", "");
-            const auto create_ts = value(_op.data, "create_ts", timestamp);
-            const auto modify_ts = value(_op.data, "modify_ts", timestamp);
 
             int i = 0;
             stmt.bind(  i, meta_namespace.data());
@@ -580,14 +581,14 @@ namespace
         try {
             const auto timestamp = current_timestamp();
 
+            const auto object_id = required_value(_op.data, "object_id");
+            const auto meta_id = required_value(_op.data, "meta_id");
+            const auto create_ts = optional_value(_op.data, "create_ts", timestamp);
+            const auto modify_ts = optional_value(_op.data, "modify_ts", timestamp);
+
             nanodbc::statement stmt{_db_conn};
             nanodbc::prepare(stmt, "insert into R_OBJT_METAMAP (object_id, meta_id, create_ts, modify_ts) "
                                    "values (?, ?, ?, ?)");
-
-            const auto& object_id = at(_op.data, "object_id");  // Cannot be null
-            const auto& meta_id = at(_op.data, "meta_id");      // Cannot be null
-            const auto create_ts = value(_op.data, "create_ts", timestamp);
-            const auto modify_ts = value(_op.data, "modify_ts", timestamp);
 
             stmt.bind(0, object_id.data());
             stmt.bind(1, meta_id.data());
@@ -670,27 +671,27 @@ namespace
 
             const auto timestamp = current_timestamp();
 
+            const auto resc_name = required_value(_op.data, "resc_name");
+            const auto zone_name = required_value(_op.data, "zone_name");
+            const auto resc_type_name = required_value(_op.data, "resc_type_name");
+            const auto resc_class_name = required_value(_op.data, "resc_class_name");
+            const auto resc_net = required_value(_op.data, "resc_net");
+            const auto resc_def_path = required_value(_op.data, "resc_def_path");
+            const auto free_space = optional_value(_op.data, "free_space", "");
+            const auto free_space_ts = optional_value(_op.data, "free_space_ts", "");
+            const auto resc_info = optional_value(_op.data, "resc_info", "");
+            const auto r_comment = optional_value(_op.data, "r_comment", "");
+            const auto resc_status = optional_value(_op.data, "resc_status", "");
+            const auto create_ts = optional_value(_op.data, "create_ts", timestamp);
+            const auto modify_ts = optional_value(_op.data, "modify_ts", timestamp);
+            const auto resc_children = optional_value(_op.data, "resc_children", "");
+            const auto resc_context = optional_value(_op.data, "resc_context", "");
+            const auto resc_parent = optional_value(_op.data, "resc_parent", "");
+            const auto resc_objcount = optional_value(_op.data, "resc_objcount", "0");
+            const auto resc_parent_context = optional_value(_op.data, "resc_parent_context", "");
+
             nanodbc::statement stmt{_db_conn};
             nanodbc::prepare(stmt, sql.data());
-
-            const auto& resc_name = at(_op.data, "resc_name");              // Cannot be null
-            const auto& zone_name = at(_op.data, "zone_name");              // Cannot be null
-            const auto& resc_type_name = at(_op.data, "resc_type_name");    // Cannot be null
-            const auto& resc_class_name = at(_op.data, "resc_class_name");  // Cannot be null
-            const auto& resc_net = at(_op.data, "resc_net");                // Cannot be null
-            const auto& resc_def_path = at(_op.data, "resc_def_path");      // Cannot be null
-            const auto free_space = value(_op.data, "free_space", "");
-            const auto free_space_ts = value(_op.data, "free_space_ts", "");
-            const auto resc_info = value(_op.data, "resc_info", "");
-            const auto r_comment = value(_op.data, "r_comment", "");
-            const auto resc_status = value(_op.data, "resc_status", "");
-            const auto create_ts = value(_op.data, "create_ts", timestamp);
-            const auto modify_ts = value(_op.data, "modify_ts", timestamp);
-            const auto resc_children = value(_op.data, "resc_children", "");
-            const auto resc_context = value(_op.data, "resc_context", "");
-            const auto resc_parent = value(_op.data, "resc_parent", "");
-            const auto resc_objcount = std::stoi(value(_op.data, "resc_objcount", "0"));
-            const auto resc_parent_context = value(_op.data, "resc_parent_context", "");
 
             int i = 0;
             stmt.bind(  i, resc_name.data());
@@ -709,7 +710,7 @@ namespace
             stmt.bind(++i, resc_children.data());
             stmt.bind(++i, resc_context.data());
             stmt.bind(++i, resc_parent.data());
-            stmt.bind(++i, &resc_objcount);
+            stmt.bind(++i, resc_objcount.data());
             stmt.bind(++i, resc_parent_context.data());
 
             nanodbc::execute(stmt);
@@ -784,27 +785,27 @@ namespace
 
             const auto timestamp = current_timestamp();
 
+            const auto resc_name = required_value(_op.data, "resc_name");
+            const auto zone_name = required_value(_op.data, "zone_name");
+            const auto resc_type_name = required_value(_op.data, "resc_type_name");
+            const auto resc_class_name = required_value(_op.data, "resc_class_name");
+            const auto resc_net = required_value(_op.data, "resc_net");
+            const auto resc_def_path = required_value(_op.data, "resc_def_path");
+            const auto free_space = optional_value(_op.data, "free_space", "");
+            const auto free_space_ts = optional_value(_op.data, "free_space_ts", "");
+            const auto resc_info = optional_value(_op.data, "resc_info", "");
+            const auto r_comment = optional_value(_op.data, "r_comment", "");
+            const auto resc_status = optional_value(_op.data, "resc_status", "");
+            const auto create_ts = optional_value(_op.data, "create_ts", timestamp);
+            const auto modify_ts = optional_value(_op.data, "modify_ts", timestamp);
+            const auto resc_children = optional_value(_op.data, "resc_children", "");
+            const auto resc_context = optional_value(_op.data, "resc_context", "");
+            const auto resc_parent = optional_value(_op.data, "resc_parent", "");
+            const auto resc_objcount = optional_value(_op.data, "resc_objcount", "0");
+            const auto resc_parent_context = optional_value(_op.data, "resc_parent_context", "");
+
             nanodbc::statement stmt{_db_conn};
             nanodbc::prepare(stmt, sql.data());
-
-            const auto& resc_name = at(_op.data, "resc_name");              // Cannot be null
-            const auto& zone_name = at(_op.data, "zone_name");              // Cannot be null
-            const auto& resc_type_name = at(_op.data, "resc_type_name");    // Cannot be null
-            const auto& resc_class_name = at(_op.data, "resc_class_name");  // Cannot be null
-            const auto& resc_net = at(_op.data, "resc_net");                // Cannot be null
-            const auto& resc_def_path = at(_op.data, "resc_def_path");      // Cannot be null
-            const auto free_space = value(_op.data, "free_space", "");
-            const auto free_space_ts = value(_op.data, "free_space_ts", "");
-            const auto resc_info = value(_op.data, "resc_info", "");
-            const auto r_comment = value(_op.data, "r_comment", "");
-            const auto resc_status = value(_op.data, "resc_status", "");
-            const auto create_ts = value(_op.data, "create_ts", timestamp);
-            const auto modify_ts = value(_op.data, "modify_ts", timestamp);
-            const auto resc_children = value(_op.data, "resc_children", "");
-            const auto resc_context = value(_op.data, "resc_context", "");
-            const auto resc_parent = value(_op.data, "resc_parent", "");
-            const auto resc_objcount = std::stoi(value(_op.data, "resc_objcount", "0"));
-            const auto resc_parent_context = value(_op.data, "resc_parent_context", "");
 
             int i = 0;
             stmt.bind(  i, resc_name.data());
@@ -823,7 +824,7 @@ namespace
             stmt.bind(++i, resc_children.data());
             stmt.bind(++i, resc_context.data());
             stmt.bind(++i, resc_parent.data());
-            stmt.bind(++i, &resc_objcount);
+            stmt.bind(++i, resc_objcount.data());
             stmt.bind(++i, resc_parent_context.data());
 
             nanodbc::execute(stmt);
@@ -877,10 +878,10 @@ namespace
             const auto sql = fmt::format("insert into {} (ticket_id, {}) values (?, ?)",
                                          to_upper_copy(_op.table), column->name);
 
+            const auto ticket_id = required_value(_op.data, "ticket_id");
+
             nanodbc::statement stmt{_db_conn};
             nanodbc::prepare(stmt, sql);
-
-            const auto& ticket_id = at(_op.data, "ticket_id"); // Cannot be null
 
             stmt.bind(0, ticket_id.data());
             stmt.bind(1, column->value.data());
@@ -1111,7 +1112,8 @@ namespace
     } // to_upper_copy
 
     template <typename Container>
-    auto at(const Container& _data, const std::string_view _column_name) -> std::string
+    auto required_value(const Container& _data, const std::string_view _column_name)
+        -> std::string_view
     {
         const auto end = std::end(_data);
         const auto iter = std::find_if(std::begin(_data), end, [&_column_name](const dml::column& _v) {
@@ -1123,12 +1125,12 @@ namespace
         }
 
         return iter->value;
-    } // at
+    } // required_value
 
     template <typename Container>
-    auto value(const Container& _data,
-               const std::string_view _column_name,
-               const std::string_view _fallback_value) -> std::string
+    auto optional_value(const Container& _data,
+                        const std::string_view _column_name,
+                        const std::string_view _default_value) -> std::string_view
     {
         const auto end = std::end(_data);
         const auto iter = std::find_if(std::begin(_data), end, [&_column_name](const dml::column& _v) {
@@ -1136,11 +1138,11 @@ namespace
         });
 
         if (iter == end) {
-            return _fallback_value.data();
+            return _default_value;
         }
 
         return iter->value;
-    } // value
+    } // optional_value
 
     auto init_conditionals(const std::string_view _table_name,
                            const std::vector<dml::condition>& _conditions)
