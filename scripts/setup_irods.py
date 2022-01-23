@@ -137,7 +137,7 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
             # prompt for default resource information
             default_resource_name = get_default_resource_name(irods_config)
             default_resource_directory = get_and_create_default_resource_vault(irods_config)
-        else
+        else:
             # prompt and set default resource to one hosted elsewhere - the test_put will catch any typos
             default_resource_name = get_default_resource_name(irods_config)
             default_resource_directory = None # passed to 'setting up the database'
@@ -209,9 +209,9 @@ def determine_local_storage(irods_config):
     l.info(irods.lib.get_header('Determining local storage'))
 
     if irods_config.is_provider:
-        default_default = 'yes'
+        default_default = ['yes']
     else:
-        default_default = 'no'
+        default_default = ['no']
 
     local_storage = irods.lib.default_prompt(
         'Local storage on this server',
@@ -229,9 +229,9 @@ def get_default_resource_name(irods_config):
     l.info(irods.lib.get_header('Setting up default resource name'))
 
     if irods_config.is_provider:
-        default_default = "demoResc"
+        default_default = ['demoResc']
     else:
-        default_default = ''.join([irods.lib.get_hostname().split('.')[0], 'Resource'])
+        default_default = [''.join([irods.lib.get_hostname().split('.')[0], 'Resource'])]
     default_resource_name = irods.lib.default_prompt(
         'Default resource',
         default=default_default)
