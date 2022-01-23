@@ -420,12 +420,10 @@ def setup_server_config(irods_config):
         input_filter=irods.lib.character_count_filter(minimum=32, maximum=32, field='Control Plane key'),
         echo=False)
 
-# tgr... TODO not quite right yet
-    if irods_config.is_local_storage:
-        if irods_config.is_consumer:
-            irods_config.server_config['default_resource_name'] = ''.join([irods.lib.get_hostname().split('.')[0], 'Resource'])
-        else:
-            irods_config.server_config['default_resource_name'] = 'demoResc'
+    if irods_config.is_consumer:
+        irods_config.server_config['default_resource_name'] = ''.join([irods.lib.get_hostname().split('.')[0], 'Resource'])
+    else:
+        irods_config.server_config['default_resource_name'] = 'demoResc'
 
     irods_config.commit(irods_config.server_config, irods_config.server_config_path, clear_cache=False)
 
