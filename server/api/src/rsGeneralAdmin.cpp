@@ -1201,8 +1201,7 @@ _rsGeneralAdmin( rsComm_t *rsComm, generalAdminInp_t *generalAdminInp ) {
     }
 
     if ( strcmp( generalAdminInp->arg0, "set_delay_server" ) == 0 ) {
-        status = chlSetDelayServer( rsComm, generalAdminInp->arg1 );
-        return status;
+        return chlSetDelayServer( rsComm, generalAdminInp->arg1 );
     }
 
     if ( strcmp( generalAdminInp->arg0, "lt" ) == 0 ) {
