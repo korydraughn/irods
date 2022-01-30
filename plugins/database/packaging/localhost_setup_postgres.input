@@ -1,7 +1,7 @@
-irods
-irods
-1
-1
+
+
+
+
 localhost
 5432
 ICAT
@@ -10,7 +10,7 @@ y
 testpassword
 
 y
-secondResc
+demoResc
 
 tempZone
 1247
