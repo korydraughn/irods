@@ -12015,9 +12015,15 @@ irods::error db_set_delay_server_op(
     int status = cmlExecuteNoAnswerSql(
                   "update R_GRID_CONFIGURATION set option_value = ? where namespace = 'delay_server' and option_name = 'successor'", &icss );
     if ( status != 0 && status != CAT_SUCCESS_BUT_WITH_NO_INFO ) {
+        _rollback( "chlSetDelayServer" );
         rodsLog( LOG_NOTICE,
                  "chlSetDelayServer cmlExecuteNoAnswerSql failure %d" , status );
         return ERROR( status, "Set Delay Server SQL update failure" );
+    }
+
+    status =  cmlExecuteNoAnswerSql( "commit", &icss );
+    if ( status < 0 ) {
+        return ERROR( status, "commit failed" );
     }
 
     return SUCCESS();
