@@ -47,6 +47,7 @@ import json
 import logging
 import pprint
 import pwd
+import re
 import shutil
 import stat
 import time
@@ -151,6 +152,11 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
     if irods_config.is_consumer:
         irods.lib.execute_command(['iadmin', 'mkresc', irods_config.server_config['default_resource_name'], 'unixfilesystem', ':'.join([irods.lib.get_hostname(), default_resource_directory]), ''])
 
+    # update core.re with default resource
+    core_re_path = os.path.join(irods_config.core_re_directory, 'core.re')
+    replace_in_file(core_re_path, 'demoResc', irods_config.server_config['default_resource_name'])
+
+    # test put
     test_put(irods_config)
 
     l.info(irods.lib.get_header('Log Configuration Notes'))
@@ -166,6 +172,15 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
     IrodsController(irods_config).stop()
 
     l.info(irods.lib.get_header('iRODS is configured and ready to be started'))
+
+def replace_in_file(filepath, original, replacement, flags=0):
+    with open(filepath, "r+") as f:
+        contents = f.read()
+        pattern = re.compile(re.escape(original), flags)
+        new_contents = pattern.sub(replacement, contents)
+        f.seek(0)
+        f.truncate()
+        f.write(new_contents)
 
 def test_put(irods_config):
     l = logging.getLogger(__name__)
