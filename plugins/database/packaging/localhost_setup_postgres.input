@@ -1,13 +1,16 @@
-
-
-
-
+irods
+irods
+1
+1
 localhost
 5432
 ICAT
 irods
 y
 testpassword
+
+y
+secondResc
 
 tempZone
 1247
@@ -23,3 +26,4 @@ TEMPORARY_ZONE_KEY
 rods
 
 
+# todo (and oracle/mysql)

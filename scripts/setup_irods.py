@@ -125,13 +125,6 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
             l.info(irods.lib.get_header('Configuring the database communications'))
             database_interface.setup_database_config(irods_config)
         # default resource
-### intended flow
-# Do you want local storage on this server?
-#  Y
-#    resource name (demoResc or thisserverResc as default):
-#    vault path (.../Vault as default):
-#  N
-#    resource name (from another iRODS server in this zone) (no default):
         local_storage = determine_local_storage(irods_config)
         if local_storage:
             # prompt for default resource information
@@ -141,6 +134,7 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
             # prompt and set default resource to one hosted elsewhere - the test_put will catch any typos
             default_resource_name = get_default_resource_name(irods_config)
             default_resource_directory = None # passed to 'setting up the database'
+        irods_config.server_config['default_resource_name'] = default_resource_name
         # server config
         setup_server_config(irods_config)
         # client environment and password
@@ -155,7 +149,6 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
 
     # create local storage resource for consumer (provider was configured directly in database_interface.setup_catalog above)
     if irods_config.is_consumer:
-        # tgr TODO should it just be the local default_resource_name here?  rather than server_config?
         irods.lib.execute_command(['iadmin', 'mkresc', irods_config.server_config['default_resource_name'], 'unixfilesystem', ':'.join([irods.lib.get_hostname(), default_resource_directory]), ''])
 
     test_put(irods_config)
@@ -229,12 +222,12 @@ def get_default_resource_name(irods_config):
     l.info(irods.lib.get_header('Setting up default resource name'))
 
     if irods_config.is_provider:
-        default_default = ['demoResc']
+        default_default = irods_config.server_config.get('default_resource_name', 'demoResc')
     else:
-        default_default = [''.join([irods.lib.get_hostname().split('.')[0], 'Resource'])]
+        default_default = irods_config.server_config.get('default_resource_name', ''.join([irods.lib.get_hostname().split('.')[0], 'Resource']))
     default_resource_name = irods.lib.default_prompt(
         'Default resource',
-        default=default_default)
+        default=[default_default])
 
     return default_resource_name
 
@@ -419,11 +412,6 @@ def setup_server_config(irods_config):
         'Control Plane key (32 characters)',
         input_filter=irods.lib.character_count_filter(minimum=32, maximum=32, field='Control Plane key'),
         echo=False)
-
-    if irods_config.is_consumer:
-        irods_config.server_config['default_resource_name'] = ''.join([irods.lib.get_hostname().split('.')[0], 'Resource'])
-    else:
-        irods_config.server_config['default_resource_name'] = 'demoResc'
 
     irods_config.commit(irods_config.server_config, irods_config.server_config_path, clear_cache=False)
 
