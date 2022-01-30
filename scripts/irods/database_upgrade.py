@@ -1,5 +1,6 @@
 from . import database_connect
 from .exceptions import IrodsError, IrodsWarning
+from . import lib
 
 import logging
 import re
