@@ -31,7 +31,6 @@
 #include "rcGlobalExtern.h"
 #include "rcMisc.h"
 #include "resource.hpp"
-#include "rodsLog.h"
 #include "rsCollCreate.hpp"
 #include "rsDataObjClose.hpp"
 #include "rsDataObjCreate.hpp"

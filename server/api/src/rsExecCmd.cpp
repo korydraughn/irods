@@ -1,8 +1,3 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-/* This is script-generated code (for the most part).  */
-/* See dataObjRead.h for a description of this API call.*/
-
 #include <sys/types.h>
 #ifndef windows_platform
 #include <sys/wait.h>
@@ -14,7 +9,6 @@
 #include "dataObjOpr.hpp"
 #include "fileClose.h"
 #include "miscServerFunct.hpp"
-#include "rodsLog.h"
 #include "icatDefines.h"
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"
@@ -25,6 +19,7 @@
 #include "irods_re_structs.hpp"
 
 #include <boost/thread/mutex.hpp>
+
 boost::mutex ExecCmdMutex;
 int initExecCmdMutex() {
     return 0;

@@ -2,7 +2,6 @@
 
 #include "rodsErrorTable.h"
 #include "irods_stacktrace.hpp"
-#include "rodsLog.h"
 
 #include "boost/regex.hpp"
 

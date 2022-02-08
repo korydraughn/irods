@@ -9,7 +9,6 @@
 #include "objMetaOpr.hpp"
 #include "rcGlobalExtern.h"
 #include "regDataObj.h"
-#include "rodsLog.h"
 #include "rsDataObjClose.hpp"
 #include "rsDataObjCopy.hpp"
 #include "rsDataObjCreate.hpp"

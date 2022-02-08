@@ -1,6 +1,3 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-
 /*
   This routine sets up the rodsEnv structure using the contents of the
   irods_environment.json file and possibly some environment variables.
@@ -27,7 +24,6 @@
 #include "rods.h"
 #include "rodsErrorTable.h"
 #include "getRodsEnv.h"
-#include "rodsLog.h"
 #include "irods_log.hpp"
 #include "irods_version.h"
 #include "irods_environment_properties.hpp"

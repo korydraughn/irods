@@ -7,7 +7,6 @@
 #include "objMetaOpr.hpp"
 #include "physPath.hpp"
 #include "rcGlobalExtern.h"
-#include "rodsLog.h"
 #include "rsApiHandler.hpp"
 #include "rsDataGet.hpp"
 #include "rsDataObjRead.hpp"

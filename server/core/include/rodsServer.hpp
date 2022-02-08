@@ -1,10 +1,6 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
 /*-------------------------------------------------------------------------
  *
  * rodsServer.hpp-- Header file for rodsServer.cpp
- *
- *
  *
  *-------------------------------------------------------------------------
  */
@@ -19,7 +15,6 @@
 
 #include "rods.h"
 #include "rcGlobalExtern.h"	/* client global */
-#include "rodsLog.h"
 #include "sockComm.h"
 #include "rsIcatOpr.hpp"
 #include "getRodsEnv.h"

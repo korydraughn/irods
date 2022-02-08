@@ -3,7 +3,6 @@
 #include "dataObjInpOut.h"
 #include "dataObjRead.h"
 #include "fileLseek.h"
-#include "rodsLog.h"
 #include "objMetaOpr.hpp"
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"

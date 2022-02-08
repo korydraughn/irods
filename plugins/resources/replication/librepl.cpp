@@ -7,7 +7,6 @@
 // irods includes
 #include "icatHighLevelRoutines.hpp"
 #include "msParam.h"
-#include "rodsLog.h"
 
 // =-=-=-=-=-=-=-
 #include "irods_at_scope_exit.hpp"

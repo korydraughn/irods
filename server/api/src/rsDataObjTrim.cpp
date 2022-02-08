@@ -1,7 +1,6 @@
 #include "dataObjTrim.h"
 #include "dataObjUnlink.h"
 #include "dataObjOpr.hpp"
-#include "rodsLog.h"
 #include "objMetaOpr.hpp"
 #include "specColl.hpp"
 #include "rsDataObjTrim.hpp"

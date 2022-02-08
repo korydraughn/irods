@@ -2,8 +2,6 @@
 #include "irods_error.hpp"
 #include "irods_log.hpp"
 
-#include "rodsLog.h"
-
 #include <sstream>
 
 namespace irods {

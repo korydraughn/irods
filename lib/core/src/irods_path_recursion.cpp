@@ -3,7 +3,6 @@
 #include "rodsPath.h"
 #include "rodsErrorTable.h"
 #include "irods_exception.hpp"
-#include "rodsLog.h"
 
 #include <stdlib.h>
 #include <cstdlib>

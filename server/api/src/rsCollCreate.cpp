@@ -1,12 +1,6 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-/* This is script-generated code (for the most part).  */
-/* See collCreate.h for a description of this API call.*/
-
 #include "rcMisc.h"
 #include "collCreate.h"
 #include "rodsConnect.h"
-#include "rodsLog.h"
 #include "regColl.h"
 #include "icatDefines.h"
 #include "fileMkdir.h"

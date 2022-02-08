@@ -1,12 +1,9 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
 #ifndef windows_platform
 #include <sys/time.h>
 #endif
 #include "rodsPath.h"
 #include "rodsErrorTable.h"
 #include "miscUtil.h"
-#include "rodsLog.h"
 #include "rmtrashUtil.h"
 #include "rcGlobalExtern.h"
 

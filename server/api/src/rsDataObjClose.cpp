@@ -20,7 +20,6 @@
 #include "regReplica.h"
 #include "resource.hpp"
 #include "rodsErrorTable.h"
-#include "rodsLog.h"
 #include "rsDataObjClose.hpp"
 #include "rsDataObjTrim.hpp"
 #include "rsDataObjUnlink.hpp"

@@ -2,10 +2,6 @@
 #include "irods_error.hpp"
 
 // =-=-=-=-=-=-=-
-// irods includes
-#include "rodsLog.h"
-
-// =-=-=-=-=-=-=-
 // boost includes
 #include <boost/lexical_cast.hpp>
 

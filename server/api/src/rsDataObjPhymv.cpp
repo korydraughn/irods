@@ -8,7 +8,6 @@
 #include "icatDefines.h"
 #include "objMetaOpr.hpp"
 #include "physPath.hpp"
-#include "rodsLog.h"
 #include "rsDataObjClose.hpp"
 #include "rsDataObjOpen.hpp"
 #include "rsDataObjPhymv.hpp"

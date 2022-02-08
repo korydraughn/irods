@@ -1,6 +1,5 @@
 #include "collRepl.h"
 #include "dataObjOpr.hpp"
-#include "rodsLog.h"
 #include "objMetaOpr.hpp"
 #include "rsCollRepl.hpp"
 #include "openCollection.h"

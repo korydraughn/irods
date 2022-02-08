@@ -17,7 +17,6 @@
 #include "objMetaOpr.hpp"
 #include "physPath.hpp"
 #include "resource.hpp"
-#include "rodsLog.h"
 #include "rsDataCopy.hpp"
 #include "rsDataObjClose.hpp"
 #include "rsDataObjCreate.hpp"

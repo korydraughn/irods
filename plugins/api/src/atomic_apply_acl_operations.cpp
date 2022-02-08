@@ -30,7 +30,6 @@
 #include "miscServerFunct.hpp"
 #include "objDesc.hpp"
 #include "rodsConnect.h"
-#include "rodsLog.h"
 #include "server_utilities.hpp"
 
 #define IRODS_QUERY_ENABLE_SERVER_SIDE_API

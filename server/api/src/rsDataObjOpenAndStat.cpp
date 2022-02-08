@@ -1,7 +1,6 @@
 #include "dataObjOpenAndStat.h"
 
 #include "dataObjOpen.h"
-#include "rodsLog.h"
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"
 #include "rsDataObjOpen.hpp"

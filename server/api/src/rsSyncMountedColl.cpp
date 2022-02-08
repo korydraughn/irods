@@ -1,5 +1,4 @@
 #include "syncMountedColl.h"
-#include "rodsLog.h"
 #include "icatDefines.h"
 #include "objMetaOpr.hpp"
 #include "collection.hpp"

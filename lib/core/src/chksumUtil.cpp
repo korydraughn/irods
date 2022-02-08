@@ -2,7 +2,6 @@
 #include "rodsPath.h"
 #include "rodsErrorTable.h"
 #include "miscUtil.h"
-#include "rodsLog.h"
 #include "chksumUtil.h"
 #include "rcGlobalExtern.h"
 

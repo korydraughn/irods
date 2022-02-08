@@ -1,6 +1,5 @@
 #include "dataObjUnlink.h"
 #include "rodsErrorTable.h"
-#include "rodsLog.h"
 #include "rodsConnect.h"
 #include "icatDefines.h"
 #include "fileUnlink.h"

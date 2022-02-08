@@ -29,7 +29,6 @@
 #include "regReplica.h"
 #include "resource.hpp"
 #include "rodsErrorTable.h"
-#include "rodsLog.h"
 #include "rsDataObjClose.hpp"
 #include "rsDataObjCreate.hpp"
 #include "rsDataObjOpen.hpp"

@@ -4,7 +4,6 @@
 
 #include "rodsPath.h"
 #include "rodsErrorTable.h"
-#include "rodsLog.h"
 #include "lsUtil.h"
 #include "getUtil.h"
 #include "miscUtil.h"

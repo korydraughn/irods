@@ -1,15 +1,10 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-/* This is script-generated code (for the most part).  */
-/* See dataPut.h for a description of this API call.*/
+#include "rsDataPut.hpp"
 
 #include "rcMisc.h"
 #include "dataPut.h"
-#include "rodsLog.h"
 #include "miscServerFunct.hpp"
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"
-#include "rsDataPut.hpp"
 
 /* rsDataPut - this routine setup portalOprOut with the resource server
  * for parallel put operation.

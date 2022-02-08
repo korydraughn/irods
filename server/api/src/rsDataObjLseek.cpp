@@ -1,7 +1,6 @@
 #include "rsDataObjLseek.hpp"
 
 #include "dataObjLseek.h"
-#include "rodsLog.h"
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"
 #include "subStructFileLseek.h"

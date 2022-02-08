@@ -1,6 +1,5 @@
 #include "irods_zone_info.hpp"
 
-#include "rodsLog.h"
 #include "icatHighLevelRoutines.hpp"
 #include "mid_level.hpp"
 #include "rodsDef.h"

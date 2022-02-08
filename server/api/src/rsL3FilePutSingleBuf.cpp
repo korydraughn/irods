@@ -1,8 +1,3 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-/* This is script-generated code (for the most part).  */
-/* See l3FilePutSingleBuf.h for a description of this API call.*/
-
 #include "dataObjOpen.h"
 #include "dataObjPut.h"
 #include "dataPut.h"
@@ -11,7 +6,6 @@
 #include "l3FilePutSingleBuf.h"
 #include "objMetaOpr.hpp"
 #include "physPath.hpp"
-#include "rodsLog.h"
 #include "specColl.hpp"
 #include "subStructFilePut.h"
 #include "rcGlobalExtern.h"

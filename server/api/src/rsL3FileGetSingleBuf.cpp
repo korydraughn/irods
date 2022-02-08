@@ -1,6 +1,5 @@
 #include "l3FileGetSingleBuf.h"
 #include "dataObjGet.h"
-#include "rodsLog.h"
 #include "dataGet.h"
 #include "fileGet.h"
 #include "dataObjOpen.h"

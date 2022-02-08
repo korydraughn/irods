@@ -1,6 +1,5 @@
 #include "irods_exception.hpp"
 #include "irods_stacktrace.hpp"
-#include "rodsLog.h"
 
 namespace irods {
 

@@ -2,7 +2,6 @@
 
 #include "irods_get_full_path_for_config_file.hpp"
 #include "irods_stacktrace.hpp"
-#include "rodsLog.h"
 
 #include <boost/any.hpp>
 #include <nlohmann/json.hpp>

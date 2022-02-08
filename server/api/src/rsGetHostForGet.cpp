@@ -1,6 +1,5 @@
 #include "getHostForGet.h"
 #include "getHostForPut.h"
-#include "rodsLog.h"
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"
 #include "getRemoteZoneResc.h"

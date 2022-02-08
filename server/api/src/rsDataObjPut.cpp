@@ -12,7 +12,6 @@
 #include "rcGlobalExtern.h"
 #include "regDataObj.h"
 #include "rodsErrorTable.h"
-#include "rodsLog.h"
 #include "rsApiHandler.hpp"
 #include "rsDataObjClose.hpp"
 #include "rsDataObjCreate.hpp"

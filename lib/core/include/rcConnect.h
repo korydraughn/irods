@@ -1,6 +1,3 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-
 /* rcConnect.h - common header file for client connect
  */
 
@@ -9,7 +6,6 @@
 
 #include "rodsDef.h"
 #include "rodsError.h"
-#include "rodsLog.h"
 #include "stringOpr.h"
 #include "rodsType.h"
 #include "rodsUser.h"

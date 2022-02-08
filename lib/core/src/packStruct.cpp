@@ -1,7 +1,6 @@
 #include "packStruct.h"
 
 #include "alignPointer.hpp"
-#include "rodsLog.h"
 #include "rcGlobalExtern.h"
 #include "base64.h"
 #include "rcMisc.h"

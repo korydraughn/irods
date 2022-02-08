@@ -6,7 +6,6 @@
 #include "rsGlobalExtern.hpp"   // server global
 #include "rcGlobalExtern.h"     // client global
 #include "rsLog.hpp"
-#include "rodsLog.h"
 #include "sockComm.h"
 #include "getRodsEnv.h"
 #include "rcConnect.h"

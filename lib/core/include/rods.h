@@ -5,7 +5,6 @@
 #include "rodsVersion.h"
 #include "rodsError.h"
 #include "rodsErrorTable.h"
-#include "rodsLog.h"
 #include "stringOpr.h"
 #include "rodsType.h"
 #include "rodsKeyWdDef.h"

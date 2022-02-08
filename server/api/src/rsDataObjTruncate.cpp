@@ -1,11 +1,7 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-/* This is script-generated code (for the most part).  */
-/* See dataObjTruncate.h for a description of this API call.*/
+#include "rsDataObjTruncate.hpp"
 
 #include "rcMisc.h"
 #include "dataObjTruncate.h"
-#include "rodsLog.h"
 #include "icatDefines.h"
 #include "fileTruncate.h"
 #include "unregDataObj.h"
@@ -13,7 +9,6 @@
 #include "dataObjOpr.hpp"
 #include "rsGlobalExtern.hpp"
 #include "rcGlobalExtern.h"
-#include "rsDataObjTruncate.hpp"
 #include "rmColl.h"
 #include "modDataObjMeta.h"
 #include "subStructFileTruncate.h"
@@ -22,10 +17,7 @@
 #include "rsModDataObjMeta.hpp"
 #include "rsSubStructFileTruncate.hpp"
 #include "rsFileTruncate.hpp"
-
 #include "irods_resource_backport.hpp"
-
-
 
 int
 rsDataObjTruncate( rsComm_t *rsComm, dataObjInp_t *dataObjTruncateInp ) {
