@@ -261,8 +261,24 @@ namespace
                           "values (R_OBJECTID.nextval, ?, ?, ?, ?, ?)");
         }
         else if (_db_instance_name == "mysql") {
-            prepare(stmt, "insert into R_META_MAIN (meta_id, meta_attr_name, meta_attr_value, meta_attr_unit, create_ts, modify_ts) "
-                          "values (R_OBJECTID_nextval(), ?, ?, ?, ?, ?)");
+            // To avoid issues with GTID, we must separate the call to "R_OBJECTID_nextval()" from
+            // the insertion of the row.
+            //
+            // For more information, see the following:
+            //   - https://github.com/irods/irods/issues/5729
+            //   - https://stackoverflow.com/questions/40724046/mysql-gtid-consistency-violation
+            auto row = nanodbc::execute(_db_conn, "select R_OBJECTID_nextval()");
+
+            if (!row.next()) {
+                throw std::runtime_error{"Failed to generate new database ID for new row."};
+            }
+
+            const auto next_id = row.get<std::int64_t>(0);
+            const auto sql = fmt::format("insert into R_META_MAIN "
+                                         "(meta_id, meta_attr_name, meta_attr_value, meta_attr_unit, create_ts, modify_ts) "
+                                         "values ({}, ?, ?, ?, ?, ?)", next_id);
+
+            prepare(stmt, sql);
         }
         else if (_db_instance_name == "postgres") {
             prepare(stmt, "insert into R_META_MAIN (meta_id, meta_attr_name, meta_attr_value, meta_attr_unit, create_ts, modify_ts) "
