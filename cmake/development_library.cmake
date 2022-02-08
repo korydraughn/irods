@@ -143,7 +143,6 @@ set(
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/include/rodsGenQueryNames.h
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/include/rodsGeneralUpdate.h
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/include/rodsKeyWdDef.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/include/rodsLog.h
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/include/rodsPackInstruct.h
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/include/rodsPackTable.h
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/include/rodsPath.h

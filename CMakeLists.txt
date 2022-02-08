@@ -1058,7 +1058,6 @@ set(
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rcMisc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/region.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rodsError.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rodsLog.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rodsPath.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/stringOpr.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/hasher/src/Hasher.cpp
@@ -1232,7 +1231,6 @@ set(
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rcPortalOpr.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/region.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rodsError.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rodsLog.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/rodsPath.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/core/src/stringOpr.cpp
   )
