@@ -12030,6 +12030,90 @@ irods::error db_set_delay_server_op(
 
 } // db_set_delay_server_op
 
+irods::error db_get_grid_configuration_value_op(
+    irods::plugin_context& _ctx,
+    const char*            _namespace,
+    const char*            _option_name,
+    char**                 _option_value)
+{
+    // =-=-=-=-=-=-=-
+    // check the context
+    if (const irods::error ret = _ctx.valid(); !ret.ok()) {
+        return PASS(ret);
+    }
+
+    if ( logSQL != 0 ) {
+        rodsLog( LOG_SQL, "chlGetGridConfigurationValue" );
+    }
+
+    if ( !icss.status ) {
+        return ERROR( CATALOG_NOT_CONNECTED, "catalog not connected" );
+    }
+
+    std::vector<std::string> bindVars{_namespace, _option_name};
+
+    // TODO Require the caller to pass the size of the _option_value buffer.
+    const int status = cmlGetStringValueFromSql(
+                 "select option_value from R_GRID_CONFIGURATION where namespace = ? and option_name = ?",
+                 *_option_value, 2700, bindVars, &icss );
+
+    if (status < 0) {
+        rodsLog(LOG_NOTICE, "chlGetGridConfigurationValue cmlGetStringValueFromSql failure %d", status);
+        return ERROR( status, "Get Grid Configuration Value select failure" );
+    }
+
+    return SUCCESS();
+
+} // db_get_grid_configuration_value_op
+
+irods::error db_set_grid_configuration_value_op(
+    irods::plugin_context& _ctx,
+    const char*            _namespace,
+    const char*            _option_name,
+    const char*            _option_value)
+{
+    if (!irods::is_privileged_client(*_ctx.comm())) {
+        return ERROR(CAT_INSUFFICIENT_PRIVILEGE_LEVEL, "insufficient privilege level");
+    }
+
+    if (const auto ret = _ctx.valid(); !ret.ok()) {
+        return PASS(ret);
+    }
+
+    if (logSQL != 0) {
+        rodsLog(LOG_SQL, "chlSetGridConfigurationValue");
+    }
+
+    if (!icss.status) {
+        return ERROR(CATALOG_NOT_CONNECTED, "catalog not connected");
+    }
+
+    int i = 0;
+    cllBindVars[i++] = _option_value;
+    cllBindVars[i++] = _namespace;
+    cllBindVars[i++] = _option_name;
+    cllBindVarCount = i;
+    if ( logSQL != 0 ) {
+        rodsLog( LOG_SQL, "chlSetGridConfigurationValue  SQL 1" );
+    }
+
+    int status = cmlExecuteNoAnswerSql(
+                  "update R_GRID_CONFIGURATION set option_value = ? where namespace = ? and option_name = ?", &icss );
+    if ( status != 0 && status != CAT_SUCCESS_BUT_WITH_NO_INFO ) {
+        _rollback( "chlSetGridConfigurationValue" );
+        rodsLog( LOG_NOTICE,
+                 "chlSetGridConfigurationValue cmlExecuteNoAnswerSql failure %d" , status );
+        return ERROR( status, "Set Grid Configuration Value SQL update failure" );
+    }
+
+    status =  cmlExecuteNoAnswerSql( "commit", &icss );
+    if ( status < 0 ) {
+        return ERROR( status, "commit failed" );
+    }
+
+    return SUCCESS();
+} // db_set_grid_configuration_value_op
+
 irods::error db_calc_usage_and_quota_op(
     irods::plugin_context& _ctx ) {
     // =-=-=-=-=-=-=-
@@ -15351,6 +15435,14 @@ irods::database* plugin_factory(
         DATABASE_OP_SET_DELAY_SERVER,
         function<error(plugin_context&,const char*)>(
             db_set_delay_server_op ) );
+    pg->add_operation(
+        DATABASE_OP_GET_GRID_CONFIGURATION_VALUE,
+        function<error(plugin_context&, const char*, const char*, char**)>(
+            db_get_grid_configuration_value_op));
+    pg->add_operation(
+        DATABASE_OP_SET_GRID_CONFIGURATION_VALUE,
+        function<error(plugin_context&, const char*, const char*, const char*)>(
+            db_set_grid_configuration_value_op));
     pg->add_operation(
         DATABASE_OP_CALC_USAGE_AND_QUOTA,
         function<error(plugin_context&)>(

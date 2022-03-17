@@ -1,3 +1,4 @@
+#include "irods/icatHighLevelRoutines.hpp"
 #include "irods/irods_at_scope_exit.hpp"
 #include "irods/irods_configuration_keywords.hpp"
 #include "irods/irods_configuration_parser.hpp"
@@ -1477,6 +1478,43 @@ recordServerProcess( rsComm_t *svrComm ) {
     return 0;
 }
 
+// TODO Stub
+// Consults the JSON health information.
+bool is_leader_dead()
+{
+    // TODO To test, we can use a random number to influence its behavior.
+    return false;
+} // is_leader_dead
+
+// TODO Stub
+// This is ping (i.e. is the delay server running?).
+//
+// Updates JSON health information.
+int run_leader_health_check(const std::string_view _hostname)
+{
+    // TODO Use control plane port number defined in server_config.json.
+    //
+    // From comment in PR:
+    //
+    //   can get the delay server info from irods-grid status. but we noticed that if
+    //   the delay server was dead, the irods-grid was not informed... so might need another
+    //   cron/thread to keep that information updated/fresh.
+    // 
+    // Possible solutions:
+    // - use another CRON task to refreshes the server properties with good PID info.
+    //   - likely only applies to the delay server PID.
+
+    /*
+       {
+            "timestamp": ""
+            "ping_result": "a string indicating success or failure"
+            "leader": ""
+       }
+     */
+
+    return 0;
+} // run_leader_health_check
+
 int initServerMain(
     rsComm_t *svrComm,
     const bool enable_test_mode = false,
@@ -1555,6 +1593,7 @@ int initServerMain(
      - run health check on the leader stats (utility function that calculates based on db stats)
      - if leader is dead
          - promote self to leader in db
+         - clear the stats
          - exit
      - else
          - check on the leader directly (ping?  grid-status?)
@@ -1564,6 +1603,71 @@ int initServerMain(
      - self is not leader or successor
      - if necessary, gracefully complete current jobs and exit
 */
+        char hostname[HOST_NAME_MAX]{};
+        if (gethostname(hostname, sizeof(hostname)) != 0) {
+            // TODO Handle error.
+        }
+
+        // TODO
+        // We need three things:
+        // - our hostname
+        // - the leader (from r_grid_configuration)
+        // - the successor (from r_grid_configuration)
+        char leader_buf[2700];
+        char* leader = leader_buf;
+        if (const auto ec = chlGetGridConfigurationValue(svrComm, "delay_server", "leader", &leader); ec != 0) {
+            // TODO Handle error.
+        }
+
+        char successor_buf[2700];
+        char* successor = successor_buf;
+        if (const auto ec = chlGetGridConfigurationValue(svrComm, "delay_server", "successor", &successor); ec != 0) {
+            // TODO Handle error.
+        }
+
+        if (std::strcmp(hostname, leader) == 0) {
+            if (std::strlen(successor) > 0) {
+                // if necessary, gracefully complete current jobs and exit
+                // TODO if running, send SIGTERM to delay server.
+                // if running means, use the PID file to determine if the delay server
+                // belongs to this iRODS server.
+                // Look at the CRON code below for some of this.
+            }
+            else {
+                // if necessary, start delay server
+                // TODO Need facility to determine if the delay server is already running.
+                // Perhaps, check for the PID. If it doesn't exist, launch the delay server.
+            }
+        }
+        else if (std::strcmp(hostname, successor) == 0) {
+            // run health check on the leader stats (utility function that calculates based on db stats)
+            // TODO Need function that tells us whether the leader is still alive/dead.
+            //
+            // Use the control plane to determine if the delay server is running.
+            // TODO Figure out how to invoke the control plane.
+            if (is_leader_dead()) {
+                if (const auto ec = chlSetGridConfigurationValue(svrComm, "delay_server", "leader", hostname); ec != 0) {
+                    // TODO Handle error.
+                }
+
+                if (const auto ec = chlSetGridConfigurationValue(svrComm, "delay_server", "successor", ""); ec != 0) {
+                    // TODO Handle error.
+                }
+            }
+            else {
+                // check on the leader directly (ping?  grid-status?)
+                // populate stats in the db (JSON?)
+                // exit
+                run_leader_health_check(leader);
+            }
+        }
+        else {
+            // If the delay server exists, let it complete its work and shutdown.
+        }
+
+        //
+        // TODO MOVE THE CODE THAT FOLLOWS INTO THE INNER ELSE-BLOCK OF THE FIRST IF-STMT.
+        //
 
         rodsServerHost_t* reServerHost{};
         getReHost(&reServerHost);
@@ -1572,6 +1676,9 @@ int initServerMain(
             return;
         }
 
+        // TODO Review this implementation.
+        // Determining who the delay server is will be driven by the information
+        // in r_grid_configuration rather than the server_config.json file.
         std::optional<pid_t> delay_pid;
         if (irods::server_properties::instance().contains(irods::RE_PID_KW)) {
             delay_pid = irods::get_server_property<int>(irods::RE_PID_KW);
