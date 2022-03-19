@@ -1,8 +1,7 @@
-/*** Copyright (c), The Regents of the University of California            ***
- *** For more information please refer to files in the COPYRIGHT directory ***/
-/* definitions for rodsLog routines */
 #ifndef RODS_LOG_H__
 #define RODS_LOG_H__
+
+#warning This file has been marked as deprecated and will be removed in a later release.
 
 #include "irods/rodsError.h"
 
@@ -60,17 +59,37 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+__attribute__((deprecated))
 void rodsLog( int level, const char *formatStr, ... );
-void rodsLogAndErrorMsg( int level, rError_t *myError, int status,
-                         const char *formatStr, ... );
+
+__attribute__((deprecated))
+void rodsLogAndErrorMsg( int level, rError_t *myError, int status, const char *formatStr, ... );
+
+__attribute__((deprecated))
 void rodsLogLevel( int level );
+
+__attribute__((deprecated))
 void rodsLogSqlReq( int onOrOff );
+
+__attribute__((deprecated))
 void rodsLogSql( const char *sql );
+
+__attribute__((deprecated))
 void rodsLogSqlResult( const char *stat );
+
 const char *rodsErrorName( int errorValue, char **subName );
+
+__attribute__((deprecated))
 void rodsLogErrorOld( int level, int errCode, const char *textStr );
+
+__attribute__((deprecated))
 void rodsLogError( int level, int errCode, const char *formatStr, ... );
+
+__attribute__((deprecated))
 int getRodsLogLevel();
+
+__attribute__((deprecated))
 void generateLogTimestamp( char *ts, int tsLen );
 
 #define TRACE_LOG() rodsLog(LOG_NOTICE, "[%s:%d]", __FUNCTION__, __LINE__);
