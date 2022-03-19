@@ -7,7 +7,6 @@
 #include "irods/dataObjLseek.h"
 #include "irods/fileLseek.h"
 #include "irods/dataObjOpr.hpp"
-#include "irods/rodsLog.h"
 #include "irods/rcGlobalExtern.h"
 #include "irods/sockComm.h"
 #include "irods/irods_stacktrace.hpp"

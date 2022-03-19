@@ -27,7 +27,6 @@
 #include "irods/rods.h"
 #include "irods/rodsErrorTable.h"
 #include "irods/getRodsEnv.h"
-#include "irods/rodsLog.h"
 #include "irods/irods_log.hpp"
 #include "irods/irods_version.h"
 #include "irods/irods_environment_properties.hpp"

@@ -9,7 +9,6 @@
 #include "irods/objMetaOpr.hpp"
 #include "irods/rcGlobalExtern.h"
 #include "irods/regDataObj.h"
-#include "irods/rodsLog.h"
 #include "irods/rsDataObjClose.hpp"
 #include "irods/rsDataObjCopy.hpp"
 #include "irods/rsDataObjCreate.hpp"

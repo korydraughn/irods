@@ -5,7 +5,6 @@
 
 #include "irods/rcMisc.h"
 #include "irods/dataPut.h"
-#include "irods/rodsLog.h"
 #include "irods/miscServerFunct.hpp"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"

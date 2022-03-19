@@ -5,7 +5,6 @@
 #endif
 #include "irods/rodsPath.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/miscUtil.h"
 #include "irods/mvUtil.h"
 #include "irods/rcGlobalExtern.h"

@@ -2,7 +2,6 @@
 #include "irods/rmUtil.h"
 #include "irods/rodsPath.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/rcGlobalExtern.h"
 #include "irods/rodsPath.h"
 #include "irods/rcMisc.h"

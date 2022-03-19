@@ -16,7 +16,6 @@
 
 #include "irods/irods_exception.hpp"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 
 bool
 operator==(const struct in_addr& lhs, const struct in_addr& rhs) {

@@ -5,7 +5,6 @@
 
 #include "irods/rcMisc.h"
 #include "irods/dataObjTruncate.h"
-#include "irods/rodsLog.h"
 #include "irods/icatDefines.h"
 #include "irods/fileTruncate.h"
 #include "irods/unregDataObj.h"

@@ -3,7 +3,6 @@
 
 // =-=-=-=-=-=-=-
 // irods includes
-#include "irods/rodsLog.h"
 
 // =-=-=-=-=-=-=-
 // boost includes

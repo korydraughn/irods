@@ -1,7 +1,6 @@
 #include "irods/rsDataObjLseek.hpp"
 
 #include "irods/dataObjLseek.h"
-#include "irods/rodsLog.h"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"
 #include "irods/subStructFileLseek.h"

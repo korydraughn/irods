@@ -5,7 +5,6 @@
 
 #include "irods/rcConnect.h"
 #include "irods/scoped_privileged_client.hpp"
-#include "irods/rodsLog.h"
 
 #define IRODS_FILESYSTEM_ENABLE_SERVER_SIDE_API
 #include "irods/filesystem.hpp"

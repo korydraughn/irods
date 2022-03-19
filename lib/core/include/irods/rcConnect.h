@@ -9,7 +9,6 @@
 
 #include "irods/rodsDef.h"
 #include "irods/rodsError.h"
-#include "irods/rodsLog.h"
 #include "irods/stringOpr.h"
 #include "irods/rodsType.h"
 #include "irods/rodsUser.h"

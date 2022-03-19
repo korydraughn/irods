@@ -4,7 +4,6 @@
 
 #include "irods/rodsPath.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/lsUtil.h"
 #include "irods/getUtil.h"
 #include "irods/miscUtil.h"

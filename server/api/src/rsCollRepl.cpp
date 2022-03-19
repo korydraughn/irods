@@ -1,6 +1,5 @@
 #include "irods/collRepl.h"
 #include "irods/dataObjOpr.hpp"
-#include "irods/rodsLog.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/rsCollRepl.hpp"
 #include "irods/openCollection.h"

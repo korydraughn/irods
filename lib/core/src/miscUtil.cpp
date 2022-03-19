@@ -3,7 +3,6 @@
 #endif
 #include <fnmatch.h>
 #include "irods/rodsClient.h"
-#include "irods/rodsLog.h"
 #include "irods/miscUtil.h"
 #include "irods/rcGlobalExtern.h"
 

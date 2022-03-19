@@ -1,6 +1,5 @@
 #include "irods/l3FileGetSingleBuf.h"
 #include "irods/dataObjGet.h"
-#include "irods/rodsLog.h"
 #include "irods/dataGet.h"
 #include "irods/fileGet.h"
 #include "irods/dataObjOpen.h"

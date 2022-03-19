@@ -7,7 +7,6 @@
 #include "irods/objMetaOpr.hpp"
 #include "irods/physPath.hpp"
 #include "irods/rcGlobalExtern.h"
-#include "irods/rodsLog.h"
 #include "irods/rsApiHandler.hpp"
 #include "irods/rsDataGet.hpp"
 #include "irods/rsDataObjRead.hpp"

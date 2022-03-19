@@ -1,7 +1,6 @@
 #include "irods/dataObjTrim.h"
 #include "irods/dataObjUnlink.h"
 #include "irods/dataObjOpr.hpp"
-#include "irods/rodsLog.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/specColl.hpp"
 #include "irods/rsDataObjTrim.hpp"

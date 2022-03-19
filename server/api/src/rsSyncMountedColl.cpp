@@ -1,5 +1,4 @@
 #include "irods/syncMountedColl.h"
-#include "irods/rodsLog.h"
 #include "irods/icatDefines.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/collection.hpp"

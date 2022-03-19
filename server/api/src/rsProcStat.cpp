@@ -3,7 +3,6 @@
 #include "irods/objMetaOpr.hpp"
 #include "irods/resource.hpp"
 #include "irods/miscServerFunct.hpp"
-#include "irods/rodsLog.h"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"
 #include "irods/procLog.h"

@@ -2,7 +2,6 @@
  *** For more infomkdiration please refer to files in the COPYRIGHT directory ***/
 #include "irods/rodsPath.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/mkdirUtil.h"
 #include "irods/miscUtil.h"
 #include "irods/rcGlobalExtern.h"

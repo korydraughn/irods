@@ -11,7 +11,6 @@
 #include "irods/irods_error.hpp"
 #include "irods/irods_stacktrace.hpp"
 
-#include "irods/rodsLog.h"
 
 namespace irods {
 

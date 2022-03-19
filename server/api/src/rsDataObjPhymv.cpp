@@ -8,7 +8,6 @@
 #include "irods/icatDefines.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/physPath.hpp"
-#include "irods/rodsLog.h"
 #include "irods/rsDataObjClose.hpp"
 #include "irods/rsDataObjOpen.hpp"
 #include "irods/rsDataObjPhymv.hpp"

@@ -1,7 +1,6 @@
 #include "irods/packStruct.h"
 
 #include "irods/alignPointer.hpp"
-#include "irods/rodsLog.h"
 #include "irods/rcGlobalExtern.h"
 #include "irods/base64.h"
 #include "irods/rcMisc.h"

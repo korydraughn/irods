@@ -3,7 +3,6 @@
 #include "irods/dataObjInpOut.h"
 #include "irods/dataObjRead.h"
 #include "irods/fileLseek.h"
-#include "irods/rodsLog.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"

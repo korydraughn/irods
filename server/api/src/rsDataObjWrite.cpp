@@ -4,7 +4,6 @@
 /* See dataObjWrite.h for a description of this API call.*/
 
 #include "irods/dataObjWrite.h"
-#include "irods/rodsLog.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/subStructFileWrite.h"
 #include "irods/fileWrite.h"

@@ -4,7 +4,6 @@
 /* See getHostForPut.h for a description of this API call.*/
 
 #include "irods/getHostForPut.h"
-#include "irods/rodsLog.h"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"
 #include "irods/getRemoteZoneResc.h"

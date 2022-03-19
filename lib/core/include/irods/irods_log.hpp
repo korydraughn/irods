@@ -2,7 +2,6 @@
 #define __IRODS_LOG_HPP__
 
 #include "irods/irods_error.hpp"
-#include "irods/rodsLog.h"
 #include "irods/stringOpr.h"
 #include "irods/irods_exception.hpp"
 

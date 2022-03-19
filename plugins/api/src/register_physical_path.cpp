@@ -31,7 +31,6 @@
 #include "irods/rcGlobalExtern.h"
 #include "irods/rcMisc.h"
 #include "irods/resource.hpp"
-#include "irods/rodsLog.h"
 #include "irods/rsCollCreate.hpp"
 #include "irods/rsDataObjClose.hpp"
 #include "irods/rsDataObjCreate.hpp"

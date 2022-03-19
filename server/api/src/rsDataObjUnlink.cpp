@@ -1,6 +1,5 @@
 #include "irods/dataObjUnlink.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/rodsConnect.h"
 #include "irods/icatDefines.h"
 #include "irods/fileUnlink.h"

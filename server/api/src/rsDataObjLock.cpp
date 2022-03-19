@@ -5,7 +5,6 @@
 
 #include "irods/rcMisc.h"
 #include "irods/dataObjLock.h"
-#include "irods/rodsLog.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/dataObjOpr.hpp"
 #include "irods/physPath.hpp"

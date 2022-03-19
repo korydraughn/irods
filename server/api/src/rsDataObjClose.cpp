@@ -20,7 +20,6 @@
 #include "irods/regReplica.h"
 #include "irods/resource.hpp"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/rsDataObjClose.hpp"
 #include "irods/rsDataObjTrim.hpp"
 #include "irods/rsDataObjUnlink.hpp"

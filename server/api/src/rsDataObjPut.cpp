@@ -12,7 +12,6 @@
 #include "irods/rcGlobalExtern.h"
 #include "irods/regDataObj.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/rsApiHandler.hpp"
 #include "irods/rsDataObjClose.hpp"
 #include "irods/rsDataObjCreate.hpp"

@@ -1,5 +1,4 @@
 #include "irods/rodsDef.h"
-#include "irods/rodsLog.h"
 #include "irods/version.hpp"
 
 #include <fmt/format.h>

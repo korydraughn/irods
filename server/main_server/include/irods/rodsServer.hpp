@@ -19,7 +19,6 @@
 
 #include "irods/rods.h"
 #include "irods/rcGlobalExtern.h"	/* client global */
-#include "irods/rodsLog.h"
 #include "irods/sockComm.h"
 #include "irods/rsIcatOpr.hpp"
 #include "irods/getRodsEnv.h"

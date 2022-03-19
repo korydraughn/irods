@@ -21,7 +21,6 @@
  *****************************************************************************/
 
 #include "irods/QUANTAnet_rbudpBase_c.h"
-#include "irods/rodsLog.h"
 #include "irods/rcMisc.h"
 
 #include <cstdarg>

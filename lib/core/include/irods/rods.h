@@ -5,7 +5,6 @@
 #include "irods/rodsVersion.h"
 #include "irods/rodsError.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #include "irods/stringOpr.h"
 #include "irods/rodsType.h"
 #include "irods/rodsKeyWdDef.h"

@@ -1,5 +1,4 @@
 #include "irods/getRemoteZoneResc.h"
-#include "irods/rodsLog.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/dataObjOpr.hpp"
 #include "irods/physPath.hpp"

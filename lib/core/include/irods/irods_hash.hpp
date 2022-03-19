@@ -2,7 +2,6 @@
 #define IRODS_HASH_HPP
 
 #include "irods/irods_stacktrace.hpp"
-#include "irods/rodsLog.h"
 
 #include <boost/unordered_map.hpp>
 

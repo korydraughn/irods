@@ -14,7 +14,6 @@
 #include "irods/dataObjOpr.hpp"
 #include "irods/fileClose.h"
 #include "irods/miscServerFunct.hpp"
-#include "irods/rodsLog.h"
 #include "irods/icatDefines.h"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"

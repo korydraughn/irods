@@ -3,7 +3,6 @@
 
 #include "irods/irods_server_properties.hpp"
 
-#include "irods/rodsLog.h"
 
 #include <vector>
 #include <string>

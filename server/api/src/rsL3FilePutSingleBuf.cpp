@@ -11,7 +11,6 @@
 #include "irods/l3FilePutSingleBuf.h"
 #include "irods/objMetaOpr.hpp"
 #include "irods/physPath.hpp"
-#include "irods/rodsLog.h"
 #include "irods/specColl.hpp"
 #include "irods/subStructFilePut.h"
 #include "irods/rcGlobalExtern.h"

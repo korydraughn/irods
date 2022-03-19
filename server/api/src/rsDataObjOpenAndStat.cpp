@@ -1,7 +1,6 @@
 #include "irods/dataObjOpenAndStat.h"
 
 #include "irods/dataObjOpen.h"
-#include "irods/rodsLog.h"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"
 #include "irods/rsDataObjOpen.hpp"

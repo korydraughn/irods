@@ -2,7 +2,6 @@
 #include "irods/miscUtil.h"
 #include "irods/rcMisc.h"
 #include "irods/rodsErrorTable.h"
-#include "irods/rodsLog.h"
 #ifdef windows_platform
 #include "irodsntutil.hpp"
 #endif

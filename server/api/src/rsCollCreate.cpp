@@ -6,7 +6,6 @@
 #include "irods/rcMisc.h"
 #include "irods/collCreate.h"
 #include "irods/rodsConnect.h"
-#include "irods/rodsLog.h"
 #include "irods/regColl.h"
 #include "irods/icatDefines.h"
 #include "irods/fileMkdir.h"

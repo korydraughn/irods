@@ -17,7 +17,6 @@
 #include "irods/objMetaOpr.hpp"
 #include "irods/physPath.hpp"
 #include "irods/resource.hpp"
-#include "irods/rodsLog.h"
 #include "irods/rsDataCopy.hpp"
 #include "irods/rsDataObjClose.hpp"
 #include "irods/rsDataObjCreate.hpp"

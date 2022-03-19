@@ -1,6 +1,5 @@
 #include "irods/getHostForGet.h"
 #include "irods/getHostForPut.h"
-#include "irods/rodsLog.h"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"
 #include "irods/getRemoteZoneResc.h"
