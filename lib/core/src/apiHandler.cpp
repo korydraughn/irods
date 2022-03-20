@@ -1,14 +1,15 @@
-// =-=-=-=-=-=-=-
-// irods includes
 #include "irods/apiHandler.hpp"
 #include "irods/irods_load_plugin.hpp"
 #include "irods/irods_plugin_name_generator.hpp"
 #include "irods/irods_pack_table.hpp"
 #include "irods/irods_client_api_table.hpp"
+#include "irods/irods_logger.hpp"
 
 #include <boost/filesystem.hpp>
 
 #include <algorithm>
+
+using log = irods::experimental::log;
 
 namespace irods
 {
@@ -123,7 +124,7 @@ namespace irods
                 // Skip the API plugin if it was loaded before.
                 if (_api_tbl.is_plugin_loaded(path.c_str())) {
                     const auto* msg = "init_api_table :: API plugin [%s] has already been loaded. Skipping ...";
-                    rodsLog(LOG_DEBUG, msg, path.stem().c_str());
+                    log::api::debug(msg, path.stem().c_str());
                     continue;
                 }
 
@@ -154,12 +155,8 @@ namespace irods
                                 "api_instance",
                                 "api_context");
                 if (ret.ok() && entry) {
-                    rodsLog(
-                        LOG_DEBUG,
-                        "init_api_table :: adding %d - [%s] - [%s]",
-                        entry->apiNumber,
-                        entry->operation_name.c_str(),
-                        name.c_str() );
+                    log::api::debug("init_api_table :: adding {} - [{}] - [{}]",
+                                    entry->apiNumber, entry->operation_name, name);
 
                     // =-=-=-=-=-=-=-
                     // ask the plugin to fill in the api and pack

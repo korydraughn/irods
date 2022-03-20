@@ -9,6 +9,7 @@
 #include "irods/irods_server_properties.hpp"
 #include "irods/irods_stacktrace.hpp"
 #include "irods/checksum.h"
+#include "irods/irods_logger.hpp"
 
 #include <cstring>
 
@@ -115,7 +116,7 @@ rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
         free( dataObjOutBBuf.buf );
     }
     else if ( !portalOprOut ) {
-        rodsLog( LOG_ERROR, "_rcDataObjGet returned a %d status code, but left portalOprOut null.", status );
+        log::api::error("_rcDataObjGet returned a {} status code, but left portalOprOut null.", status);
         return SYS_INVALID_PORTAL_OPR;
     }
     else if ( getUdpPortFromPortList( &portalOprOut->portList ) != 0 ) {
@@ -143,11 +144,8 @@ rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
         // encryption.  given that RBUDP is not supported in an
         // encrypted capacity this is considered an error
         if ( irods::CS_NEG_USE_SSL == conn->negotiation_results ) {
-            rodsLog(
-                LOG_ERROR,
-                "getFileToPortal: Encryption is not supported with RBUDP" );
+            log::api::error("getFileToPortal: Encryption is not supported with RBUDP");
             return SYS_INVALID_PORTAL_OPR;
-
         }
 
         status = getFileToPortalRbudp(
@@ -205,11 +203,9 @@ rcDataObjGet( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
 
     if ( getValByKey( &dataObjInp->condInput, VERIFY_CHKSUM_KW ) != NULL ) {
         if ( portalOprOut == NULL || strlen( portalOprOut->chksum ) == 0 ) {
-            rodsLog( LOG_ERROR,
-                     "rcDataObjGet: VERIFY_CHKSUM_KW set but no checksum from server" );
+            log::api::error("rcDataObjGet: VERIFY_CHKSUM_KW set but no checksum from server");
         }
         else {
-
             status = verifyChksumLocFile( locFilePath, portalOprOut->chksum, NULL );
             if ( status == USER_CHKSUM_MISMATCH ) {
                 rodsLogError( LOG_ERROR, status,

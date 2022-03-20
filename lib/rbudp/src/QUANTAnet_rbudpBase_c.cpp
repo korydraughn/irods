@@ -22,9 +22,12 @@
 
 #include "irods/QUANTAnet_rbudpBase_c.h"
 #include "irods/rcMisc.h"
+#include "irods/irods_logger.hpp"
 
 #include <cstdarg>
 #include <cstring>
+
+using log = irods::experimental::log;
 
 // inline void TRACE_DEBUG( char *format, ...)
 void TRACE_DEBUG( char *format, ... ) {
@@ -426,12 +429,12 @@ setUdpSockOpt( int udpSockfd ) {
     error_code = setsockopt( udpSockfd, SOL_SOCKET, SO_SNDBUF, &sockbufsize,
                              sizeof( sockbufsize ) );
     if ( error_code != 0 ) {
-        rodsLog( LOG_ERROR, "setsockopt failed on the send buffer in setUdpSockOpt with %d", error_code );
+        log::api::error("setsockopt failed on the send buffer in setUdpSockOpt with {}", error_code);
     }
     error_code = setsockopt( udpSockfd, SOL_SOCKET, SO_RCVBUF, &sockbufsize,
                              sizeof( sockbufsize ) );
     if ( error_code != 0 ) {
-        rodsLog( LOG_ERROR, "setsockopt failed on the receive buffer in setUdpSockOpt with %d", error_code );
+        log::api::error("setsockopt failed on the receive buffer in setUdpSockOpt with {}", error_code);
     }
     return 0;
 }

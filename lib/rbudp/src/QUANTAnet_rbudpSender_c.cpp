@@ -22,6 +22,7 @@
 
 #include "irods/QUANTAnet_rbudpSender_c.h"
 #include "irods/rodsErrorTable.h"
+#include "irods/irods_logger.hpp"
 
 #include <cstdlib>
 #include <stdarg.h>
@@ -106,7 +107,7 @@ int  sendBuf( rbudpSender_t *rbudpSender, void * buffer, int bufSize,
         int error_code = writen( rbudpSender->rbudpBase.tcpSockfd, ( char * )&rbudpSender->rbudpBase.endOfUdp,
                                  sizeof( rbudpSender->rbudpBase.endOfUdp ) );
         if ( error_code < 0 ) {
-            rodsLog( LOG_ERROR, "writen failed in sendBuf with error code %d", error_code );
+            log::api::error("writen failed in sendBuf with error code {}", error_code);
         }
         rbudpSender->rbudpBase.endOfUdp.round ++;
 

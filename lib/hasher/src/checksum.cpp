@@ -8,6 +8,7 @@
 #include "irods/SHA256Strategy.hpp"
 #include "irods/rodsKeyWdDef.h"
 #include "irods/rcMisc.h"
+#include "irods/irods_logger.hpp"
 
 #include <cstdio>
 #include <ctime>
@@ -16,19 +17,15 @@
 
 #define HASH_BUF_SZ (1024*1024)
 
+using log = irods::experimental::log;
+
 int chksumLocFile(
-    const char*       _file_name,
+    const char* _file_name,
     char*       _checksum,
-    const char* _hash_scheme ) {
-    if ( !_file_name ||
-            !_checksum  ||
-            !_hash_scheme ) {
-        rodsLog(
-            LOG_ERROR,
-            "chksumLocFile :: null input param - %p %p %p",
-            _file_name,
-            _checksum,
-            _hash_scheme );
+    const char* _hash_scheme)
+{
+    if (!_file_name || !_checksum  || !_hash_scheme) {
+        log::api::error("chksumLocFile :: null input param - {} {} {}", _file_name, _checksum, _hash_scheme);
         return SYS_INVALID_INPUT_PARAM;
     }
 
@@ -231,16 +228,14 @@ rcChksumLocFile( char *fileName, char *chksumFlag, keyValPair_t *condInput, cons
     int status;
 
     if ( condInput == NULL || chksumFlag == NULL || fileName == NULL ) {
-        rodsLog( LOG_NOTICE,
-                 "rcChksumLocFile: NULL input" );
+        log::api::info("rcChksumLocFile: NULL input");
         return USER__NULL_INPUT_ERR;
     }
 
     if ( strcmp( chksumFlag, VERIFY_CHKSUM_KW ) != 0 &&
             strcmp( chksumFlag, REG_CHKSUM_KW ) != 0 &&
             strcmp( chksumFlag, RSYNC_CHKSUM_KW ) != 0 ) {
-        rodsLog( LOG_NOTICE,
-                 "rcChksumLocFile: bad input chksumFlag %s", chksumFlag );
+        log::api::info("rcChksumLocFile: bad input chksumFlag {}", chksumFlag);
         return USER_BAD_KEYWORD_ERR;
     }
 

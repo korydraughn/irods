@@ -6,8 +6,11 @@
 #include "irods/sockComm.h"
 #include "irods/rcMisc.h"
 #include "irods/irods_client_server_negotiation.hpp"
+#include "irods/irods_logger.hpp"
 
 #include <cstring>
+
+using log = irods::experimental::log;
 
 /**
  * \fn rcDataObjPut (rcComm_t *conn, dataObjInp_t *dataObjInp,
@@ -104,7 +107,7 @@ rcDataObjPut( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
 
     rodsEnv rods_env;
     if ( int status = getRodsEnv( &rods_env ) ) {
-        rodsLog( LOG_ERROR, "getRodsEnv failed in %s with status %s", __FUNCTION__, status );
+        log::api::error("getRodsEnv failed in {} with status {}", __FUNCTION__, status);
         return status;
     }
     int single_buff_sz = rods_env.irodsMaxSizeForSingleBuffer * 1024 * 1024;
@@ -113,22 +116,18 @@ rcDataObjPut( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
             rmKeyVal( &dataObjInp->condInput, DATA_INCLUDED_KW );
         }
         else {
-            status = fillBBufWithFile( conn, &dataObjInpBBuf, locFilePath,
-                                       dataObjInp->dataSize );
-            if ( status < 0 ) {
-                rodsLog( LOG_NOTICE,
-                         "rcDataObjPut: fileBBufWithFile error for %s", locFilePath );
+            status = fillBBufWithFile(conn, &dataObjInpBBuf, locFilePath, dataObjInp->dataSize);
+            if (status < 0) {
+                log::api::info("rcDataObjPut: fileBBufWithFile error for {}", locFilePath);
                 return status;
             }
         }
     }
     else if ( dataObjInp->dataSize <= single_buff_sz ) {
         addKeyVal( &dataObjInp->condInput, DATA_INCLUDED_KW, "" );
-        status = fillBBufWithFile( conn, &dataObjInpBBuf, locFilePath,
-                                   dataObjInp->dataSize );
-        if ( status < 0 ) {
-            rodsLog( LOG_NOTICE,
-                     "rcDataObjPut: fileBBufWithFile error for %s", locFilePath );
+        status = fillBBufWithFile( conn, &dataObjInpBBuf, locFilePath, dataObjInp->dataSize );
+        if (status < 0) {
+            log::api::info("rcDataObjPut: fileBBufWithFile error for {}", locFilePath);
             return status;
         }
     }
@@ -176,11 +175,8 @@ rcDataObjPut( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
             // if a secret has been negotiated then we must be using
             // encryption.  given that RBUDP is not supported in an
             // encrypted capacity this is considered an error
-            rodsLog(
-                LOG_ERROR,
-                "putFileToPortal: Encryption is not supported with RBUDP" );
+            log::api::error("putFileToPortal: Encryption is not supported with RBUDP");
             return SYS_INVALID_PORTAL_OPR;
-
         }
         else {
             status = putFileToPortalRbudp(
@@ -200,7 +196,7 @@ rcDataObjPut( rcComm_t *conn, dataObjInp_t *dataObjInp, char *locFilePath ) {
         /* some sanity check */
         rodsEnv rods_env;
         if ( int status = getRodsEnv( &rods_env ) ) {
-            rodsLog( LOG_ERROR, "getRodsEnv failed in %s with status %s", __FUNCTION__, status );
+            log::api::error("getRodsEnv failed in {} with status {}", __FUNCTION__, status);
             return status;
         }
         if ( portalOprOut->numThreads >= 20 * rods_env.irodsDefaultNumberTransferThreads ) {
