@@ -19,6 +19,8 @@
 #include "irods/irods_hierarchy_parser.hpp"
 #include "irods/irods_logger.hpp"
 #include "irods/user_validation_utilities.hpp"
+#include "irods/plugins/api/grid_configuration_types.h"
+#include "irods/rs_set_grid_configuration_value.hpp"
 
 #include <fmt/format.h>
 
@@ -1200,8 +1202,12 @@ _rsGeneralAdmin( rsComm_t *rsComm, generalAdminInp_t *generalAdminInp ) {
         return status;
     }
 
-    if ( strcmp( generalAdminInp->arg0, "set_delay_server" ) == 0 ) {
-        return chlSetDelayServer( rsComm, generalAdminInp->arg1 );
+    if (std::strcmp(generalAdminInp->arg0, "set_delay_server") == 0) {
+        GridConfigurationInput input;
+        std::strcpy(input.name_space, "delay_server");
+        std::strcpy(input.option_name, "successor");
+        std::strcpy(input.option_value, generalAdminInp->arg1);
+        return rs_set_grid_configuration_value(rsComm, &input);
     }
 
     if ( strcmp( generalAdminInp->arg0, "lt" ) == 0 ) {
