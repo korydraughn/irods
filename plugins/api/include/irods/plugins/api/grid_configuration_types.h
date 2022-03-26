@@ -7,9 +7,12 @@ typedef struct GridConfigurationInput
 {
     char name_space[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];
     char option_name[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];
+    char option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];
 } gridConfigurationInp_t;
 
-#define GridConfigurationInp_PI "str name_space[IRODS_GRID_CONFIGURATION_COLUMN_SIZE]; str option_name[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];"
+#define GridConfigurationInp_PI "str name_space[IRODS_GRID_CONFIGURATION_COLUMN_SIZE]; "    \
+                                "str option_name[IRODS_GRID_CONFIGURATION_COLUMN_SIZE]; "   \
+                                "str option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];"
 
 typedef struct GridConfigurationOutput
 {
