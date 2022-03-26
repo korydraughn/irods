@@ -3,7 +3,10 @@
 
 /// \file
 
+#include <sys/types.h>
+
 #include <string_view>
+#include <optional>
 
 struct RsComm;
 struct DataObjInp;
@@ -56,6 +59,11 @@ namespace irods
     ///
     /// \since 4.3.0
     auto create_pid_file(const std::string_view _pid_filename) -> int;
+
+    /// Returns the PID stored in irods_delay_server.pid if available.
+    ///
+    /// \since 4.3.0
+    auto get_delay_server_pid() noexcept -> std::optional<pid_t>;
 } // namespace irods
 
 #endif // IRODS_SERVER_UTILITIES_HPP

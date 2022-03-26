@@ -9,10 +9,12 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 #include <boost/filesystem.hpp>
 
 #include <regex>
+#include <fstream>
 
 namespace irods
 {
@@ -124,5 +126,32 @@ namespace irods
 
         return 0;
     } // create_pid_file
+
+    std::optional<pid_t> get_delay_server_pid() noexcept
+    {
+        try {
+            const auto pid_file = boost::filesystem::temp_directory_path() / "irods_delay_server.pid";
+
+            if (!boost::filesystem::exists(pid_file)) {
+                return std::nullopt;
+            }
+
+            pid_t pid;
+
+            if (!(std::ifstream{pid_file.c_str()} >> pid)) {
+                return std::nullopt;
+            }
+
+            // The delay server is running if waitpid() returns a value other than -1.
+            // If -1 is returned and errno is set to ECHILD, that means the process specified
+            // by "pid" does not exist or is not a child of the calling process.
+            if (waitpid(pid, nullptr, WNOHANG) != -1) {
+                return pid;
+            }
+        }
+        catch (...) {}
+
+        return std::nullopt;
+    } // get_delay_server_pid
 } // namespace irods
 
