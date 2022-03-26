@@ -10,16 +10,20 @@ typedef struct GridConfigurationInput
     char option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];
 } gridConfigurationInp_t;
 
-#define GridConfigurationInp_PI "str name_space[IRODS_GRID_CONFIGURATION_COLUMN_SIZE]; "    \
-                                "str option_name[IRODS_GRID_CONFIGURATION_COLUMN_SIZE]; "   \
-                                "str option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];"
+#define GridConfigurationInp_PI "str name_space[2700]; "    \
+                                "str option_name[2700]; "   \
+                                "str option_value[2700];"
+//#define GridConfigurationInp_PI "str name_space[IRODS_GRID_CONFIGURATION_COLUMN_SIZE]; "    \
+//                                "str option_name[IRODS_GRID_CONFIGURATION_COLUMN_SIZE]; "   \
+//                                "str option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];"
 
 typedef struct GridConfigurationOutput
 {
     char option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];
 } gridConfigurationOut_t;
 
-#define GridConfigurationOut_PI "str option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];"
+//#define GridConfigurationOut_PI "str option_value[IRODS_GRID_CONFIGURATION_COLUMN_SIZE];"
+#define GridConfigurationOut_PI "str option_value[2700];"
 
 #endif // IRODS_GRID_CONFIGURATION_TYPES_H
 
