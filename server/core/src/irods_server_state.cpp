@@ -1,53 +1,59 @@
-
-
-#include "irods/rodsErrorTable.h"
 #include "irods/irods_server_state.hpp"
 
-namespace irods {
+#include "irods/rodsErrorTable.h"
+#include "irods/shared_memory_object.hpp"
 
-    const std::string server_state::RUNNING( "server_state_running" );
-    const std::string server_state::PAUSED( "server_state_paused" );
-    const std::string server_state::STOPPED( "server_state_stopped" );
-    const std::string server_state::EXITED( "server_state_exited" );
+#include <fmt/format.h>
 
+#include <memory>
 
-    server_state::server_state() :
-        state_( RUNNING )  {
-    }
+namespace ipc = irods::experimental::interprocess;
 
-    server_state& server_state::instance() {
-        static server_state instance_;
-        return instance_;
-    }
+using ipc_object_type = ipc::shared_memory_object<irods::server_state::server_state>;
 
-    error server_state::operator()( const std::string& _s ) {
-        boost::mutex::scoped_lock lock( mutex_ );
-        if ( RUNNING != _s &&
-             PAUSED  != _s &&
-             STOPPED != _s &&
-             EXITED  != _s ) {
-            std::string msg( "invalid state [" );
-            msg += _s;
-            msg += "]";
-            return ERROR(
-                       SYS_INVALID_INPUT_PARAM,
-                       msg );
+std::unique_ptr<ipc_object_type> g_state;
 
+const char* const g_shared_memory_name = "irods_server_state";
+
+namespace irods::server_state
+{
+    auto init() -> void 
+    {
+        // Due to the implementation of shared_memory_object, the object might not be
+        // set to the value passed. Relying on the constructor to do this is incorrect
+        // because shared_memory_object only initializes the object when the shared
+        // memory is first created. If the shared memory exists, the values passed to
+        // the shared_memory_object will be ignored.
+        g_state.reset(new ipc_object_type{g_shared_memory_name, server_state::running});
+    } // init
+
+    auto get_state() -> server_state 
+    {
+        return g_state->atomic_exec_read([](server_state _value) {
+            return _value;
+        });
+    } // get_state
+
+    auto set_state(server_state _new_state) -> irods::error 
+    {
+        return g_state->atomic_exec([_new_state](server_state& _value) {
+            _value = _new_state;
+            return SUCCESS();
+        });
+    } // set_state
+
+    auto to_string(server_state _state) -> std::string_view
+    {
+        switch (_state) {
+            // clang-format off
+            case server_state::running: return "server_state_running";
+            case server_state::paused:  return "server_state_paused";
+            case server_state::stopped: return "server_state_stopped";
+            case server_state::exited:  return "server_state_exited";
+            // clang-format on
         }
 
-        state_ = _s;
-
-        return SUCCESS();
-    }
-
-    std::string server_state::operator()() {
-        boost::mutex::scoped_lock lock( mutex_ );
-        return state_;
-    }
-
-
-}; // namespace irods
-
-
-
+        throw std::invalid_argument{"Server state not supported"};
+    } // to_string
+} // namespace irods::server_state
 
