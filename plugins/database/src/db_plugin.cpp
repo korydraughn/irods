@@ -12004,13 +12004,8 @@ irods::error db_get_grid_configuration_value_op(
         return ERROR(CATALOG_NOT_CONNECTED, "catalog not connected");
     }
 
-    //std::vector<std::string> bindVars{_namespace, _option_name};
-    std::vector<std::string> bindVars;
-    bindVars.reserve(2);
-    bindVars.push_back(_namespace);
-    bindVars.push_back(_option_name);
+    std::vector<std::string> bindVars{_namespace, _option_name};
 
-    // TODO Require the caller to pass the size of the _option_value buffer.
     const int status = cmlGetStringValueFromSql(
          "select option_value from R_GRID_CONFIGURATION where namespace = ? and option_name = ?",
          _option_value, _option_value_buffer_size, bindVars, &icss);

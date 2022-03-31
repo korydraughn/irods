@@ -3419,11 +3419,6 @@ int chlCalcUsageAndQuota(
 
 } // chlCalcUsageAndQuota
 
-// TODO Add documentation.
-// =-=-=-=-=-=-=-
-// chlGetGridConfigurationValue - Gets a single row from the r_grid_configuration table.
-// Input - rsComm_t *rsComm - the server handle,
-//         char* hostname - new/successor delay server
 int chlGetGridConfigurationValue(rsComm_t*   _comm,
                                  const char* _namespace,
                                  const char* _optionName,
