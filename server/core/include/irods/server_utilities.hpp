@@ -70,10 +70,18 @@ namespace irods
     /// \since 4.3.0
     auto create_pid_file(const std::string_view _pid_filename) -> int;
 
-    /// Returns the PID stored in PID_FILENAME_DELAY_SERVER if available.
+    /// Returns the PID stored in the file if available.
+    ///
+    /// This function will return a \p std::nullopt if the filename does not refer to a file
+    /// under the temp directory or the PID is not a child of the calling process.
+    ///
+    /// \param[in] _pid_filename The name of the file to which contains a PID value (just the
+    ///                          filename, not the absolute path).
+    ///
+    /// \return The PID stored in the file.
     ///
     /// \since 4.3.0
-    auto get_delay_server_pid() noexcept -> std::optional<pid_t>;
+    auto get_pid_from_file(const std::string_view _pid_filename) noexcept -> std::optional<pid_t>;
 } // namespace irods
 
 #endif // IRODS_SERVER_UTILITIES_HPP

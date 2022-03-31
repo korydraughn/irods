@@ -132,10 +132,10 @@ namespace irods
         return 0;
     } // create_pid_file
 
-    std::optional<pid_t> get_delay_server_pid() noexcept
+    std::optional<pid_t> get_pid_from_file(const std::string_view _pid_filename) noexcept
     {
         try {
-            const auto pid_file = boost::filesystem::temp_directory_path() / PID_FILENAME_DELAY_SERVER.data();
+            const auto pid_file = boost::filesystem::temp_directory_path() / _pid_filename.data();
 
             if (!boost::filesystem::exists(pid_file)) {
                 return std::nullopt;
@@ -147,8 +147,8 @@ namespace irods
                 return std::nullopt;
             }
 
-            // The delay server is running if waitpid() returns a value other than -1.
-            // If -1 is returned and errno is set to ECHILD, that means the process specified
+            // The process is running if waitpid() returns a value other than -1. If -1
+            // is returned and errno is set to ECHILD, that means the process specified
             // by "pid" does not exist or is not a child of the calling process.
             if (waitpid(pid, nullptr, WNOHANG) != -1) {
                 return pid;
@@ -157,6 +157,6 @@ namespace irods
         catch (...) {}
 
         return std::nullopt;
-    } // get_delay_server_pid
+    } // get_pid_from_file
 } // namespace irods
 
