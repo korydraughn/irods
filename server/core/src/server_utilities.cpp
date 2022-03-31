@@ -18,6 +18,11 @@
 
 namespace irods
 {
+    // clang-format off
+    const std::string_view PID_FILENAME_MAIN_SERVER  = "irods.pid";
+    const std::string_view PID_FILENAME_DELAY_SERVER = "irods_delay_server.pid";
+    // clang-format on
+
     auto is_force_flag_required(RsComm& _comm, const DataObjInp& _input) -> bool
     {
         namespace ix = irods::experimental;
@@ -130,7 +135,7 @@ namespace irods
     std::optional<pid_t> get_delay_server_pid() noexcept
     {
         try {
-            const auto pid_file = boost::filesystem::temp_directory_path() / "irods_delay_server.pid";
+            const auto pid_file = boost::filesystem::temp_directory_path() / PID_FILENAME_DELAY_SERVER.data();
 
             if (!boost::filesystem::exists(pid_file)) {
                 return std::nullopt;
