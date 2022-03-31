@@ -201,7 +201,7 @@ namespace
         }
 
         return false;
-    } // instantiate_shared_memory
+    } // instantiate_shared_memory_for_plugin
 
     irods::error instantiate_shared_memory()
     {
@@ -236,7 +236,7 @@ namespace
         }
 
         return false;
-    } // uninstantiate_shared_memory
+    } // uninstantiate_shared_memory_for_plugin
 
     irods::error uninstantiate_shared_memory()
     {
@@ -1782,7 +1782,7 @@ int recordServerProcess(rsComm_t* svrComm)
     char* tmp;
     if (DIR* dirp = opendir("/usr/tmp"); dirp) {
         tmp = "/usr/tmp";
-        (void) closedir(dirp);
+        closedir(dirp);
     }
     else {
         tmp = "/tmp";
