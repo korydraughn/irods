@@ -4,9 +4,6 @@
 #include "irods/procApiRequest.h"
 #include "irods/rodsErrorTable.h"
 
-#include <cstdlib>
-#include <cstring>
-
 auto rc_set_grid_configuration_value(RcComm* _comm, const GridConfigurationInput* _input) -> int
 {
     if (!_input) {

@@ -21,7 +21,6 @@
 #include "irods/irods_logger.hpp"
 
 #include <string>
-#include <tuple>
 
 namespace ic = irods::experimental::catalog;
 

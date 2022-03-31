@@ -3,8 +3,9 @@
 
 /// \file
 
+#include "irods/plugins/api/grid_configuration_types.h"
+
 struct RsComm;
-struct GridConfigurationInput;
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +23,6 @@ extern "C" {
 ///
 /// \since 4.3.0
 int rs_set_grid_configuration_value(RsComm* _comm, const GridConfigurationInput* _input);
-                                    
 
 #ifdef __cplusplus
 } // extern "C"

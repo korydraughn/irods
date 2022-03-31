@@ -3461,11 +3461,6 @@ int chlGetGridConfigurationValue(rsComm_t*   _comm,
     return ret.code();
 } // chlGetGridConfigurationValue
 
-// TODO Add documentation.
-// =-=-=-=-=-=-=-
-// chlSetGridConfigurationValue - Sets a single row in the r_grid_configuration table.
-// Input - rsComm_t *rsComm - the server handle,
-//         char* hostname - new/successor delay server
 int chlSetGridConfigurationValue(rsComm_t*   _comm,
                                  const char* _namespace,
                                  const char* _optionName,

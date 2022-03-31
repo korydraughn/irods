@@ -5,9 +5,6 @@
 
 #include "irods/irods_server_api_call.hpp"
 
-#include <cstdlib>
-#include <cstring>
-
 auto rs_set_grid_configuration_value(RsComm* _comm, const GridConfigurationInput* _input) -> int
 {
     if (!_input) {

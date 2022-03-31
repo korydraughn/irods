@@ -3,8 +3,9 @@
 
 /// \file
 
+#include "irods/plugins/api/grid_configuration_types.h"
+
 struct RcComm;
-struct GridConfigurationInput;
 
 #ifdef __cplusplus
 extern "C" {
