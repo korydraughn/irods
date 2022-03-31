@@ -67,7 +67,6 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
-#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <regex>
@@ -497,7 +496,7 @@ namespace
         irods::at_scope_exit free_output{[&output] { std::free(output); }};
 
         if (const auto ec = rc_get_grid_configuration_value(&_comm, &input, &output); ec != 0) {
-            log::error("Failed to retrieve option value from r_grid_configuration "
+            log::error("Failed to get option value from r_grid_configuration "
                        "[error_code={}, namespace={}, option_name={}].",
                        ec, _namespace, _option_name);
             return std::nullopt;
@@ -691,7 +690,7 @@ namespace
         }
     } // launch_delay_server
 
-    void delay_server_migration(bool _enable_test_mode, bool _write_to_stdout)
+    void migrate_delay_server(bool _enable_test_mode, bool _write_to_stdout)
     {
         using log = irods::experimental::log::server;
 
@@ -771,7 +770,7 @@ namespace
                 if (!successor.empty() && hostname != successor) {
                     log::trace("New successor detected!");
 
-                    const auto pid = irods::get_delay_server_pid();
+                    const auto pid = irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER);
 
                     if (!pid) {
                         log::trace("Could not get delay server PID.");
@@ -783,7 +782,7 @@ namespace
 
                     // If the delay server is running locally, send SIGTERM to it and wait
                     // for graceful shutdown. The call to waitpid() will cause the CRON manager
-                    // to stop making process until it returns because it is single threaded.
+                    // to stop making progress until it returns because it is single threaded.
                     kill(*pid, SIGTERM);
 
                     int child_status = 0;
@@ -794,7 +793,7 @@ namespace
                     log::trace("No successor detected. Checking if delay server needs to be launched ...");
 
                     // If the delay server is not running, launch it!
-                    if (const auto pid = irods::get_delay_server_pid(); !pid) {
+                    if (const auto pid = irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER); !pid) {
                         launch_delay_server(_enable_test_mode, _write_to_stdout);
                     }
                 }
@@ -822,7 +821,7 @@ namespace
         catch (const std::exception& e) {
             log::error("Caught exception in delay server CRON task [exception={}]", e.what());
         }
-    } // delay_server_migration
+    } // migrate_delay_server
 
     void daemonize()
     {
@@ -1877,7 +1876,7 @@ int initServerMain(rsComm_t *svrComm,
     delay_server
         .interval(5)
         .task([enable_test_mode, write_to_stdout] {
-            delay_server_migration(enable_test_mode, write_to_stdout);
+            migrate_delay_server(enable_test_mode, write_to_stdout);
         });
     ix::cron::cron::instance().add_task(delay_server.build());
 
