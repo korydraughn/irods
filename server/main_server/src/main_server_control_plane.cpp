@@ -21,11 +21,6 @@
 
 #include <boost/lexical_cast.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnarrowing"
-#include <boost/process.hpp>
-#pragma GCC diagnostic pop
-
 #include <fmt/format.h>
 
 #include <nlohmann/json.hpp>
@@ -192,7 +187,7 @@ namespace irods
 
     static void kill_delay_server()
     {
-        if (const auto pid = irods::get_delay_server_pid(); pid) {
+        if (const auto pid = irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER); pid) {
             rodsLog(LOG_DEBUG, "[%s:%d] - sending kill signal to delay server", __FUNCTION__, __LINE__);
 
             // Previously, we ran kill_pid.py here.
@@ -328,7 +323,6 @@ namespace irods
 
     static int get_pid_age(pid_t _pid)
     {
-#if 1
         std::vector<std::string> args{std::to_string(_pid)};
 
         std::string pid_age;
@@ -347,33 +341,6 @@ namespace irods
         }
 
         return static_cast<int>(age);
-#else
-        namespace bp = boost::process;
-
-        bp::ipstream pipe;
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnarrowing"
-        bp::child c(fmt::format("python3 {}/scripts/pid_age.py {}", get_irods_home_directory().c_str(), _pid),
-                    bp::std_out > pipe);
-#pragma GCC diagnostic pop
-
-        std::string line;
-        std::string output;
-        while (pipe && std::getline(pipe, line) && !line.empty()) {
-            output += line;
-        }
-
-        c.wait();
-
-        rodsLog(LOG_NOTICE, "%s :: get_pid_age(%d) => output=[%s]", __func__, _pid, output.c_str());
-
-        if (c.exit_code() == 0) {
-            return std::stoi(line);
-        }
-
-        return 0;
-#endif
     } // get_pid_age
 
     static error operation_status(
@@ -389,7 +356,7 @@ namespace irods
         json obj{
             {"hostname", my_env.rodsHost},
             {"irods_server_pid", getpid()},
-            {"re_server_pid", irods::get_delay_server_pid().value_or(0)}
+            {"re_server_pid", irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER).value_or(0)}
         };
 
         server_state& s = server_state::instance();
