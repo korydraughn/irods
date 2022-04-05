@@ -1079,6 +1079,29 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
         ix::cron::cron::instance().add_task(task_builder.build());
     }
 
+    // TODO Launch the control plane.
+    {
+        const auto launch_control_plane = [] {
+            const auto pid = fork();
+
+            if (pid > 0) {
+
+            }
+            else if (pid == 0) {
+
+            }
+            else {
+
+            }
+        };
+
+        ix::cron::cron_builder task_builder;
+        task_builder
+            .interval(5)
+            .task(launch_control_plane);
+        ix::cron::cron::instance().add_task(task_builder.build());
+    }
+
     std::thread cron_manager_thread{[] {
         irods::server_state& server_state = irods::server_state::instance();
 
