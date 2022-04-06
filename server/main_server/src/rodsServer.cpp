@@ -801,25 +801,25 @@ namespace
             else if (hostname == successor) {
                 log::trace("Local server [{}] is the successor.", hostname);
 
-                try {
-                    if (const auto res = is_delay_server_running_on_remote_host(leader); res && !*res) {
-                        {
-                            ix::client_connection comm;
-                            set_grid_configuration_option_value(comm, "delay_server", "leader", hostname);
-                            set_grid_configuration_option_value(comm, "delay_server", "successor", "");
-                        }
+                if (const auto res = is_delay_server_running_on_remote_host(leader); res && !*res) {
+                    {
+                        ix::client_connection comm;
+                        set_grid_configuration_option_value(comm, "delay_server", "leader", hostname);
+                        set_grid_configuration_option_value(comm, "delay_server", "successor", "");
+                    }
 
-                        launch_delay_server(_enable_test_mode, _write_to_stdout);
-                    }
-                    else {
-                        run_leader_health_check(leader);
-                    }
+                    launch_delay_server(_enable_test_mode, _write_to_stdout);
                 }
-                catch (...) {}
+                else {
+                    run_leader_health_check(leader);
+                }
             }
         }
         catch (const std::exception& e) {
-            log::error("Caught exception in delay server CRON task [exception={}]", e.what());
+            log::error("Caught exception in migrate_delay_server(): {}", e.what());
+        }
+        catch (...) {
+            log::error("Caught unknown exception in migrate_delay_server()");
         }
     } // migrate_delay_server
 
