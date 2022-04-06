@@ -134,16 +134,20 @@ namespace irods
 
     std::optional<pid_t> get_pid_from_file(const std::string_view _pid_filename) noexcept
     {
+        using log = irods::experimental::log::server;
+
         try {
             const auto pid_file = boost::filesystem::temp_directory_path() / _pid_filename.data();
 
             if (!boost::filesystem::exists(pid_file)) {
+                log::trace("PID file does not exist [path={}].", pid_file.c_str());
                 return std::nullopt;
             }
 
             pid_t pid;
 
             if (!(std::ifstream{pid_file.c_str()} >> pid)) {
+                log::trace("Could not retrieve PID from file [path={}].", pid_file.c_str());
                 return std::nullopt;
             }
 
@@ -154,7 +158,14 @@ namespace irods
                 return pid;
             }
         }
-        catch (...) {}
+        catch (const std::exception& e) {
+            log::error("Caught exception in get_pid_from_file() [_pid_filename={}]: {}",
+                       _pid_filename, e.what());
+        }
+        catch (...) {
+            log::error("Caught unknown exception in get_pid_from_file() [_pid_filename={}].",
+                       _pid_filename);
+        }
 
         return std::nullopt;
     } // get_pid_from_file
