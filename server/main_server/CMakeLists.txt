@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 add_executable(
   irodsServer
   "${CMAKE_CURRENT_SOURCE_DIR}/src/rodsServer.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/main_server_control_plane.cpp"
+  #"${CMAKE_CURRENT_SOURCE_DIR}/src/main_server_control_plane.cpp"
 )
 target_link_libraries(
   irodsServer

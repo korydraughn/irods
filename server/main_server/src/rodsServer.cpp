@@ -18,6 +18,7 @@
 #include "irods/irods_re_plugin.hpp"
 #include "irods/irods_server_properties.hpp"
 #include "irods/irods_server_control_plane.hpp"
+#include "irods/server_control_plane_command.hpp"
 #include "irods/initServer.hpp"
 #include "irods/procLog.h"
 #include "irods/rsGlobalExtern.hpp"

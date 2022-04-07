@@ -3,6 +3,9 @@
 
 /// \file
 
+#include <cstddef>
+#include <string>
+
 namespace irods
 {
     inline const std::string SERVER_CONTROL_OPTION_KW( "server_control_option" );
