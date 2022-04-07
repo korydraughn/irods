@@ -747,12 +747,12 @@ irods::error process_host_list(const control_plane_context& _context,
         }
         // Forward to the correct server.
         else {
-            irods::error ret = forward_command(_cmd_name,
-                                               host,
-                                               _context.port_property,
-                                               _wait_option,
-                                               _wait_seconds,
-                                               output);
+            const auto ret = forward_command(_cmd_name,
+                                             host,
+                                             _context.port_property,
+                                             _wait_option,
+                                             _wait_seconds,
+                                             output);
 
             if (!ret.ok()) {
                 _output += output;
