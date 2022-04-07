@@ -1124,9 +1124,6 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
     std::uint64_t return_code = 0;
 
     try {
-        // Launch the control plane.
-        irods::server_control_plane ctrl_plane(irods::CFG_SERVER_CONTROL_PLANE_PORT, is_control_plane_accepting_requests);
-
         status = startProcConnReqThreads();
         if (status < 0) {
             rodsLog(LOG_ERROR, "[%s] - Error in startProcConnReqThreads()", __FUNCTION__);

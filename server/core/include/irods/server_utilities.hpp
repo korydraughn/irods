@@ -24,6 +24,11 @@ namespace irods
     /// \since 4.3.0
     extern const std::string_view PID_FILENAME_DELAY_SERVER;
 
+    /// The name of the PID file used for the control plane.
+    ///
+    /// \since 4.3.0
+    extern const std::string_view PID_FILENAME_CONTROL_PLANE;
+
     /// A utility function primarily meant to be used with ::rsDataObjPut and ::rsDataObjCopy.
     ///
     /// \param[in] _comm  A reference to the communication object.

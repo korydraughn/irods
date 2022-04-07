@@ -19,8 +19,9 @@
 namespace irods
 {
     // clang-format off
-    const std::string_view PID_FILENAME_MAIN_SERVER  = "irods.pid";
-    const std::string_view PID_FILENAME_DELAY_SERVER = "irods_delay_server.pid";
+    const std::string_view PID_FILENAME_MAIN_SERVER   = "irods.pid";
+    const std::string_view PID_FILENAME_DELAY_SERVER  = "irods_delay_server.pid";
+    const std::string_view PID_FILENAME_CONTROL_PLANE = "irods_control_plane.pid":
     // clang-format on
 
     auto is_force_flag_required(RsComm& _comm, const DataObjInp& _input) -> bool

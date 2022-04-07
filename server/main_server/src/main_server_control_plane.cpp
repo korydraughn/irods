@@ -407,36 +407,15 @@ namespace irods
         });
     } // is_host_in_list
 
-    server_control_plane::server_control_plane(const std::string& _prop,
-                                               std::atomic<bool>& _is_accepting_requests)
-        : control_executor_(_prop, _is_accepting_requests)
-        , control_thread_(boost::ref(control_executor_))
-    {
-    } // ctor
-
-    server_control_plane::~server_control_plane()
-    {
-        try {
-            control_thread_.join();
-        }
-        catch ( const boost::thread_resource_error& ) {
-            rodsLog(LOG_ERROR, "boost encountered thread_resource_error on join in server_control_plane destructor.");
-        }
-    } // dtor
-
-    server_control_executor::server_control_executor(const std::string& _prop,
-                                                     std::atomic<bool>& _is_accepting_requests)
-        : port_prop_(_prop)
-        , op_map_{}
+    server_control_executor::server_control_executor(const std::string& _prop)
+        : op_map_{}
+        , port_prop_(_prop)
         , local_server_hostname_{}
         , provider_hostname_{}
-        , is_accepting_requests_{_is_accepting_requests}
     {
         if (port_prop_.empty()) {
             THROW(SYS_INVALID_INPUT_PARAM, "control_plane_port key is empty");
         }
-
-        is_accepting_requests_.store(false);
 
         op_map_[SERVER_CONTROL_PAUSE]  = operation_pause;
         op_map_[SERVER_CONTROL_RESUME] = operation_resume;
@@ -594,10 +573,6 @@ namespace irods
 
                 rodsLog(LOG_NOTICE, ">>> control plane :: listening on port %d\n", port);
 
-                // Let external components know that the control plane is ready
-                // to accept requests.
-                is_accepting_requests_.store(true);
-
                 server_state& s = server_state::instance();
                 while (server_state::STOPPED != s() && server_state::EXITED != s()) {
                     std::string output;
@@ -700,8 +675,6 @@ namespace irods
             catch (const std::exception& e) {
                 rodsLog(LOG_ERROR, "Encountered an error in the control plane loop: [%s] Restarting control thread...", e.what());
             }
-
-            is_accepting_requests_.store(false);
         }
     } // control operation
 
