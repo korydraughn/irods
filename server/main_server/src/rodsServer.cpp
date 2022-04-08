@@ -68,6 +68,7 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <regex>
@@ -90,8 +91,7 @@ int agent_conn_socket{};
 bool connected_to_agent{};
 
 pid_t agent_spawning_pid{};
-const char socket_dir_template[]{"/tmp/irods_sockets_XXXXXX"};
-char agent_factory_socket_dir[sizeof(socket_dir_template)]{};
+char unix_domain_socket_directory[] = "/tmp/irods_sockets_XXXXXX";
 char agent_factory_socket_file[sizeof(local_addr.sun_path)]{};
 
 uint ServerBootTime;
@@ -661,14 +661,14 @@ namespace
     {
         using log = irods::experimental::log::server;
 
-        log::info("Forking Rule Execution Server (irodsReServer) ...");
+        log::info("Forking Delay Server (irodsReServer) ...");
 
         // If we're planning on calling one of the functions from the exec-family,
         // then we're only allowed to use async-signal-safe functions following the call
         // to fork(). To avoid potential issues, we build up the argument list before
         // doing the fork-exec.
 
-        std::vector<char*> args{"irodsReServer"};
+        std::vector<char*> args{"irodsDelayServer"};
 
         if (_enable_test_mode) {
             args.push_back("-t");
@@ -680,9 +680,7 @@ namespace
 
         args.push_back(nullptr);
 
-        const auto pid = RODS_FORK();
-
-        if (pid == 0) {
+        if (RODS_FORK() == 0) {
             execv(args[0], args.data());
 
             // If execv() fails, the POSIX standard recommends using _exit() instead of
@@ -700,7 +698,6 @@ namespace
                 return;
             }
 
-            //
             // At this point, we don't have a database connection because grandpa never needed
             // one. initServer() calls initServerInfo() which attempts to establish a database connection.
             // initServer() immediately tears down the database connection. We can only guess that this is
@@ -709,7 +706,6 @@ namespace
             // The lines that follow temporarily re-establish a database connection only if the local
             // server is a catalog provider. This is necessary because none of the APIs invoked after this
             // database code results in the creation of a database connection.
-            //
 
             std::string service_role;
             if (const auto err = get_catalog_service_role(service_role); !err.ok()) {
@@ -823,6 +819,52 @@ namespace
             log::error("Caught unknown exception in migrate_delay_server()");
         }
     } // migrate_delay_server
+
+    void launch_control_plane(bool _enable_test_mode, bool _write_to_stdout)
+    {
+        using log = irods::experimental::log::server;
+
+        try {
+            if (irods::get_pid_from_file(irods::PID_FILENAME_CONTROL_PLANE)) {
+                return;
+            }
+
+            log::info("Forking Control Plane (irodsControlPlane) ...");
+
+            // If we're planning on calling one of the functions from the exec-family,
+            // then we're only allowed to use async-signal-safe functions following the call
+            // to fork(). To avoid potential issues, we build up the argument list before
+            // doing the fork-exec.
+
+            auto socket_endpoint = fmt::format("{}/control_plane", unix_domain_socket_directory);
+
+            std::vector<char*> args{"irodsControlPlane", socket_endpoint.data()};
+
+            if (_enable_test_mode) {
+                args.push_back("-t");
+            }
+
+            if (_write_to_stdout) {
+                args.push_back("-u");
+            }
+
+            args.push_back(nullptr);
+
+            if (fork() == 0) {
+                execv(args[0], args.data());
+
+                // If execv() fails, the POSIX standard recommends using _exit() instead of
+                // exit() to keep the child from corrupting the parent's memory.
+                _exit(1);
+            }
+        }
+        catch (const std::exception& e) {
+            log::error("Caught exception in launch_control_plane(): {}", e.what());
+        }
+        catch (...) {
+            log::error("Caught unknown exception in launch_control_plane()");
+        }
+    } // launch_control_plane
 
     void daemonize()
     {
@@ -958,81 +1000,94 @@ int main(int argc, char** argv)
 
     setup_signal_handlers();
 
-    // Set up local_addr for socket communication.
-    std::memset(&local_addr, 0, sizeof(local_addr));
-    local_addr.sun_family = AF_UNIX;
-    char random_suffix[65];
-    get64RandomBytes(random_suffix);
-
-    char mkdtemp_template[sizeof(socket_dir_template)]{};
-    std::snprintf(mkdtemp_template, sizeof(mkdtemp_template), "%s", socket_dir_template);
-
-    const char* mkdtemp_result = mkdtemp(mkdtemp_template);
-    if (!mkdtemp_result) {
-        rodsLog(LOG_ERROR, "Error creating tmp directory for iRODS sockets, mkdtemp errno [%d]: [%s]", errno, strerror(errno));
+    // Create a directory for IPC related sockets. This directory has protects IPC sockets from
+    // external applications.
+    if (!mkdtemp(unix_domain_socket_directory)) {
+        ix::log::server::error("Error creating temporary directory for iRODS sockets, mkdtemp errno [{}]: [{}].", errno, strerror(errno));
         return SYS_INTERNAL_ERR;
     }
 
-    std::snprintf(agent_factory_socket_dir, sizeof(agent_factory_socket_dir), "%s", mkdtemp_result);
-    std::snprintf(agent_factory_socket_file, sizeof(agent_factory_socket_file), "%s/irods_factory_%s", agent_factory_socket_dir, random_suffix);
+    // It's possible that the control plane could fail to launch. This is fine because the CRON
+    // manager thread will relaunch it until it starts.
+    launch_control_plane(enable_test_mode, write_to_stdout);
+
+    char random_suffix[65];
+    get64RandomBytes(random_suffix);
+    std::snprintf(agent_factory_socket_file, sizeof(agent_factory_socket_file), "%s/irods_factory_%s", unix_domain_socket_directory, random_suffix);
+
+    // Set up local_addr for socket communication.
+    std::memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.sun_family = AF_UNIX;
     std::snprintf(local_addr.sun_path, sizeof(local_addr.sun_path), "%s", agent_factory_socket_file);
 
-    ix::cron::cron_builder agent_watcher;
-    const auto start_agent_server = [&] {
-        int status;
-        int w = waitpid(agent_spawning_pid, &status, WNOHANG);
-        if (w != 0) {
-            ix::log::server::info("Starting agent factory");
-            auto new_pid = fork();
-            if (0 == new_pid) {
-                close(pid_file_fd);
+    const auto launch_agent_factory = [&] {
+        try {
+            int status;
+            int w = waitpid(agent_spawning_pid, &status, WNOHANG);
+            if (w != 0) {
+                ix::log::server::info("Starting agent factory");
+                auto new_pid = fork();
+                if (0 == new_pid) {
+                    close(pid_file_fd);
 
-                ProcessType = AGENT_PT;
+                    ProcessType = AGENT_PT;
 
-                // This appeared to be the best option at balancing cleanup and correct behavior,
-                // however this may not perform the full cleanup that would happen on a normal return from main.
-                // The other alternative considered here was throwing the code, however this was complicated
-                // by the usage of catch(...) blocks elsewhere.
-                exit(runIrodsAgentFactory(local_addr));
-            }
-            else {
-                close(agent_conn_socket);
-                ix::log::server::info("Restarting agent factory");
-                agent_conn_socket = socket(AF_UNIX, SOCK_STREAM, 0);
-
-                std::time_t sock_connect_start_time = time(nullptr);
-                while (true) {
-                    const auto len = sizeof(local_addr);
-                    ssize_t status = connect(agent_conn_socket, (const struct sockaddr*) &local_addr, len);
-                    if (status >= 0) {
-                        break;
-                    }
-
-                    int saved_errno = errno;
-                    if ((std::time(nullptr) - sock_connect_start_time) > 5) {
-                        rodsLog(LOG_ERROR, "Error connecting to agent factory socket, errno = [%d]: %s",
-                                saved_errno, strerror(saved_errno));
-                        exit(SYS_SOCK_CONNECT_ERR);
-                    }
-
+                    // This appeared to be the best option at balancing cleanup and correct behavior,
+                    // however this may not perform the full cleanup that would happen on a normal return from main.
+                    // The other alternative considered here was throwing the code, however this was complicated
+                    // by the usage of catch(...) blocks elsewhere.
+                    exit(runIrodsAgentFactory(local_addr));
                 }
+                else {
+                    close(agent_conn_socket);
+                    ix::log::server::info("Restarting agent factory");
+                    agent_conn_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 
-                agent_spawning_pid = new_pid;
+                    std::time_t sock_connect_start_time = std::time(nullptr);
+                    while (true) {
+                        const auto len = sizeof(local_addr);
+                        ssize_t status = connect(agent_conn_socket, (const struct sockaddr*) &local_addr, len);
+                        if (status >= 0) {
+                            break;
+                        }
+
+                        int saved_errno = errno;
+                        if ((std::time(nullptr) - sock_connect_start_time) > 5) {
+                            rodsLog(LOG_ERROR, "Error connecting to agent factory socket, errno = [%d]: %s",
+                                    saved_errno, strerror(saved_errno));
+                            exit(SYS_SOCK_CONNECT_ERR);
+                        }
+
+                    }
+
+                    agent_spawning_pid = new_pid;
+                }
             }
         }
-    };
+        catch (...) {
+            // Do not allow exceptions to escape the CRON task!
+            // Failing to do so can cause the CRON manager thread to crash the server.
+        }
+    }; // launch_agent_factory
 
-    start_agent_server();
-    agent_watcher.interval(5).task(start_agent_server);
+    launch_agent_factory();
+    ix::cron::cron_builder agent_watcher;
+    agent_watcher.interval(5).task(launch_agent_factory);
     ix::cron::cron::instance().add_task(agent_watcher.build());
 
     ix::cron::cron_builder cache_clearer;
     cache_clearer
         .interval(600)
         .task([] {
-            ix::log::server::info("Expiring old cache entries");
-            irods::experimental::net::hostname_cache::erase_expired_entries();
-            irods::experimental::net::dns_cache::erase_expired_entries();
+            try {
+                ix::log::server::info("Expiring old cache entries");
+                irods::experimental::net::hostname_cache::erase_expired_entries();
+                irods::experimental::net::dns_cache::erase_expired_entries();
+            }
+            catch (...) {
+                // Do not allow exceptions to escape the CRON task!
+                // Failing to do so can cause the CRON manager thread to crash the server.
+            }
         });
     ix::cron::cron::instance().add_task(cache_clearer.build());
 
@@ -1076,51 +1131,78 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
         ix::cron::cron_builder task_builder;
         task_builder
             .interval(get_stacktrace_file_processor_sleep_time())
-            .task(log_stacktrace_files);
-        ix::cron::cron::instance().add_task(task_builder.build());
-    }
-
-    // TODO Launch the control plane.
-    {
-        const auto launch_control_plane = [] {
-            const auto pid = fork();
-
-            if (pid > 0) {
-
-            }
-            else if (pid == 0) {
-
-            }
-            else {
-
-            }
-        };
-
-        ix::cron::cron_builder task_builder;
-        task_builder
-            .interval(5)
-            .task(launch_control_plane);
+            .task([] {
+                try {
+                    log_stacktrace_files();
+                }
+                catch (...) {
+                    // Do not allow exceptions to escape the CRON task!
+                    // Failing to do so can cause the CRON manager thread to crash the server.
+                }
+            });
         ix::cron::cron::instance().add_task(task_builder.build());
     }
 
     std::thread cron_manager_thread{[] {
-        irods::server_state& server_state = irods::server_state::instance();
+        auto& server_state = irods::server_state::instance();
 
         while (true) {
-            const auto& state = server_state();
+            try {
+                const auto& state = server_state();
 
-            if (irods::server_state::STOPPED == state || irods::server_state::EXITED == state) {
-                break;
+                if (irods::server_state::STOPPED == state || irods::server_state::EXITED == state) {
+                    break;
+                }
+
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(100ms);
+
+                ix::cron::cron::instance().run();
             }
-
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(100ms);
-
-            ix::cron::cron::instance().run();
+            catch (...) {}
         }
     }};
 
     irods::at_scope_exit join_cron_manager_thread{[&] { cron_manager_thread.join(); }};
+#if 0
+    std::thread control_plane_communication_thread{[] {
+        // clang-format off
+        using log             = irods::experimental::log::server;
+        using stream_protocol = boost::asio::local::stream_protocol;
+        // clang-format on
+
+        boost::asio::io_context io_context;
+        stream_protocol::endpoint ep{fmt::format("{}/control_plane", unix_domain_socket_directory)}; // TODO Move to a function.
+        stream_protocol::acceptor acceptor{io_context, ep};
+
+        auto& server_state = irods::server_state::instance();
+
+        while (true) {
+            try {
+                stream_protocol::iostream client;
+                acceptor.accept(client.socket());
+
+                if (!client) {
+                    log::error("Control plane request error: {}", client.error().message());
+                    continue;
+                }
+
+                int cp_instruction;
+                client.read(&cp_instruction, sizeof(cp_instruction));
+
+                switch (cp_instruction) {
+                    case 0: server_state(irods::server_state::RUNNING); break;
+                    case 1: server_state(irods::server_state::PAUSED);break;
+                    case 2: server_state(irods::server_state::STOPPED);break;
+                    case 3: server_state(irods::server_state::EXITED);break;
+                }
+            }
+            catch (...) {}
+        }
+    }};
+
+    irods::at_scope_exit join_cron_manager_thread{[&] { control_plane_communication_thread.join(); }};
+#endif
 
     std::uint64_t return_code = 0;
 
@@ -1257,7 +1339,7 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
 
     close(agent_conn_socket);
     unlink(agent_factory_socket_file);
-    rmdir(agent_factory_socket_dir);
+    rmdir(unix_domain_socket_directory);
 
     ix::log::server::info("iRODS Server is done.");
 
@@ -1275,7 +1357,7 @@ serverExit()
 
     close(agent_conn_socket);
     unlink(agent_factory_socket_file);
-    rmdir(agent_factory_socket_dir);
+    rmdir(unix_domain_socket_directory);
 
     // Wake and terminate agent spawning process
     kill(agent_spawning_pid, SIGTERM);
@@ -1444,7 +1526,7 @@ int execAgent(int newSock, startupPack_t* startupPack)
 
     sockaddr_un tmp_socket_addr{};
     char tmp_socket_file[sizeof(tmp_socket_addr.sun_path)]{};
-    std::snprintf(tmp_socket_file, sizeof(tmp_socket_file), "%s/irods_agent_%s", agent_factory_socket_dir, random_suffix);
+    std::snprintf(tmp_socket_file, sizeof(tmp_socket_file), "%s/irods_agent_%s", unix_domain_socket_directory, random_suffix);
 
     ssize_t status = send(agent_conn_socket, tmp_socket_file, strlen(tmp_socket_file), 0);
     if (status < 0) {
@@ -1893,11 +1975,35 @@ int initServerMain(rsComm_t *svrComm,
     // Record port, PID, and CWD into a well-known file.
     recordServerProcess(svrComm);
 
+    // Launch the control plane and setup a CRON task to keep it alive.
+    launch_control_plane(enable_test_mode, write_to_stdout);
+    ix::cron::cron_builder task_builder;
+    task_builder
+        .interval(5)
+        .task([enable_test_mode, write_to_stdout] {
+            try {
+                launch_control_plane(enable_test_mode, write_to_stdout);
+            }
+            catch (...) {
+                // Do not allow exceptions to escape the CRON task!
+                // Failing to do so can cause the CRON manager thread to crash the server.
+            }
+        });
+    ix::cron::cron::instance().add_task(task_builder.build());
+
+    // Setup the delay server CRON task. Unlike the control plane, the delay server will
+    // launch just before we enter the main loop of grandpa.
     ix::cron::cron_builder delay_server;
     delay_server
         .interval(5)
         .task([enable_test_mode, write_to_stdout] {
-            migrate_delay_server(enable_test_mode, write_to_stdout);
+            try {
+                migrate_delay_server(enable_test_mode, write_to_stdout);
+            }
+            catch (...) {
+                // Do not allow exceptions to escape the CRON task!
+                // Failing to do so can cause the CRON manager thread to crash the server.
+            }
         });
     ix::cron::cron::instance().add_task(delay_server.build());
 

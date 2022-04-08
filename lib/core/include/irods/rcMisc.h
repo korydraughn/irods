@@ -373,6 +373,15 @@ enum class hostname_resolution_scheme
 /// \since 4.2.9
 auto resolve_hostname(const std::string_view _hostname, hostname_resolution_scheme _scheme)
     -> std::optional<std::string>;
+
+/// Sets the display name of a single connection in the output of "ips".
+///
+/// This function should be called at the start of a client application.
+///
+/// \param[in] _display_name The name that identifies the connection. This is normally the name of the client application.
+///
+/// \since 4.3.0
+auto set_ips_display_name(const std::string_view _display_name) -> void;
 #endif // __cplusplus
 
 #endif // IRODS_RC_MISC_H

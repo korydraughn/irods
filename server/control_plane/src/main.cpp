@@ -7,6 +7,7 @@
 #include "irods/irods_resource_manager.hpp"
 #include "irods/irods_server_control_plane.hpp"
 #include "irods/irods_server_properties.hpp"
+#include "irods/irods_server_state.hpp"
 #include "irods/irods_stacktrace.hpp"
 #include "irods/miscServerFunct.hpp"
 #include "irods/rcMisc.h"
@@ -14,14 +15,15 @@
 #include "irods/server_control_plane_command.hpp"
 #include "irods/server_utilities.hpp"
 #include "irods/sockComm.h"
-//#include "irods/irods_server_state.hpp"
 //#include "irods/rodsServer.hpp"
 
 #include <avro/Encoder.hh>
 #include <avro/Decoder.hh>
 #include <avro/Specific.hh>
 
+#include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/program_options.hpp>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 #include <zmq.hpp>
@@ -39,6 +41,10 @@
 #include <algorithm>
 #include <optional>
 
+//
+// Data Types
+//
+
 // clang-format off
 using handler_type   = std::function<irods::error(const std::string&, const std::size_t, std::string&)>;
 using host_list_type = std::vector<std::string>;
@@ -52,6 +58,18 @@ struct control_plane_context
     std::string local_server_hostname;
     std::string provider_hostname;
 }; // struct control_plane_context
+
+//
+// Function Prototypes
+//
+
+auto ctrl_plane_handle_shutdown_signal(int _signal) -> void;
+
+auto ctrl_plane_sleep(int _s, int _ms) -> void;
+
+auto resolve_hostnames_using_server_config(std::vector<std::string>& _hostnames) -> void;
+
+auto init_logger(bool _write_to_stdout, bool _enable_test_mode) -> void;
 
 irods::error forward_server_control_command(const std::string& _name,
                                             const std::string& _host,
@@ -140,40 +158,60 @@ irods::error process_operation(const control_plane_context& _context,
 
 irods::error decrypt_incoming_command(const zmq::message_t& _msg, irods::control_plane_command& _cmd);
 
-irods::error perform_operation(const std::string& _cmd_name,
+irods::error perform_operation(const control_plane_context& _context,
+                               const std::string& _cmd_name,
                                const std::string& _cmd_option,
                                const std::string& _wait_option,
                                const std::size_t& _wait_time_in_seconds,
                                const host_list_type& _cmd_hosts,
                                std::string& _output);
 
+//
+// Function Definitions
+//
+
 int ctrl_plane_signal_ = 0;
 
-void ctrl_plane_handle_shutdown_signal(int sig)
+auto ctrl_plane_handle_shutdown_signal(int) -> void
 {
     ctrl_plane_signal_ = SIGTERM;
-}
+} // ctrl_plane_handle_shutdown_signal
 
-void ctrl_plane_sleep(int _s, int _ms)
+auto ctrl_plane_sleep(int _s, int _ms) -> void
 {
     useconds_t us = (_s * 1000000) + (_ms * 1000);
     usleep(us);
-}
+} // ctrl_plane_sleep
 
-void resolve_hostnames_using_server_config(std::vector<std::string>& _hostnames)
+auto resolve_hostnames_using_server_config(std::vector<std::string>& _hostnames) -> void
 {
     std::transform(std::begin(_hostnames), std::end(_hostnames), std::begin(_hostnames),
         [](std::string& _hostname) {
             return resolve_hostname(_hostname, hostname_resolution_scheme::match_preferred)
                 .value_or(_hostname);
         });
-}
+} // resolve_hostnames_using_server_config
 
-irods::error forward_server_control_command(
-    const std::string& _name,
-    const std::string& _host,
-    const std::string& _port_keyword,
-    std::string& _output)
+auto init_logger(bool _write_to_stdout, bool _enable_test_mode) -> void
+{
+    using log = irods::experimental::log;
+
+    log::init(_write_to_stdout, _enable_test_mode);
+
+    log::server::set_level(log::get_level_from_config(irods::CFG_LOG_LEVEL_CATEGORY_SERVER_KW));
+    log::legacy::set_level(log::get_level_from_config(irods::CFG_LOG_LEVEL_CATEGORY_LEGACY_KW));
+
+    log::set_server_type("control_plane");
+
+    if (char hostname[HOST_NAME_MAX]{}; gethostname(hostname, sizeof(hostname)) == 0) {
+        log::set_server_host(hostname);
+    }
+} // init_logger
+
+irods::error forward_server_control_command(const std::string& _name,
+                                            const std::string& _host,
+                                            const std::string& _port_keyword,
+                                            std::string& _output)
 {
     if (irods::EMPTY_RESC_HOST == _host) {
         return SUCCESS();
@@ -229,11 +267,10 @@ irods::error forward_server_control_command(
     avro::encode(*e, cmd);
     std::shared_ptr<std::vector<std::uint8_t>> data = avro::snapshot(*out);
 
-    irods::buffer_crypt crypt(
-        shared_secret.size(),  // key size
-        0,                     // salt size ( we dont send a salt )
-        num_hash_rounds,       // num hash rounds
-        encryption_algorithm->c_str() );
+    irods::buffer_crypt crypt(shared_secret.size(),  // key size
+                              0,                     // salt size ( we dont send a salt )
+                              num_hash_rounds,       // num hash rounds
+                              encryption_algorithm->c_str());
 
     irods::buffer_crypt::array_t iv;
     irods::buffer_crypt::array_t data_to_send;
@@ -258,7 +295,7 @@ irods::error forward_server_control_command(
 
     // decrypt the message before passing to avro
     irods::buffer_crypt::array_t data_to_process;
-    const std::uint8_t* data_ptr = static_cast<const std::uint8_t*>(req.data());
+    const auto* data_ptr = static_cast<const std::uint8_t*>(req.data());
     irods::buffer_crypt::array_t data_to_decrypt(data_ptr, data_ptr + req.size());
     if (const auto ret = crypt.decrypt(shared_secret, iv, data_to_decrypt, data_to_process); !ret.ok()) {
         irods::log(PASS(ret));
@@ -325,12 +362,12 @@ irods::error server_operation_shutdown(
 
     int wait_milliseconds = irods::SERVER_CONTROL_POLLING_TIME_MILLI_SEC;
 
-    server_state& svr_state = server_state::instance();
-    svr_state(server_state::PAUSED);
+    irods::server_state& svr_state = irods::server_state::instance();
+    svr_state(irods::server_state::PAUSED);
 
     int sleep_time = 0;
     bool timeout_flg = false;
-    int proc_cnt = getAgentProcCnt();
+    int proc_cnt = 0; //getAgentProcCnt();
 
     kill_delay_server();
 
@@ -345,11 +382,11 @@ irods::error server_operation_shutdown(
             }
         }
 
-        proc_cnt = getAgentProcCnt();
+        proc_cnt = 0; //getAgentProcCnt();
     }
 
     // actually shut down the server
-    svr_state(server_state::STOPPED);
+    svr_state(irods::server_state::STOPPED);
 
     // block until server exits to return
     while (!timeout_flg) {
@@ -381,8 +418,8 @@ irods::error rule_engine_operation_shutdown(
     _output += env.rodsHost;
     _output += "\"\n},\n";
 
-    server_state& s = server_state::instance();
-    s(server_state::STOPPED);
+    irods::server_state& s = irods::server_state::instance();
+    s(irods::server_state::STOPPED);
     return SUCCESS();
 } // rule_engine_server_operation_shutdown
 
@@ -396,8 +433,8 @@ irods::error operation_pause(
     _output += "{\n    \"pausing\": \"";
     _output += env.rodsHost;
     _output += "\"\n},\n";
-    server_state& s = server_state::instance();
-    s( server_state::PAUSED );
+    irods::server_state& s = irods::server_state::instance();
+    s(irods::server_state::PAUSED);
 
     return SUCCESS();
 } // operation_pause
@@ -413,8 +450,8 @@ irods::error operation_resume(
     _output += env.rodsHost;
     _output += "\"\n},\n";
 
-    server_state& s = server_state::instance();
-    s( server_state::RUNNING );
+    irods::server_state& s = irods::server_state::instance();
+    s(irods::server_state::RUNNING);
     return SUCCESS();
 } // operation_resume
 
@@ -456,13 +493,13 @@ irods::error operation_status(
         {"re_server_pid", irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER).value_or(0)}
     };
 
-    server_state& s = server_state::instance();
+    irods::server_state& s = irods::server_state::instance();
     obj["status"] = s();
 
     auto arr = json::array();
 
     std::vector<int> pids;
-    getAgentProcPIDs( pids );
+    //getAgentProcPIDs( pids );
     for (std::size_t i = 0; i < pids.size(); ++i) {
         int pid = pids[i];
         int age = get_pid_age(pids[i]);
@@ -900,7 +937,8 @@ irods::error process_operation(const control_plane_context& _context,
         return PASS(ret);
     }
 
-    ret = perform_operation(cmd_name,
+    ret = perform_operation(_context,
+                            cmd_name,
                             cmd_option,
                             wait_option,
                             wait_seconds,
@@ -960,7 +998,8 @@ irods::error decrypt_incoming_command(const zmq::message_t& _msg, irods::control
     return SUCCESS();
 } // decrypt_incoming_command
 
-irods::error perform_operation(const std::string& _cmd_name,
+irods::error perform_operation(const control_plane_context& _context,
+                               const std::string& _cmd_name,
                                const std::string& _cmd_option,
                                const std::string& _wait_option,
                                const std::size_t& _wait_time_in_seconds,
@@ -971,10 +1010,10 @@ irods::error perform_operation(const std::string& _cmd_name,
     host_list_type cmd_hosts = _cmd_hosts;
 
     // add safeguards - if server is paused only allow a resume call
-    server_state& s = server_state::instance();
+    irods::server_state& s = irods::server_state::instance();
     std::string the_server_state = s();
-    if (server_state::PAUSED == the_server_state && irods::SERVER_CONTROL_RESUME != _cmd_name) {
-        _output = SERVER_PAUSED_ERROR;
+    if (irods::server_state::PAUSED == the_server_state && irods::SERVER_CONTROL_RESUME != _cmd_name) {
+        _output = irods::SERVER_PAUSED_ERROR;
         return SUCCESS();
     }
 
@@ -983,7 +1022,8 @@ irods::error perform_operation(const std::string& _cmd_name,
     // the provider needs to be notified first in certain
     // cases such as RESUME where it is needed to capture
     // the hostname list for validation, etc
-    auto ret = notify_provider_and_local_servers_preop(_cmd_name,
+    auto ret = notify_provider_and_local_servers_preop(_context,
+                                                       _cmd_name,
                                                        _cmd_option,
                                                        _wait_option,
                                                        _wait_time_in_seconds,
@@ -1006,13 +1046,13 @@ irods::error perform_operation(const std::string& _cmd_name,
     }
 
     host_list_type valid_hosts;
-    ret = validate_host_list(irods_hosts, cmd_hosts, valid_hosts);
+    ret = validate_host_list(_context, irods_hosts, cmd_hosts, valid_hosts);
     if (!ret.ok()) {
         final_ret = PASS(ret);
         server_log::error(final_ret.result());
     }
 
-    ret = process_host_list(_cmd_name, _wait_option, _wait_time_in_seconds, valid_hosts, _output);
+    ret = process_host_list(_context, _cmd_name, _wait_option, _wait_time_in_seconds, valid_hosts, _output);
     if (!ret.ok()) {
         final_ret = PASS(ret);
         server_log::error(final_ret.result());
@@ -1021,7 +1061,8 @@ irods::error perform_operation(const std::string& _cmd_name,
     // the provider needs to be notified last in certain
     // cases such as SHUTDOWN or PAUSE  where it is
     // needed to capture the hostname list for validation
-    ret = notify_provider_and_local_servers_postop(_cmd_name,
+    ret = notify_provider_and_local_servers_postop(_context,
+                                                   _cmd_name,
                                                    _cmd_option,
                                                    _wait_option,
                                                    _wait_time_in_seconds,
@@ -1037,15 +1078,61 @@ irods::error perform_operation(const std::string& _cmd_name,
 
 int main(int _argc, char* _argv[])
 {
+    set_ips_display_name(boost::filesystem::path{_argv[0]}.filename().c_str());
+
+    namespace po = boost::program_options;
+
+    po::options_description desc{""};
+    desc.add_options()
+        ("help,h", "")
+        ("test-mode,t", po::bool_switch(), "")
+        ("stdout,u", po::bool_switch(), "");
+
+    po::positional_options_description pod;
+    pod.add("socket_endpoint", 1);
+
+    po::variables_map vm;
+
+    try {
+        po::store(po::command_line_parser(_argc, _argv).options(desc).positional(pod).run(), vm);
+        po::notify(vm);
+    }
+    catch (const std::exception& e) {
+        server_log::error("Error: {}", e.what());
+        return 1;
+    }
+
+    if (vm.count("help")) {
+        // TODO print help message.
+        return 0;
+    }
+
+    if (vm.count("socket_endpoint") == 0) {
+        // TODO Handle error.
+        return 1;
+    }
+
+    // Load server_config.json into memory.
+    irods::server_properties::instance().capture();
+
+    init_logger(vm["stdout"].as<bool>(), vm["test-mode"].as<bool>());
+
     // TODO The main server must fork the control plane with the socket file
     // descriptor passed as an argument. The socket descriptor is expected to
     // be one of the ends of a connected socket pair (UNIX Domain Socket).
 
-    // TODO Argument needs to be defined in server_utilities.hpp.
     if (irods::create_pid_file(irods::PID_FILENAME_CONTROL_PLANE) != 0) {
         server_log::error("Could not create PID file for control plane.");
         return 1;
     }
+
+    namespace asio = boost::asio;
+
+    asio::io_context io_context;
+
+    asio::local::stream_protocol::endpoint ep{vm["socket_endpoint"].as<std::string>()};
+    asio::local::stream_protocol::socket socket{io_context};
+    socket.connect(ep);
 
     const auto context = init_control_plane_context(irods::CFG_SERVER_CONTROL_PLANE_PORT);
 
@@ -1094,8 +1181,8 @@ int main(int _argc, char* _argv[])
 
             server_log::info(">>> control plane :: listening on port {}", port);
 
-            server_state& s = server_state::instance();
-            while (server_state::STOPPED != s() && server_state::EXITED != s()) {
+            irods::server_state& s = irods::server_state::instance();
+            while (irods::server_state::STOPPED != s() && irods::server_state::EXITED != s()) {
                 std::string output;
 
                 switch (ctrl_plane_signal_) {
@@ -1160,14 +1247,15 @@ int main(int _argc, char* _argv[])
 #endif
                         host_list_type cmd_hosts;
                         cmd_hosts.push_back(context.local_server_hostname);
-                        const auto result = perform_operation(irods::SERVER_CONTROL_SHUTDOWN,
+                        const auto result = perform_operation(context,
+                                                              irods::SERVER_CONTROL_SHUTDOWN,
                                                               irods::SERVER_CONTROL_HOSTS_OPT,
                                                               "",
                                                               0,
                                                               cmd_hosts,
                                                               output);
                         if (!result.ok()) {
-                            log(PASS(ret));
+                            server_log::error(PASS(result).result());
                         }
 
                         break;

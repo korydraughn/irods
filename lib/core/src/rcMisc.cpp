@@ -4692,3 +4692,12 @@ auto resolve_hostname(const std::string_view _hostname, hostname_resolution_sche
     }
 } // resolve_hostname
 
+auto set_ips_display_name(const std::string_view _display_name) -> void
+{
+    // Setting this environment variable is required so that "ips" can display
+    // the command name alongside the connection information.
+    if (setenv(SP_OPTION, _display_name.data(), /* overwrite */ 1)) {
+        std::cout << "Warning: Could not set environment variable [spOption] for ips.";
+    }
+} // set_ips_display_name
+
