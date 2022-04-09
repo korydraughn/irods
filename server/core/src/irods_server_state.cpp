@@ -20,7 +20,16 @@ namespace irods::server_state
     auto init(bool _init_shared_memory) -> void 
     {
         if (_init_shared_memory) {
-            g_state.reset(new ipc_object_type{g_shared_memory_name, server_state::running});
+            g_state.reset(new ipc_object_type{g_shared_memory_name});
+
+            // Due to the implementation of shared_memory_object, we have to manually
+            // set the value. Relying on the constructor to do this is incorrect because
+            // shared_memory_object only initializes the object when allocating shared
+            // memory for the first time. If the shared memory exists, the values passed
+            // to the shared_memory_object will be ignored.
+            g_state->exec([](auto& _value) {
+                _value = server_state::running;
+            });
         }
         else {
             g_state.reset(new ipc_object_type{ipc::no_init, g_shared_memory_name});

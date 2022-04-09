@@ -1007,10 +1007,6 @@ int main(int argc, char** argv)
         return SYS_INTERNAL_ERR;
     }
 
-    // It's possible that the control plane could fail to launch. This is fine because the CRON
-    // manager thread will relaunch it until it starts.
-    launch_control_plane(enable_test_mode, write_to_stdout);
-
     ix::log::server::info("Setting up UNIX domain socket for agent factory ...");
     char random_suffix[65];
     get64RandomBytes(random_suffix);
@@ -1023,46 +1019,63 @@ int main(int argc, char** argv)
 
     const auto launch_agent_factory = [&] {
         try {
-            int status;
-            int w = waitpid(agent_spawning_pid, &status, WNOHANG);
-            if (w != 0) {
-                ix::log::server::info("Starting agent factory");
-                auto new_pid = fork();
-                if (0 == new_pid) {
-                    close(pid_file_fd);
+            // Return immediately if the agent factory exists.
+            // When the server is starting up, agent_spawning_pid will be zero. Therefore,
+            // we skip checking for the agent factory on startup.
+            if (agent_spawning_pid > 0 && waitpid(agent_spawning_pid, nullptr, WNOHANG) != -1) {
+                return;
+            }
 
-                    ProcessType = AGENT_PT;
+            ix::log::server::info("Forking agent factory ...");
 
+            const auto pid = fork();
+
+            if (pid == 0) {
+                close(pid_file_fd);
+
+                ProcessType = AGENT_PT;
+
+                try {
                     // This appeared to be the best option at balancing cleanup and correct behavior,
                     // however this may not perform the full cleanup that would happen on a normal return from main.
                     // The other alternative considered here was throwing the code, however this was complicated
                     // by the usage of catch(...) blocks elsewhere.
-                    exit(runIrodsAgentFactory(local_addr));
+                    _exit(runIrodsAgentFactory(local_addr));
                 }
-                else {
-                    close(agent_conn_socket);
-                    ix::log::server::info("Restarting agent factory");
-                    agent_conn_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+                catch (...) {
+                    // If an exception is thrown for any reason, terminate the agent factory.
+                    _exit(1);
+                }
+            }
+            else if (pid > 0) {
+                // If the agent factory is no longer available (e.g. it crashed or something), close the
+                // socket associated with the crashed agent factory.
+                close(agent_conn_socket);
 
-                    std::time_t sock_connect_start_time = std::time(nullptr);
-                    while (true) {
-                        const auto len = sizeof(local_addr);
-                        ssize_t status = connect(agent_conn_socket, (const struct sockaddr*) &local_addr, len);
-                        if (status >= 0) {
-                            break;
-                        }
+                ix::log::server::info("Connecting to agent factory [agent_factory_pid={}] ...", pid);
 
-                        int saved_errno = errno;
-                        if ((std::time(nullptr) - sock_connect_start_time) > 5) {
-                            rodsLog(LOG_ERROR, "Error connecting to agent factory socket, errno = [%d]: %s",
-                                    saved_errno, strerror(saved_errno));
-                            exit(SYS_SOCK_CONNECT_ERR);
-                        }
+                agent_conn_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 
+                const auto start_time = std::time(nullptr);
+
+                // Loop until grandpa establishes a connection to the new agent factory.
+                // If more than five seconds have elapsed, perhaps something bad has happened.
+                // In this, just terminate the program.
+                while (true) {
+                    if (connect(agent_conn_socket, (const struct sockaddr*) &local_addr, sizeof(local_addr)) >= 0) {
+                        break;
                     }
 
-                    agent_spawning_pid = new_pid;
+                    const auto saved_errno = errno;
+
+                    if ((std::time(nullptr) - start_time) > 5) {
+                        ix::log::server::error("Error connecting to agent factory socket, errno = [{}]: {}",
+                                               saved_errno, strerror(saved_errno));
+                        exit(SYS_SOCK_CONNECT_ERR);
+                    }
                 }
+
+                agent_spawning_pid = pid;
             }
         }
         catch (...) {
@@ -1075,6 +1088,10 @@ int main(int argc, char** argv)
     ix::cron::cron_builder agent_watcher;
     agent_watcher.interval(5).task(launch_agent_factory);
     ix::cron::cron::instance().add_task(agent_watcher.build());
+
+    // If the control plane fails to launch, it is okay. The CRON manager thread will
+    // attempt to relaunch it.
+    launch_control_plane(enable_test_mode, write_to_stdout);
 
     ix::cron::cron_builder cache_clearer;
     cache_clearer

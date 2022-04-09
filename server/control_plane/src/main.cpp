@@ -1179,6 +1179,7 @@ int main(int _argc, char* _argv[])
                 if (irods::server_state::server_state::stopped == state ||
                     irods::server_state::server_state::exited == state)
                 {
+                    server_log::info(">>> control plane :: server state is [stopped] or [exited]. exiting loop ...");
                     break;
                 }
 
@@ -1186,6 +1187,7 @@ int main(int _argc, char* _argv[])
 
                 switch (ctrl_plane_signal_) {
                     case 0: {
+                        server_log::trace(">>> control plane :: waiting for request ...");
                         // Wait for a request.
                         zmq::message_t req;
                         { [[maybe_unused]] const auto ec = zmq_skt.recv(req); }
@@ -1193,6 +1195,7 @@ int main(int _argc, char* _argv[])
                             continue;
                         }
 
+                        server_log::info(">>> control plane :: processing operation ...");
                         // Process the message.
                         std::string rep_msg = irods::SERVER_CONTROL_SUCCESS;
                         irods::error result = process_operation(context, req, output);
@@ -1202,6 +1205,7 @@ int main(int _argc, char* _argv[])
                             log(PASS(result));
                         }
 
+                        server_log::info(">>> control plane :: preparing response ...");
 #if 0
                         // TODO Investigate. This makes no sense.
                         if (!output.empty()) {
@@ -1225,6 +1229,7 @@ int main(int _argc, char* _argv[])
                         std::memcpy(rep.data(), data_to_send.data(), data_to_send.size());
                         zmq_skt.send(rep, zmq::send_flags::none);
 
+                        server_log::info(">>> control plane :: response sent.");
                         break;
                     }
 
