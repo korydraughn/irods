@@ -362,8 +362,7 @@ irods::error server_operation_shutdown(
 
     int wait_milliseconds = irods::SERVER_CONTROL_POLLING_TIME_MILLI_SEC;
 
-    irods::server_state& svr_state = irods::server_state::instance();
-    svr_state(irods::server_state::PAUSED);
+    irods::server_state::set_state(irods::server_state::server_state::paused);
 
     int sleep_time = 0;
     bool timeout_flg = false;
@@ -386,7 +385,7 @@ irods::error server_operation_shutdown(
     }
 
     // actually shut down the server
-    svr_state(irods::server_state::STOPPED);
+    irods::server_state::set_state(irods::server_state::server_state::stopped);
 
     // block until server exits to return
     while (!timeout_flg) {
@@ -398,8 +397,7 @@ irods::error server_operation_shutdown(
             timeout_flg = true;
         }
 
-        std::string the_server_state = svr_state();
-        if (irods::server_state::EXITED == the_server_state) {
+        if (irods::server_state::server_state::exited == irods::server_state::get_state()) {
             break;
         }
     }
@@ -418,8 +416,8 @@ irods::error rule_engine_operation_shutdown(
     _output += env.rodsHost;
     _output += "\"\n},\n";
 
-    irods::server_state& s = irods::server_state::instance();
-    s(irods::server_state::STOPPED);
+    irods::server_state::set_state(irods::server_state::server_state::stopped);
+
     return SUCCESS();
 } // rule_engine_server_operation_shutdown
 
@@ -433,8 +431,8 @@ irods::error operation_pause(
     _output += "{\n    \"pausing\": \"";
     _output += env.rodsHost;
     _output += "\"\n},\n";
-    irods::server_state& s = irods::server_state::instance();
-    s(irods::server_state::PAUSED);
+
+    irods::server_state::set_state(irods::server_state::server_state::paused);
 
     return SUCCESS();
 } // operation_pause
@@ -450,8 +448,8 @@ irods::error operation_resume(
     _output += env.rodsHost;
     _output += "\"\n},\n";
 
-    irods::server_state& s = irods::server_state::instance();
-    s(irods::server_state::RUNNING);
+    irods::server_state::set_state(irods::server_state::server_state::running);
+
     return SUCCESS();
 } // operation_resume
 
@@ -493,8 +491,7 @@ irods::error operation_status(
         {"re_server_pid", irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER).value_or(0)}
     };
 
-    irods::server_state& s = irods::server_state::instance();
-    obj["status"] = s();
+    obj["status"] = to_string(irods::server_state::get_state());
 
     auto arr = json::array();
 
@@ -548,6 +545,8 @@ control_plane_context init_control_plane_context(const std::string& _prop)
     }
 
     control_plane_context context;
+
+    context.port_property = _prop;
 
     // clang-format off
     context.handlers[irods::SERVER_CONTROL_PAUSE]  = operation_pause;
@@ -1010,9 +1009,9 @@ irods::error perform_operation(const control_plane_context& _context,
     host_list_type cmd_hosts = _cmd_hosts;
 
     // add safeguards - if server is paused only allow a resume call
-    irods::server_state& s = irods::server_state::instance();
-    std::string the_server_state = s();
-    if (irods::server_state::PAUSED == the_server_state && irods::SERVER_CONTROL_RESUME != _cmd_name) {
+    if (irods::server_state::server_state::paused == irods::server_state::get_state() &&
+        irods::SERVER_CONTROL_RESUME != _cmd_name)
+    {
         _output = irods::SERVER_PAUSED_ERROR;
         return SUCCESS();
     }
@@ -1080,6 +1079,10 @@ int main(int _argc, char* _argv[])
 {
     set_ips_display_name(boost::filesystem::path{_argv[0]}.filename().c_str());
 
+    init_logger(false, false);
+
+    irods::server_state::init();
+
     namespace po = boost::program_options;
 
     po::options_description desc{""};
@@ -1088,13 +1091,13 @@ int main(int _argc, char* _argv[])
         ("test-mode,t", po::bool_switch(), "")
         ("stdout,u", po::bool_switch(), "");
 
-    po::positional_options_description pod;
-    pod.add("socket_endpoint", 1);
+    //po::positional_options_description pod;
+    //pod.add("socket_endpoint", 1);
 
     po::variables_map vm;
 
     try {
-        po::store(po::command_line_parser(_argc, _argv).options(desc).positional(pod).run(), vm);
+        po::store(po::command_line_parser(_argc, _argv).options(desc)/*.positional(pod)*/.run(), vm);
         po::notify(vm);
     }
     catch (const std::exception& e) {
@@ -1107,35 +1110,23 @@ int main(int _argc, char* _argv[])
         return 0;
     }
 
-    if (vm.count("socket_endpoint") == 0) {
-        // TODO Handle error.
-        return 1;
-    }
-
     // Load server_config.json into memory.
     irods::server_properties::instance().capture();
 
-    init_logger(vm["stdout"].as<bool>(), vm["test-mode"].as<bool>());
+    //init_logger(vm["stdout"].as<bool>(), vm["test-mode"].as<bool>());
 
-    // TODO The main server must fork the control plane with the socket file
-    // descriptor passed as an argument. The socket descriptor is expected to
-    // be one of the ends of a connected socket pair (UNIX Domain Socket).
+    server_log::info("Initializing control plane ...");
+    server_log::info("Creating PID file for control plane ...");
 
     if (irods::create_pid_file(irods::PID_FILENAME_CONTROL_PLANE) != 0) {
         server_log::error("Could not create PID file for control plane.");
         return 1;
     }
 
-    namespace asio = boost::asio;
-
-    asio::io_context io_context;
-
-    asio::local::stream_protocol::endpoint ep{vm["socket_endpoint"].as<std::string>()};
-    asio::local::stream_protocol::socket socket{io_context};
-    socket.connect(ep);
-
+    server_log::info("Initializing control plane context ...");
     const auto context = init_control_plane_context(irods::CFG_SERVER_CONTROL_PLANE_PORT);
 
+    server_log::info("Setting up signal handlers for control plane context ...");
     signal(SIGINT, ctrl_plane_handle_shutdown_signal);
     signal(SIGHUP, ctrl_plane_handle_shutdown_signal);
     signal(SIGTERM, ctrl_plane_handle_shutdown_signal);
@@ -1166,6 +1157,7 @@ int main(int _argc, char* _argv[])
         return 1;
     }
 
+    server_log::info("Entering control plane main loop ...");
     while (true) {
         try {
             zmq::context_t zmq_ctx(1);
@@ -1181,8 +1173,15 @@ int main(int _argc, char* _argv[])
 
             server_log::info(">>> control plane :: listening on port {}", port);
 
-            irods::server_state& s = irods::server_state::instance();
-            while (irods::server_state::STOPPED != s() && irods::server_state::EXITED != s()) {
+            while (true) {
+                const auto state = irods::server_state::get_state();
+
+                if (irods::server_state::server_state::stopped == state ||
+                    irods::server_state::server_state::exited == state)
+                {
+                    break;
+                }
+
                 std::string output;
 
                 switch (ctrl_plane_signal_) {
@@ -1262,9 +1261,6 @@ int main(int _argc, char* _argv[])
                     }
                 }
             }
-
-            // Exited control loop normally, we're done.
-            break;
         }
         catch (const zmq::error_t& e) {
             server_log::error("Caught ZMQ error: {}", e.what());

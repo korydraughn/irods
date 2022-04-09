@@ -836,9 +836,7 @@ namespace
             // to fork(). To avoid potential issues, we build up the argument list before
             // doing the fork-exec.
 
-            auto socket_endpoint = fmt::format("{}/control_plane", unix_domain_socket_directory);
-
-            std::vector<char*> args{"irodsControlPlane", socket_endpoint.data()};
+            std::vector<char*> args{"irodsControlPlane"};
 
             if (_enable_test_mode) {
                 args.push_back("-t");
@@ -971,6 +969,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    irods::server_state::init(true);
+
     create_stacktrace_directory();
 
     hnc::init("irods_hostname_cache", irods::get_hostname_cache_shared_memory_size());
@@ -1011,12 +1011,13 @@ int main(int argc, char** argv)
     // manager thread will relaunch it until it starts.
     launch_control_plane(enable_test_mode, write_to_stdout);
 
+    ix::log::server::info("Setting up UNIX domain socket for agent factory ...");
     char random_suffix[65];
     get64RandomBytes(random_suffix);
     std::snprintf(agent_factory_socket_file, sizeof(agent_factory_socket_file), "%s/irods_factory_%s", unix_domain_socket_directory, random_suffix);
 
     // Set up local_addr for socket communication.
-    std::memset(&local_addr, 0, sizeof(local_addr));
+    //std::memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sun_family = AF_UNIX;
     std::snprintf(local_addr.sun_path, sizeof(local_addr.sun_path), "%s", agent_factory_socket_file);
 
@@ -1080,7 +1081,7 @@ int main(int argc, char** argv)
         .interval(600)
         .task([] {
             try {
-                ix::log::server::info("Expiring old cache entries");
+                ix::log::server::trace("Expiring old cache entries");
                 irods::experimental::net::hostname_cache::erase_expired_entries();
                 irods::experimental::net::dns_cache::erase_expired_entries();
             }
@@ -1144,13 +1145,13 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
     }
 
     std::thread cron_manager_thread{[] {
-        auto& server_state = irods::server_state::instance();
-
         while (true) {
             try {
-                const auto& state = server_state();
+                const auto state = irods::server_state::get_state();
 
-                if (irods::server_state::STOPPED == state || irods::server_state::EXITED == state) {
+                if (irods::server_state::server_state::stopped == state ||
+                    irods::server_state::server_state::exited == state)
+                {
                     break;
                 }
 
@@ -1164,45 +1165,6 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
     }};
 
     irods::at_scope_exit join_cron_manager_thread{[&] { cron_manager_thread.join(); }};
-#if 0
-    std::thread control_plane_communication_thread{[] {
-        // clang-format off
-        using log             = irods::experimental::log::server;
-        using stream_protocol = boost::asio::local::stream_protocol;
-        // clang-format on
-
-        boost::asio::io_context io_context;
-        stream_protocol::endpoint ep{fmt::format("{}/control_plane", unix_domain_socket_directory)}; // TODO Move to a function.
-        stream_protocol::acceptor acceptor{io_context, ep};
-
-        auto& server_state = irods::server_state::instance();
-
-        while (true) {
-            try {
-                stream_protocol::iostream client;
-                acceptor.accept(client.socket());
-
-                if (!client) {
-                    log::error("Control plane request error: {}", client.error().message());
-                    continue;
-                }
-
-                int cp_instruction;
-                client.read(&cp_instruction, sizeof(cp_instruction));
-
-                switch (cp_instruction) {
-                    case 0: server_state(irods::server_state::RUNNING); break;
-                    case 1: server_state(irods::server_state::PAUSED);break;
-                    case 2: server_state(irods::server_state::STOPPED);break;
-                    case 3: server_state(irods::server_state::EXITED);break;
-                }
-            }
-            catch (...) {}
-        }
-    }};
-
-    irods::at_scope_exit join_cron_manager_thread{[&] { control_plane_communication_thread.join(); }};
-#endif
 
     std::uint64_t return_code = 0;
 
@@ -1226,27 +1188,25 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
         FD_ZERO(&sockMask);
         SvrSock = svrComm.sock;
 
-        irods::server_state& server_state = irods::server_state::instance();
-
         while (true) {
-            std::string the_server_state = server_state();
+            const auto the_server_state = irods::server_state::get_state();
 
-            if (irods::server_state::STOPPED == the_server_state) {
+            if (irods::server_state::server_state::stopped == the_server_state) {
                 procChildren(&ConnectedAgentHead);
                 // Wake up the agent factory process so it can clean up and exit
                 kill(agent_spawning_pid, SIGTERM);
-                rodsLog(LOG_NOTICE, "iRODS Server is exiting with state [%s].", the_server_state.c_str());
+                rodsLog(LOG_NOTICE, "iRODS Server is exiting with state [%s].", to_string(the_server_state));
                 break;
             }
 
-            if (irods::server_state::PAUSED == the_server_state) {
+            if (irods::server_state::server_state::paused == the_server_state) {
                 procChildren(&ConnectedAgentHead);
                 rodsSleep(0, irods::SERVER_CONTROL_FWD_SLEEP_TIME_MILLI_SEC * 1000);
                 continue;
             }
 
-            if (irods::server_state::RUNNING != the_server_state) {
-                rodsLog(LOG_NOTICE, "invalid iRODS server state [%s]", the_server_state.c_str());
+            if (irods::server_state::server_state::running != the_server_state) {
+                rodsLog(LOG_NOTICE, "invalid iRODS server state [%s]", to_string(the_server_state));
             }
 
             FD_SET(svrComm.sock, &sockMask);
@@ -1328,7 +1288,7 @@ int serverMain(const bool enable_test_mode = false, const bool write_to_stdout =
         procChildren(&ConnectedAgentHead);
         stopProcConnReqThreads();
 
-        server_state(irods::server_state::EXITED);
+        irods::server_state::set_state(irods::server_state::server_state::exited);
     }
     catch (const irods::exception& e) {
         rodsLog(LOG_ERROR, "Exception caught in server loop\n%s", e.what());
@@ -2030,10 +1990,10 @@ agentProc_t* getConnReqFromQueue()
 {
     agentProc_t* myConnReq{};
 
-    irods::server_state& server_state = irods::server_state::instance();
+    const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::STOPPED != server_state() &&
-           irods::server_state::EXITED != server_state() &&
+    while (irods::server_state::server_state::stopped != state &&
+           irods::server_state::server_state::exited != state &&
            !myConnReq)
     {
         boost::unique_lock<boost::mutex> read_req_lock(ReadReqCondMutex);
@@ -2119,10 +2079,10 @@ void readWorkerTask()
         return;
     }
 
-    irods::server_state& server_state = irods::server_state::instance();
+    const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::STOPPED != server_state() &&
-           irods::server_state::EXITED != server_state())
+    while (irods::server_state::server_state::stopped != state &&
+           irods::server_state::server_state::exited != state)
     {
         agentProc_t* myConnReq = getConnReqFromQueue();
         if (!myConnReq) {
@@ -2201,10 +2161,10 @@ void spawnManagerTask()
 {
     uint agentQueChkTime = 0;
 
-    irods::server_state& server_state = irods::server_state::instance();
+    const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::STOPPED != server_state() &&
-           irods::server_state::EXITED != server_state())
+    while (irods::server_state::server_state::stopped != state &&
+           irods::server_state::server_state::exited != state)
     {
         boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex);
         SpawnReqCond.wait(spwn_req_lock);
@@ -2341,10 +2301,10 @@ void purgeLockFileWorkerTask()
     std::size_t wait_time_ms = 0;
     const std::size_t purge_time_ms = LOCK_FILE_PURGE_TIME * 1000; // s to ms
 
-    irods::server_state& server_state = irods::server_state::instance();
+    const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::STOPPED != server_state() &&
-           irods::server_state::EXITED != server_state())
+    while (irods::server_state::server_state::stopped != state &&
+           irods::server_state::server_state::exited != state)
     {
         rodsSleep(0, irods::SERVER_CONTROL_POLLING_TIME_MILLI_SEC * 1000); // second, microseconds
         wait_time_ms += irods::SERVER_CONTROL_POLLING_TIME_MILLI_SEC;

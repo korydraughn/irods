@@ -11,6 +11,8 @@
 
 namespace irods::experimental::interprocess
 {
+    inline struct no_init_tag {} no_init;
+
     template <typename T>
     class shared_memory_object
     {
@@ -41,6 +43,14 @@ namespace irods::experimental::interprocess
                 region_ = {shm_, boost::interprocess::read_write};
                 object_ = static_cast<ipc_object*>(region_.get_address());
             }
+        }
+
+        shared_memory_object(no_init_tag, std::string _shm_name)
+            : shm_name_{std::move(_shm_name)}
+            , shm_{boost::interprocess::open_only, shm_name_.c_str(), boost::interprocess::read_write}
+            , region_{shm_, boost::interprocess::read_write}
+            , object_{static_cast<ipc_object*>(region_.get_address())}
+        {
         }
 
         shared_memory_object(const shared_memory_object&) = delete;
