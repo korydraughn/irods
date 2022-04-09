@@ -76,7 +76,6 @@
 #include <optional>
 #include <iterator>
 #include <thread>
-#include <atomic>
 #include <chrono>
 #include <sstream>
 
@@ -96,8 +95,6 @@ char agent_factory_socket_file[sizeof(local_addr.sun_path)]{};
 
 uint ServerBootTime;
 int SvrSock;
-
-std::atomic<bool> is_control_plane_accepting_requests = false;
 
 agentProc_t* ConnectedAgentHead{};
 agentProc_t* ConnReqHead{};
@@ -694,7 +691,7 @@ namespace
         using log = irods::experimental::log::server;
 
         try {
-            if (!is_control_plane_accepting_requests.load()) {
+            if (!irods::get_pid_from_file(irods::PID_FILENAME_CONTROL_PLANE)) {
                 return;
             }
 
