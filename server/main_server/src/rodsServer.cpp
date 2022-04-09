@@ -661,7 +661,7 @@ namespace
     {
         using log = irods::experimental::log::server;
 
-        log::info("Forking Delay Server (irodsReServer) ...");
+        log::info("Forking Delay Server (irodsDelayServer) ...");
 
         // If we're planning on calling one of the functions from the exec-family,
         // then we're only allowed to use async-signal-safe functions following the call
@@ -1000,7 +1000,7 @@ int main(int argc, char** argv)
 
     setup_signal_handlers();
 
-    // Create a directory for IPC related sockets. This directory has protects IPC sockets from
+    // Create a directory for IPC related sockets. This directory protects IPC sockets from
     // external applications.
     if (!mkdtemp(unix_domain_socket_directory)) {
         ix::log::server::error("Error creating temporary directory for iRODS sockets, mkdtemp errno [{}]: [{}].", errno, strerror(errno));
