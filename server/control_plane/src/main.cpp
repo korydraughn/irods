@@ -1261,6 +1261,12 @@ int main(int _argc, char* _argv[])
                     }
                 }
             }
+
+            //
+            // We've exited the control loop gracefully. The control plane will shutdown now.
+            //
+
+            break;
         }
         catch (const zmq::error_t& e) {
             server_log::error("Caught ZMQ error: {}", e.what());

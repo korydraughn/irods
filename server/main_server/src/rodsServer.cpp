@@ -1990,12 +1990,16 @@ agentProc_t* getConnReqFromQueue()
 {
     agentProc_t* myConnReq{};
 
-    const auto state = irods::server_state::get_state();
+    while (true) {
+        const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::server_state::stopped != state &&
-           irods::server_state::server_state::exited != state &&
-           !myConnReq)
-    {
+        if (irods::server_state::server_state::stopped == state ||
+            irods::server_state::server_state::exited == state ||
+            myConnReq)
+        {
+            break;
+        }
+
         boost::unique_lock<boost::mutex> read_req_lock(ReadReqCondMutex);
         if (ConnReqHead) {
             myConnReq = ConnReqHead;
@@ -2079,11 +2083,15 @@ void readWorkerTask()
         return;
     }
 
-    const auto state = irods::server_state::get_state();
+    while (true) {
+        const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::server_state::stopped != state &&
-           irods::server_state::server_state::exited != state)
-    {
+        if (irods::server_state::server_state::stopped == state ||
+            irods::server_state::server_state::exited == state)
+        {
+            break;
+        }
+
         agentProc_t* myConnReq = getConnReqFromQueue();
         if (!myConnReq) {
             // Someone else took care of it.
@@ -2161,11 +2169,15 @@ void spawnManagerTask()
 {
     uint agentQueChkTime = 0;
 
-    const auto state = irods::server_state::get_state();
+    while (true) {
+        const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::server_state::stopped != state &&
-           irods::server_state::server_state::exited != state)
-    {
+        if (irods::server_state::server_state::stopped == state ||
+            irods::server_state::server_state::exited == state)
+        {
+            break;
+        }
+
         boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex);
         SpawnReqCond.wait(spwn_req_lock);
 
@@ -2301,11 +2313,15 @@ void purgeLockFileWorkerTask()
     std::size_t wait_time_ms = 0;
     const std::size_t purge_time_ms = LOCK_FILE_PURGE_TIME * 1000; // s to ms
 
-    const auto state = irods::server_state::get_state();
+    while (true) {
+        const auto state = irods::server_state::get_state();
 
-    while (irods::server_state::server_state::stopped != state &&
-           irods::server_state::server_state::exited != state)
-    {
+        if (irods::server_state::server_state::stopped == state ||
+            irods::server_state::server_state::exited == state)
+        {
+            break;
+        }
+
         rodsSleep(0, irods::SERVER_CONTROL_POLLING_TIME_MILLI_SEC * 1000); // second, microseconds
         wait_time_ms += irods::SERVER_CONTROL_POLLING_TIME_MILLI_SEC;
 
