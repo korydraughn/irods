@@ -607,12 +607,16 @@ int main(int argc, char** argv)
 
     init_logger(write_to_stdout, enable_test_mode);
 
+    irods::server_state::init();
+
     logger::delay_server::info("Initializing delay server ...");
 
     const auto pid_file_fd = irods::create_pid_file(irods::PID_FILENAME_DELAY_SERVER);
     if (pid_file_fd == -1) {
         return 1;
     }
+
+    irods::set_pid_in_pid_storage(irods::PID_FILENAME_DELAY_SERVER, pid_file_fd);
 
     set_ips_display_name(boost::filesystem::path{argv[0]}.filename().c_str());
 
@@ -690,7 +694,19 @@ int main(int argc, char** argv)
     irods::delay_queue queue{queue_size_in_bytes};
 
     try {
-        while (!delay_server_terminated) {
+        while (true) {
+            if (delay_server_terminated) {
+                break;
+            }
+
+            const auto state = irods::server_state::get_state();
+
+            if (state == irods::server_state::server_state::stopped ||
+                state == irods::server_state::server_state::exited)
+            {
+                break;
+            }
+
             try {
                 irods::server_properties::instance().capture();
 

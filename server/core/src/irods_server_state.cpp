@@ -27,7 +27,7 @@ namespace irods::server_state
             // shared_memory_object only initializes the object when allocating shared
             // memory for the first time. If the shared memory exists, the values passed
             // to the shared_memory_object will be ignored.
-            g_state->exec([](auto& _value) {
+            g_state->atomic_exec([](server_state& _value) {
                 _value = server_state::running;
             });
         }

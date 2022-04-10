@@ -968,6 +968,8 @@ int main(int argc, char** argv)
 
     irods::server_state::init(true);
 
+    irods::init_pid_storage();
+
     create_stacktrace_directory();
 
     hnc::init("irods_hostname_cache", irods::get_hostname_cache_shared_memory_size());

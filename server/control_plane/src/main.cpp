@@ -11,6 +11,7 @@
 #include "irods/irods_stacktrace.hpp"
 #include "irods/miscServerFunct.hpp"
 #include "irods/rcMisc.h"
+#include "irods/rodsClient.h"
 #include "irods/rodsServer.hpp"
 #include "irods/server_control_plane_command.hpp"
 #include "irods/server_utilities.hpp"
@@ -321,8 +322,11 @@ irods::error forward_server_control_command(const std::string& _name,
 
 void kill_delay_server()
 {
-    if (const auto pid = irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER); pid) {
-        server_log::debug("[{}:{}] - Sending kill signal to delay server.", __func__, __LINE__);
+    server_log::trace("Checking if the delay server is still running ...");
+
+    //if (const auto pid = irods::get_pid_from_file(irods::PID_FILENAME_DELAY_SERVER); pid) {
+    if (const auto pid = irods::get_pid_from_storage(irods::PID_FILENAME_DELAY_SERVER); pid) {
+        server_log::trace("Sending kill signal to delay server [delay_server_pid={}] ...", *pid);
 
         // Previously, we ran kill_pid.py here.
         // This would send three signals to the process, one right after the other:
@@ -333,6 +337,9 @@ void kill_delay_server()
 
         kill(*pid, SIGTERM);
         kill(*pid, SIGKILL);
+    }
+    else {
+        server_log::trace("Delay server PID unavailable.");
     }
 } // kill_delay_server
 
@@ -1077,6 +1084,8 @@ irods::error perform_operation(const control_plane_context& _context,
 
 int main(int _argc, char* _argv[])
 {
+    load_client_api_plugins();
+
     set_ips_display_name(boost::filesystem::path{_argv[0]}.filename().c_str());
 
     init_logger(false, false);
@@ -1118,10 +1127,13 @@ int main(int _argc, char* _argv[])
     server_log::info("Initializing control plane ...");
     server_log::info("Creating PID file for control plane ...");
 
-    if (irods::create_pid_file(irods::PID_FILENAME_CONTROL_PLANE) != 0) {
+    const auto pid_file_id = irods::create_pid_file(irods::PID_FILENAME_CONTROL_PLANE);
+    if (pid_file_id != 0) {
         server_log::error("Could not create PID file for control plane.");
         return 1;
     }
+
+    irods::set_pid_in_pid_storage(irods::PID_FILENAME_CONTROL_PLANE, pid_file_id);
 
     server_log::info("Initializing control plane context ...");
     const auto context = init_control_plane_context(irods::CFG_SERVER_CONTROL_PLANE_PORT);

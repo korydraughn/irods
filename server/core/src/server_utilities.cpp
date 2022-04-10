@@ -3,6 +3,8 @@
 #include "irods/dataObjInpOut.h"
 #include "irods/key_value_proxy.hpp"
 #include "irods/irods_logger.hpp"
+#include "irods/shared_memory_object.hpp"
+#include <string_view>
 
 #define IRODS_FILESYSTEM_ENABLE_SERVER_SIDE_API
 #include "irods/filesystem.hpp"
@@ -15,6 +17,17 @@
 
 #include <regex>
 #include <fstream>
+
+namespace
+{
+    const char* const IRODS_PID_STORAGE_NAME = "irods_pid_storage";
+
+    struct pid_storage
+    {
+        pid_t control_plane;
+        pid_t delay_server;
+    }; // struct pid_storage
+} // anonymous namespace
 
 namespace irods
 {
@@ -133,6 +146,42 @@ namespace irods
         return 0;
     } // create_pid_file
 
+    void init_pid_storage()
+    {
+        namespace ipc = irods::experimental::interprocess;
+
+        ipc::shared_memory_object<pid_storage>{IRODS_PID_STORAGE_NAME}
+            .exec([](pid_storage& _thing) {
+                _thing.control_plane = 0;
+                _thing.delay_server = 0;
+            });
+    } // init_pid_storage
+
+    void set_pid_in_pid_storage(const std::string_view _pid_filename, pid_t _pid)
+    {
+        namespace ipc = irods::experimental::interprocess;
+
+        using log = irods::experimental::log::server;
+
+        try {
+            // clang-format off
+            ipc::shared_memory_object<pid_storage>{ipc::no_init, IRODS_PID_STORAGE_NAME}
+                .atomic_exec([_pid_filename, _pid](pid_storage& _thing) {
+                    if      (_pid_filename == PID_FILENAME_CONTROL_PLANE) { _thing.control_plane = _pid; }
+                    else if (_pid_filename == PID_FILENAME_DELAY_SERVER)  { _thing.delay_server = _pid; }
+                });
+            // clang-format on
+        }
+        catch (const std::exception& e) {
+            log::error("Caught exception in set_pid_in_pid_storage() [_pid_filename={}]: {}",
+                       _pid_filename, e.what());
+        }
+        catch (...) {
+            log::error("Caught unknown exception in set_pid_in_pid_storage() [_pid_filename={}].",
+                       _pid_filename);
+        }
+    } // set_pid_in_pid_storage
+
     std::optional<pid_t> get_pid_from_file(const std::string_view _pid_filename) noexcept
     {
         using log = irods::experimental::log::server;
@@ -165,6 +214,45 @@ namespace irods
         }
         catch (...) {
             log::error("Caught unknown exception in get_pid_from_file() [_pid_filename={}].",
+                       _pid_filename);
+        }
+
+        return std::nullopt;
+    } // get_pid_from_file
+
+    std::optional<pid_t> get_pid_from_storage(const std::string_view _pid_filename) noexcept
+    {
+        namespace ipc = irods::experimental::interprocess;
+
+        using log = irods::experimental::log::server;
+
+        try {
+            // clang-format off
+            const pid_t pid = ipc::shared_memory_object<pid_storage>{ipc::no_init, IRODS_PID_STORAGE_NAME}
+                .atomic_exec([_pid_filename](const pid_storage& _thing) {
+                    if (_pid_filename == PID_FILENAME_CONTROL_PLANE) { return _thing.control_plane; }
+                    if (_pid_filename == PID_FILENAME_DELAY_SERVER)  { return _thing.delay_server; }
+                    return 0;
+                });
+            // clang-format on
+
+            if (pid == 0) {
+                return std::nullopt;
+            }
+
+            // The process is running if waitpid() returns a value other than -1. If -1
+            // is returned and errno is set to ECHILD, that means the process specified
+            // by "pid" does not exist or is not a child of the calling process.
+            if (waitpid(pid, nullptr, WNOHANG) != -1) {
+                return pid;
+            }
+        }
+        catch (const std::exception& e) {
+            log::error("Caught exception in get_pid_from_storage() [_pid_filename={}]: {}",
+                       _pid_filename, e.what());
+        }
+        catch (...) {
+            log::error("Caught unknown exception in get_pid_from_storage() [_pid_filename={}].",
                        _pid_filename);
         }
 

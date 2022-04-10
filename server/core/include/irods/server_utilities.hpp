@@ -75,6 +75,16 @@ namespace irods
     /// \since 4.3.0
     auto create_pid_file(const std::string_view _pid_filename) -> int;
 
+    /// Initializes memory dedicated to storing the PIDs of the delay server and control plane.
+    ///
+    /// \since 4.3.0
+    auto init_pid_storage() -> void;
+
+    /// Maps a PID to a PID filename. 
+    ///
+    /// \since 4.3.0
+    auto set_pid_in_pid_storage(const std::string_view _pid_filename, pid_t _pid) -> void;
+
     /// Returns the PID stored in the file if available.
     ///
     /// This function will return a \p std::nullopt if the filename does not refer to a file
@@ -87,6 +97,7 @@ namespace irods
     ///
     /// \since 4.3.0
     auto get_pid_from_file(const std::string_view _pid_filename) noexcept -> std::optional<pid_t>;
+    auto get_pid_from_storage(const std::string_view _pid_filename) noexcept -> std::optional<pid_t>;
 } // namespace irods
 
 #endif // IRODS_SERVER_UTILITIES_HPP
