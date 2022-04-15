@@ -80,17 +80,17 @@ namespace
 
         // Issue 3913: retain status in case string too long
         status = resolveLinkedPath( rsComm, collCreateInp->collName, &specCollCache,
-                           &collCreateInp->condInput );
+                &collCreateInp->condInput );
 
         // Issue 3913: retain status in case string too long
         if (status == USER_STRLEN_TOOLONG) {
             return USER_STRLEN_TOOLONG;
         }
         status = getAndConnRcatHost(
-                     rsComm,
-                     MASTER_RCAT,
-                     ( const char* )collCreateInp->collName,
-                     &rodsServerHost );
+                rsComm,
+                MASTER_RCAT,
+                ( const char* )collCreateInp->collName,
+                &rodsServerHost );
 
         if ( status < 0 || rodsServerHost == NULL ) { // JMC cppcheck
             return status;
@@ -106,8 +106,8 @@ namespace
                     status = rei.status;
                 }
                 rodsLog( LOG_ERROR,
-                         "rsCollCreate:acPreprocForCollCreate error for %s,stat=%d",
-                         collCreateInp->collName, status );
+                        "rsCollCreate:acPreprocForCollCreate error for %s,stat=%d",
+                        collCreateInp->collName, status );
                 return status;
             }
 
@@ -128,7 +128,7 @@ namespace
                  * COLLECTION_TYPE_KW must be set */
 
                 status = resolvePathInSpecColl( rsComm, collCreateInp->collName,
-                                                WRITE_COLL_PERM, 0, &dataObjInfo );
+                        WRITE_COLL_PERM, 0, &dataObjInfo );
                 if ( status >= 0 ) {
                     freeDataObjInfo( dataObjInfo );
                     if ( status == COLL_OBJ_T ) {
