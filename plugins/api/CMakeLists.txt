@@ -16,6 +16,7 @@ set(
   data_object_modify_info
   get_file_descriptor_info
   get_grid_configuration_value
+  set_delay_server_migration_info
   set_grid_configuration_value
   register_physical_path
   replica_close
@@ -151,11 +152,23 @@ target_link_libraries(
   ${CMAKE_DL_LIBS}
 )
 
+target_link_libraries(
+  irods_api_plugin-set_delay_server_migration_info_server
+  PRIVATE
+  "${IRODS_EXTERNALS_FULLPATH_NANODBC}/lib/libnanodbc.so"
+)
+target_include_directories(
+  irods_api_plugin-set_delay_server_migration_info_client
+  PRIVATE
+  "${IRODS_EXTERNALS_FULLPATH_NANODBC}/include"
+)
+
 install(
   FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/plugins/api/api_plugin_number.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/plugins/api/api_plugin_number_map.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/plugins/api/api_plugin_number_data.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/plugins/api/delay_server_migration_types.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/plugins/api/grid_configuration_types.h"
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/irods/plugins/api"
   COMPONENT ${IRODS_PACKAGE_COMPONENT_DEVELOPMENT_NAME}
