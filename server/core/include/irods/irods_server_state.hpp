@@ -21,6 +21,8 @@ namespace irods::server_state
 
     auto init() -> void;
 
+    auto deinit() -> void;
+
     auto get_state() -> server_state;
 
     auto set_state(server_state _new_state) -> irods::error;
