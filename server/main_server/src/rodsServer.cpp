@@ -916,6 +916,7 @@ int main(int argc, char** argv)
 
     irods::server_state::init();
     irods::server_state::set_state(irods::server_state::server_state::running);
+    irods::at_scope_exit deinit_server_state{[] { irods::server_state::deinit(); }};
 
     create_stacktrace_directory();
 
