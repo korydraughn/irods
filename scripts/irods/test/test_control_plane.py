@@ -58,15 +58,10 @@ class TestControlPlane(SessionsMixin, unittest.TestCase):
     def test_shutdown(self):
         with session.make_session_for_existing_admin() as admin_session:
             admin_session.environment_file_contents = IrodsConfig().client_environment
-            if 'irods_rule_engine_plugin-irods_rule_language' in IrodsConfig().configured_rule_engine_plugins:
-                self.assertTrue(lib.re_shm_exists())
 
             try:
                 assert_command('irods-grid shutdown --all', 'STDOUT_SINGLELINE', 'shutting down')
-                #time.sleep(2)
                 assert_command('ils', 'STDERR_SINGLELINE', 'connectToRhost error')
-
-                self.assertFalse(lib.re_shm_exists())
             finally:
                 IrodsController().start()
 
