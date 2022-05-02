@@ -152,7 +152,7 @@ namespace
         auto row = nanodbc::execute(stmt);
 
         if (!row.next()) {
-            THROW(CAT_NO_ROWS_FOUND, fmt::format("Could not find row matching rule ID [{}]", rule_id));
+        THROW(CAT_NO_ROWS_FOUND, fmt::format("Could not find row matching rule ID [{}]", rule_id));
         }
 
         constexpr auto number_of_columns = 12;
