@@ -248,7 +248,7 @@ namespace
 
         const auto update_rule_exec_info = [&](const bool repeat_rule) -> int {
             ruleExecModInp_t rule_exec_mod_inp{};
-            rstrcpy(rule_exec_mod_inp.ruleId, _inp.ruleExecId, NAME_LEN);
+    rstrcpy(rule_exec_mod_inp.ruleId, _inp.ruleExecId, NAME_LEN);
 
             if (std::strlen(_inp.priority) > 0) {
                 // The priority string is not empty, but it could be invalid.
