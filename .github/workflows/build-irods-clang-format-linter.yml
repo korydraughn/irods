@@ -1,0 +1,29 @@
+name: build-irods-clang-format-linter
+on: pull_request
+jobs:
+    clang-format-linter:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 2
+            - name: Install Prerequisites
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -qq apt-transport-https ca-certificates
+                  sudo apt-get install -qq wget
+            - name: Install Clang Compiler
+              run: |
+                  wget -qO - https://unstable.irods.org/irods-unstable-signing-key.asc | sudo apt-key add -
+                  echo "deb [arch=amd64] https://unstable.irods.org/apt/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/renci-irods-unstable.list
+                  sudo apt-get update -qq
+                  sudo apt-get install -qq irods-externals-clang13.0.0-0
+            - name: Run Clang-Format
+              run: |
+                  export PATH=/opt/irods-externals/clang13.0.0-0/bin:$PATH
+                  git config --global clangFormat.binary clang-format
+                  git config --global clangFormat.style file
+                  git config --global clangFormat.extensions 'h,c,hpp,cpp,tpp'
+                  output=`git clang-format HEAD^ --diff`
+                  [[ "$output" == *"no modified files to format"* ]] || [[ "$output" == *"clang-format did not modify any files"* ]]
