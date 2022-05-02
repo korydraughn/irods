@@ -240,7 +240,7 @@ namespace
             rstrcpy(rule_exec_del_inp.ruleExecId, _inp.ruleExecId, NAME_LEN);
             const int status = rcRuleExecDel(&_comm, &rule_exec_del_inp);
             if (status < 0) {
-                logger::delay_server::error("{}:{} - rcRuleExecDel failed {} for ID {}",
+                    logger::delay_server::error("{}:{} - rcRuleExecDel failed {} for ID {}",
                     __FUNCTION__, __LINE__, status, rule_exec_del_inp.ruleExecId);
             }
             return status;
