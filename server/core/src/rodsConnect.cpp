@@ -242,6 +242,12 @@ int queueZone(const char* zoneName,
               rodsServerHost_t* primaryServerHost,
               rodsServerHost_t* secondaryServerHost)
 {
+using log = irods::experimental::log::server;
+
+log::info("Entered function: {}", __func__);
+static int invoked = 0;
+log::info("{} :: Number of times invoked: {}", __func__, ++invoked);
+
     bool zoneAlreadyInList = false;
 
     zoneInfo_t *tmpZoneInfo, *lastZoneInfo;
@@ -253,10 +259,12 @@ int queueZone(const char* zoneName,
 
     rstrcpy( myZoneInfo->zoneName, zoneName, NAME_LEN );
     if (primaryServerHost != NULL) {
+log::info("{} :: primaryServerHost was provided.", __func__);
         myZoneInfo->primaryServerHost = primaryServerHost;
         primaryServerHost->zoneInfo = myZoneInfo;
     }
     if (secondaryServerHost != NULL) {
+log::info("{} :: secondaryServerHost was provided.", __func__);
         myZoneInfo->secondaryServerHost = secondaryServerHost;
         secondaryServerHost->zoneInfo = myZoneInfo;
     }
@@ -269,6 +277,7 @@ int queueZone(const char* zoneName,
             rodsLog( LOG_ERROR,
                      "queueZone:  Bad input portNum %d for %s", portNum, zoneName );
             free( myZoneInfo );
+log::info("Returned early from function: {}", __func__);
             return SYS_INVALID_SERVER_HOST;
         }
     }
@@ -278,9 +287,11 @@ int queueZone(const char* zoneName,
 
     /* queue it */
 
+log::info("{} :: Queuing zone ...", __func__);
     lastZoneInfo = tmpZoneInfo = ZoneInfoHead;
     while ( tmpZoneInfo != NULL ) {
         if (strcmp(tmpZoneInfo->zoneName, myZoneInfo->zoneName) == 0 ) {
+log::info("{} :: Zone [{}] already in list.", __func__, tmpZoneInfo->zoneName);
             zoneAlreadyInList = true;
         }
         lastZoneInfo = tmpZoneInfo;
@@ -288,8 +299,10 @@ int queueZone(const char* zoneName,
     }
 
     if ( lastZoneInfo == NULL ) {
+log::info("{} :: Zone list is empty. Setting ZoneInfoHead to [{}] ...", __func__, myZoneInfo->zoneName);
         ZoneInfoHead = myZoneInfo;
     } else if (!zoneAlreadyInList) {
+log::info("{} :: Zone list is NOT empty. Appending zone [{}] to zone list ...", __func__, myZoneInfo->zoneName);
         lastZoneInfo->next = myZoneInfo;
     }
     myZoneInfo->next = NULL;

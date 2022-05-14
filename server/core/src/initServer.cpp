@@ -169,6 +169,45 @@ InformationRequiredToSafelyRenameProcess::InformationRequiredToSafelyRenameProce
 
 int initServerInfo(int processType, rsComm_t* rsComm)
 {
+    std::ofstream out{"/tmp/print_zone_info.txt"}; // truncate the file.
+    const auto print_zone_info = [] {
+        static int invoked = 0;
+
+        std::ofstream out{"/tmp/print_zone_info.txt", std::ios::app};
+        out << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Number of times invoked: " << ++invoked << '\n';
+
+        for (auto* info = ZoneInfoHead; info; info = info->next) {
+            out << fmt::format("ZoneInfo :: zoneName=[{}], portNum=[{}], primaryServerHost=[{}], secondaryServerHost=[{}]\n",
+                               info->zoneName, info->portNum, fmt::ptr(info->primaryServerHost), fmt::ptr(info->secondaryServerHost));
+
+            out << "\tPrimaryServerHost Info:\n";
+            for (auto* host = info->primaryServerHost; host; host = host->next) {
+                if (host->hostName) {
+                    for (auto* hn = host->hostName; hn; hn = hn->next) {
+                        out << fmt::format("\t\tRodsServerHost :: hostName=[{}]\n", hn->name);
+                    }
+                }
+
+                out << fmt::format("\t\tRodsServerHost :: localFlag=[{}], reHostFlag=[{}], rcatEnabled=[{}], status=[{}]\n",
+                         host->localFlag, host->reHostFlag, host->rcatEnabled, host->status);
+            }
+
+            out << "\tSecondaryServerHost Info:\n";
+            for (auto* host = info->secondaryServerHost; host; host = host->next) {
+                if (host->hostName) {
+                    for (auto* hn = host->hostName; hn; hn = hn->next) {
+                        out << fmt::format("\t\tRodsServerHost :: hostName=[{}]\n", hn->name);
+                    }
+                }
+
+                out << fmt::format("\t\tRodsServerHost :: localFlag=[{}], reHostFlag=[{}], rcatEnabled=[{}], status=[{}]\n",
+                         host->localFlag, host->reHostFlag, host->rcatEnabled, host->status);
+            }
+        }
+    };
+
+    print_zone_info();
+
     int status = 0;
 
     try {
@@ -186,6 +225,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
         irods::log(irods::error(e));
         return e.code();
     }
+    print_zone_info();
 
     status = initHostConfigByFile();
     if ( status < 0 ) {
@@ -194,6 +234,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
                  status );
         return status;
     }
+    print_zone_info();
 
     status = initLocalServerHost();
     if ( status < 0 ) {
@@ -202,6 +243,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
                  status );
         return status;
     }
+    print_zone_info();
 
     status = initRcatServerHostByFile();
     if ( status < 0 ) {
@@ -210,6 +252,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
                  status );
         return status;
     }
+    print_zone_info();
 
     std::string svc_role;
     irods::error ret = get_catalog_service_role(svc_role);
@@ -217,6 +260,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
         irods::log(PASS(ret));
         return ret.code();
     }
+    print_zone_info();
 
     if( irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role ) {
         status = connectRcat();
@@ -229,6 +273,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
             return status;
         }
     }
+    print_zone_info();
 
     status = initZone( rsComm );
     if ( status < 0 ) {
@@ -237,6 +282,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
                  status );
         return status;
     }
+    print_zone_info();
 
     if (processType) {
         try {
@@ -250,6 +296,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
             return e.code();
         }
     }
+    print_zone_info();
 
     return status;
 }

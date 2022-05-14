@@ -53,13 +53,24 @@ typedef struct hostName {
 #define STANDALONE_SERVER               2
 
 typedef struct rodsServerHost {
+    // Linked list holding all hostnames for a single iRODS server.
     hostName_t *hostName;
+
     rcComm_t *conn;
+
+    // Signals whether the iRODS server is connected to the catalog (i.e. a provider).
     int rcatEnabled;
+
+    // No longer used.
     int reHostFlag;
+
+    // Indicates 
     int localFlag;
+
     int status;
     void *zoneInfo;
+
+    // A pointer to the next entry in the linked list.
     struct rodsServerHost *next;
 } rodsServerHost_t;
 
