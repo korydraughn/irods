@@ -11,25 +11,22 @@
 auto rc_switch_user(RcComm* _comm, const char* _username, const char* _zone) -> int
 {
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-    if (!_username || !_zone) {
+    if (!_comm || !_username || !_zone) {
         return SYS_INVALID_INPUT_PARAM;
     }
 
     auto& client = _comm->clientUser;
 
-    // Attempting to verify that the user is already the target user cannot be done without
-    // going over the wire. That's because the client cannot determine the user type of the
-    // target user. For that reason, this implementation always results in a network request.
+    if (std::strcmp(_username, client.userName) == 0 && std::strcmp(_zone, client.rodsZone) == 0) {
+        return 0;
+    }
 
     try {
         SwitchUserInput input{};
         std::strncpy(static_cast<char*>(input.username), _username, sizeof(SwitchUserInput::username));
         std::strncpy(static_cast<char*>(input.zone), _zone, sizeof(SwitchUserInput::zone));
 
-        SwitchUserOutput* output{};
-        void** out_ptr = reinterpret_cast<void**>(&output); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-
-        const int ec = procApiRequest(_comm, SWITCH_USER_APN, &input, nullptr, out_ptr, nullptr);
+        const int ec = procApiRequest(_comm, SWITCH_USER_APN, &input, nullptr, nullptr, nullptr);
 
         // NOLINTNEXTLINE(readability-implicit-bool-conversion)
         if (ec == 0) {
@@ -39,12 +36,7 @@ auto rc_switch_user(RcComm* _comm, const char* _username, const char* _zone) -> 
             // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             std::strncpy(client.userName, _username, sizeof(UserInfo::userName));
             std::strncpy(client.rodsZone, _zone, sizeof(UserInfo::rodsZone));
-            std::strncpy(client.userType, output->user_type, sizeof(UserInfo::userType));
             // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-
-            _comm->clientUser.authInfo.authFlag = output->privilege_level;
-
-            std::free(output); // NOLINT(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
         }
 
         return ec;

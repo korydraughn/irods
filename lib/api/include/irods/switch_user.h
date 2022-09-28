@@ -17,9 +17,7 @@ extern "C" {
 ///
 /// \param[in] _comm     A pointer to a RcComm.
 /// \param[in] _username The name of the iRODS user to become.
-/// \param[in] _zone     The zone of the iRODS user to become. Passing an empty string is
-///                      equivalent to setting this parameter to the name of the connected
-///                      zone.
+/// \param[in] _zone     The zone of the iRODS user to become.
 ///
 /// \return An integer.
 /// \retval 0        On success.

@@ -34,25 +34,22 @@ namespace
     // Function Prototypes
     //
 
-    auto call_switch_user(irods::api_entry*, RsComm*, SwitchUserInput*, SwitchUserOutput**) -> int;
-    auto rs_switch_user(RsComm*, SwitchUserInput*, SwitchUserOutput**) -> int;
+    auto call_switch_user(irods::api_entry*, RsComm*, SwitchUserInput*) -> int;
+    auto rs_switch_user(RsComm*, SwitchUserInput*) -> int;
 
     //
     // Function Implementations
     //
 
-    auto call_switch_user(irods::api_entry* _api, RsComm* _comm, SwitchUserInput* _input, SwitchUserOutput** _output)
+    auto call_switch_user(irods::api_entry* _api, RsComm* _comm, SwitchUserInput* _input)
         -> int
     {
-        return _api->call_handler<SwitchUserInput*, SwitchUserOutput**>(_comm, _input, _output);
+        return _api->call_handler<SwitchUserInput*>(_comm, _input);
     } // call_switch_user
 
-    auto rs_switch_user(RsComm* _comm, SwitchUserInput* _input, SwitchUserOutput** _output) -> int
+    auto rs_switch_user(RsComm* _comm, SwitchUserInput* _input) -> int
     {
         using log_api = irods::experimental::log::api;
-
-        // Clear the output pointer in case the client handed us bad input.
-        *_output = nullptr;
 
         // Only administrators are allowed to invoke this API.
         // We check the proxy user because it covers clients and server-to-server redirects.
@@ -115,19 +112,10 @@ namespace
                 (*user_type == adm::user_type::rodsadmin) ? REMOTE_PRIV_USER_AUTH : REMOTE_USER_AUTH;
         }
 
-        // Populate the response object with information that helps the client avoid
-        // additional API calls.
-        auto* output = static_cast<SwitchUserOutput*>(std::malloc(sizeof(SwitchUserOutput)));
-        std::memset(output, 0, sizeof(SwitchUserOutput));
-        std::strncpy(output->user_type, user_type_string, sizeof(SwitchUserOutput::user_type));
-        output->privilege_level = client.authInfo.authFlag;
-
-        *_output = output;
-
         return 0;
     } // rs_switch_user
 
-    using operation = std::function<int(RsComm*, SwitchUserInput*, SwitchUserOutput**)>;
+    using operation = std::function<int(RsComm*, SwitchUserInput*)>;
     const operation op = rs_switch_user;
 #  define CALL_SWITCH_USER call_switch_user
 } // anonymous namespace
@@ -140,7 +128,7 @@ namespace
 
 namespace
 {
-    using operation = std::function<int(RsComm*, SwitchUserInput*, SwitchUserOutput**)>;
+    using operation = std::function<int(RsComm*, SwitchUserInput*)>;
     const operation op{};
 #  define CALL_SWITCH_USER nullptr // NOLINT(cppcoreguidelines-macro-usage)
 } // anonymous namespace
@@ -165,7 +153,7 @@ extern "C" auto plugin_factory(
                         NO_USER_AUTH,               // Client auth
                         NO_USER_AUTH,               // Proxy auth
                         "SwitchUserInp_PI", 0,      // In PI / bs flag
-                        "SwitchUserOut_PI", 0,      // Out PI / bs flag
+                        nullptr, 0,                 // Out PI / bs flag
                         op,                         // Operation
                         "api_switch_user",          // Operation name
                         nullptr,                    // Null clear function
@@ -176,9 +164,6 @@ extern "C" auto plugin_factory(
 
     api->in_pack_key = "SwitchUserInp_PI";
     api->in_pack_value = SwitchUserInp_PI;
-
-    api->out_pack_key = "SwitchUserOut_PI";
-    api->out_pack_value = SwitchUserOut_PI;
 
     return api;
 } // plugin_factory
