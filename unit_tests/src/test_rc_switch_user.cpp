@@ -61,9 +61,7 @@ TEST_CASE("rc_switch_user basic usage")
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     CHECK(conn_ptr->clientUser.userName == alice.name);
     CHECK(conn_ptr->clientUser.rodsZone == alice.zone);
-    CHECK(std::strcmp(conn_ptr->clientUser.userType, adm::to_c_str(adm::user_type::rodsuser)) == 0);
     // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-    CHECK(conn_ptr->clientUser.authInfo.authFlag == LOCAL_USER_AUTH);
 
     // As the test user, create another data object in the sandbox.
     data_object = sandbox / "bar";
@@ -82,9 +80,7 @@ TEST_CASE("rc_switch_user basic usage")
     REQUIRE(rc_switch_user(conn_ptr, env.rodsUserName, env.rodsZone) == 0);
     CHECK(std::strcmp(conn_ptr->clientUser.userName, env.rodsUserName) == 0);
     CHECK(std::strcmp(conn_ptr->clientUser.rodsZone, env.rodsZone) == 0);
-    CHECK(std::strcmp(conn_ptr->clientUser.userType, adm::to_c_str(adm::user_type::rodsadmin)) == 0);
     // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-    CHECK(conn_ptr->clientUser.authInfo.authFlag == LOCAL_PRIV_USER_AUTH);
 }
 
 TEST_CASE("rc_switch_user honors permission model following successful invocation")
@@ -127,9 +123,7 @@ TEST_CASE("rc_switch_user honors permission model following successful invocatio
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     CHECK(conn_ptr->clientUser.userName == alice.name);
     CHECK(conn_ptr->clientUser.rodsZone == alice.zone);
-    CHECK(std::strcmp(conn_ptr->clientUser.userType, adm::to_c_str(adm::user_type::rodsuser)) == 0);
     // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-    CHECK(conn_ptr->clientUser.authInfo.authFlag == LOCAL_USER_AUTH);
 
     // Show that the test user cannot see the administrator's collection or data object.
     CHECK_FALSE(fs::client::exists(conn, sandbox));
@@ -139,8 +133,6 @@ TEST_CASE("rc_switch_user honors permission model following successful invocatio
     REQUIRE(rc_switch_user(conn_ptr, env.rodsUserName, env.rodsZone) == 0);
     CHECK(std::strcmp(conn_ptr->clientUser.userName, env.rodsUserName) == 0);
     CHECK(std::strcmp(conn_ptr->clientUser.rodsZone, env.rodsZone) == 0);
-    CHECK(std::strcmp(conn_ptr->clientUser.userType, adm::to_c_str(adm::user_type::rodsadmin)) == 0);
     // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-    CHECK(conn_ptr->clientUser.authInfo.authFlag == LOCAL_PRIV_USER_AUTH);
 }
 

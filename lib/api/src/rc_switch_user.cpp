@@ -15,11 +15,34 @@ auto rc_switch_user(RcComm* _comm, const char* _username, const char* _zone) -> 
         return SYS_INVALID_INPUT_PARAM;
     }
 
+    // Accepting empty strings for either parameter is not allowed.
+    // This is especially true for the "_zone" parameter because the implementation of this
+    // function copies the string represented by "_zone" into the RcComm. Copying an empty
+    // string into the RcComm's rodsZone member variables makes the RcComm invalid.
+    if (std::strlen(_username) == 0 || std::strlen(_zone) == 0) {
+        return SYS_INVALID_INPUT_PARAM;
+    }
+
     auto& client = _comm->clientUser;
 
-    if (std::strcmp(_username, client.userName) == 0 && std::strcmp(_zone, client.rodsZone) == 0) {
+    // clang-format off
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+    //
+    // Return immediately if the RcComm object already represents the target user.
+    //
+    // This is allowed because the RcComm only cares about the username and zone. If the RcComm
+    // considered the user's type or authentication level (i.e. LOCAL_PRIV_USER_AUTH), then this
+    // optimization would not be possible.
+    //
+    // The substraction of 1 on the final argument helps to ensure there is a null byte. The
+    // server assumes the strings passed to the API are null-terminated strings.
+    if (std::strncmp(_username, client.userName, sizeof(UserInfo::userName) - 1) == 0 &&
+        std::strncmp(_zone, client.rodsZone, sizeof(UserInfo::rodsZone) - 1) == 0)
+    {
         return 0;
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+    // clang-format on
 
     try {
         SwitchUserInput input{};
