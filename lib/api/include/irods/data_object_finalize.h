@@ -3,9 +3,9 @@
 
 /// \file
 
-const char* SET_TINE_TO_NOW_KW = "set time to now";
-
 struct RcComm;
+
+static const char* const SET_TINE_TO_NOW_KW = "set time to now";
 
 #ifdef __cplusplus
 extern "C" {
