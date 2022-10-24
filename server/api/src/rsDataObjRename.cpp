@@ -1,4 +1,6 @@
 #include "irods/dataObjRename.h"
+
+#include "irods/irods_at_scope_exit.hpp"
 #include "irods/objMetaOpr.hpp"
 #include "irods/dataObjOpr.hpp"
 #include "irods/collection.hpp"
@@ -308,6 +310,11 @@ namespace
 
         srcDataObjInp = &dataObjRenameInp->srcDataObjInp;
         destDataObjInp = &dataObjRenameInp->destDataObjInp;
+
+        irods::at_scope_exit free_cond_inputs{[srcDataObjInp, destDataObjInp] {
+            clearKeyVal(&srcDataObjInp->condInput);
+            clearKeyVal(&destDataObjInp->condInput);
+        }};
 
         /* don't translate the link pt. treat it as a normal collection */
         addKeyVal( &srcDataObjInp->condInput, NO_TRANSLATE_LINKPT_KW, "" );
