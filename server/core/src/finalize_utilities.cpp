@@ -223,8 +223,8 @@ namespace irods
 
     auto duplicate_l1_descriptor(const l1desc& _src) -> l1desc
     {
-        l1desc dest{};
-        std::memcpy(&dest, &_src, sizeof(l1desc));
+        l1desc dest;
+        copy_l1desc(dest, _src);
 
         if (_src.dataObjInp) {
             DataObjInp* doi = static_cast<DataObjInp*>(std::malloc(sizeof(DataObjInp)));

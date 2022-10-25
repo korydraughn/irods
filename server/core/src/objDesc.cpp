@@ -70,6 +70,43 @@ auto init_l1desc(l1desc& _l1d) -> void
     // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 } // init_l1desc
 
+auto copy_l1desc(l1desc& _dst, const l1desc& _src) -> void
+{
+    _dst.l3descInx = _src.l3descInx;
+    _dst.inuseFlag = _src.inuseFlag;
+    _dst.oprType = _src.oprType;
+    _dst.openType = _src.openType;
+    _dst.oprStatus = _src.oprStatus;
+    _dst.dataObjInpReplFlag = _src.dataObjInpReplFlag;
+    _dst.copiesNeeded = _src.copiesNeeded;
+    _dst.bytesWritten = _src.bytesWritten;
+    _dst.dataSize = _src.dataSize;
+    _dst.replStatus = _src.replStatus;
+    _dst.chksumFlag = _src.chksumFlag;
+    _dst.srcL1descInx = _src.srcL1descInx;
+    _dst.remoteL1descInx = _src.remoteL1descInx;
+    _dst.stageFlag = _src.stageFlag;
+    _dst.purgeCacheFlag = _src.purgeCacheFlag;
+    _dst.lockFd = _src.lockFd;
+
+    // TODO Should these be copied?
+    _dst.dataObjInp = _src.dataObjInp;
+    _dst.dataObjInfo = _src.dataObjInfo;
+    _dst.otherDataObjInfo = _src.otherDataObjInfo;
+    _dst.replDataObjInfo = _src.replDataObjInfo;
+    _dst.remoteZoneHost = _src.remoteZoneHost;
+
+    // TODO Should these be copied?
+    _dst.pluginData = _src.pluginData;
+    _dst.replica_token = _src.replica_token;
+
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+    // TODO Should these be copied?
+    std::memcpy(_dst.chksum, _src.chksum, sizeof(l1desc::chksum));
+    std::memcpy(_dst.in_pdmo, _src.in_pdmo, sizeof(l1desc::in_pdmo));
+    // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+} // copy_l1desc
+
 int
 allocL1desc() {
     int i;
