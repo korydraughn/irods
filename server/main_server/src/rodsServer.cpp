@@ -83,6 +83,10 @@
 #include <chrono>
 #include <sstream>
 
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#  include <sanitizer/lsan_interface.h>
+#endif
+
 #define LOCK_FILE_PURGE_TIME 7200 // Purge lock files every 2 hr.
 
 // clang-format off
@@ -1188,11 +1192,11 @@ int main(int argc, char** argv)
 
                 try {
                     // Collapse non-zero error codes into one.
-                    _exit(runIrodsAgentFactory(local_addr) == 0 ? 0 : 1);
+                    std::exit(runIrodsAgentFactory(local_addr) == 0 ? 0 : 1);
                 }
                 catch (...) {
                     // If an exception is thrown for any reason, terminate the agent factory.
-                    _exit(1);
+                    std::exit(1);
                 }
             }
             else if (agent_spawning_pid > 0) {
@@ -1534,7 +1538,14 @@ serverExit()
     // Wake and terminate agent spawning process
     kill(agent_spawning_pid, SIGTERM);
 
-    exit(1);
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+    // Calling this function is likely not async-signal-safe, but it is okay because
+    // if the code has been compiled with Address Sanitizer enabled. For that reason,
+    // we can assume that the binary is not running in a production environment.
+    __lsan_do_leak_check();
+#endif
+
+    _exit(1);
 }
 
 int procChildren(agentProc_t** agentProcHead)
