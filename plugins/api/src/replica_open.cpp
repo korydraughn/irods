@@ -176,6 +176,7 @@ auto plugin_factory(const std::string& _instance_name,
                         op,                              // Operation
                         "api_replica_open",              // Operation name
                         clearDataObjInp,                 // Clear function
+                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
                         (funcPtr) CALL_REPLICA_OPEN};
     // clang-format on
 

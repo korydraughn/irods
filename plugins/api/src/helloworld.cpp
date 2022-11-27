@@ -139,7 +139,8 @@ extern "C" {
                                "HelloOut_PI", 0,     // out PI / bs flag
                                std::function<int(rsComm_t*, helloInp_t*, helloOut_t**)>(rs_hello_world), // operation
                                "api_hello_world",    // operation name
-                               0,                    // null clear fcn
+                               [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
+                               [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
                                (funcPtr)CALL_HELLOINP_HELLO_OUT};
         // =-=-=-=-=-=-=-
         // create an api object

@@ -650,7 +650,8 @@ auto plugin_factory(const std::string& _instance_name,
                         "BinBytesBuf_PI", 0,                        // Out PI / bs flag
                         op,                                         // Operation
                         "data_object_finalize",                     // Operation name
-                        nullptr,                                    // Null clear function
+                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
+                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
                         (funcPtr) CALL_DATA_OBJECT_FINALIZE};
     // clang-format on
 

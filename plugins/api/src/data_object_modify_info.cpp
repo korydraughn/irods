@@ -1,3 +1,4 @@
+#include "irods/irods_pack_table.hpp"
 #include "irods/plugins/api/api_plugin_number.h"
 #include "irods/rodsDef.h"
 #include "irods/rcConnect.h"
@@ -143,6 +144,7 @@ auto plugin_factory(const std::string& _instance_name,
                         op,                              // Operation
                         "api_data_object_modify_info",   // Operation name
                         clearModDataObjMetaInp,          // Null clear function
+                        irods::clearOutStruct_noop,
                         (funcPtr) CALL_DATA_OBJECT_MODIFY_INFO};
     // clang-format on
 

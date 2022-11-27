@@ -4,7 +4,7 @@
 #include "irods/rodsDef.h"
 #include "irods/rcConnect.h"
 
-typedef struct {
+typedef struct FileStatInp {
     rodsHostAddr_t addr;
     char fileName[MAX_NAME_LEN];
     char rescHier[MAX_NAME_LEN];

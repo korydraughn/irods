@@ -1,3 +1,4 @@
+#include "irods/irods_pack_table.hpp"
 #include "irods/plugins/api/api_plugin_number.h"
 #include "irods/client_api_allowlist.hpp"
 #include "irods/fileDriver.hpp"
@@ -1357,7 +1358,8 @@ auto plugin_factory(const std::string& _instance_name,
                         "BinBytesBuf_PI", 0,                        // Out PI / bs flag
                         op,                                         // Operation
                         "api_register_physical_path",               // Operation name
-                        nullptr,                                    // Null clear function
+                        irods::clearInStruct_noop,                                    // Null clear function
+                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
                         (funcPtr) CALL_REGISTER_PHYSICAL_PATH};
     // clang-format on
 

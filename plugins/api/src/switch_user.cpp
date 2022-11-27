@@ -1,3 +1,4 @@
+#include "irods/irods_pack_table.hpp"
 #include "irods/plugins/api/api_plugin_number.h"
 #include "irods/plugins/api/switch_user_types.h"
 #include "irods/rodsDef.h"
@@ -281,7 +282,8 @@ extern "C" auto plugin_factory(
                         nullptr, 0,                 // Out PI / bs flag
                         op,                         // Operation
                         "api_switch_user",          // Operation name
-                        nullptr,                    // Null clear function
+                        irods::clearInStruct_noop,                    // Null clear function
+                        irods::clearOutStruct_noop,                    // Null clear function
                         fn_ptr};
     // clang-format on
 

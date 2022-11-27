@@ -1,3 +1,4 @@
+#include "irods/irods_pack_table.hpp"
 #include "irods/plugins/api/api_plugin_number.h"
 #include "irods/plugins/api/grid_configuration_types.h"
 #include "irods/rodsDef.h"
@@ -104,7 +105,8 @@ auto plugin_factory(const std::string& _instance_name,
                         nullptr, 0,                           // Out PI / bs flag
                         op,                                   // Operation
                         "api_set_grid_configuration_value",   // Operation name
-                        nullptr,                              // Null clear function
+                        irods::clearInStruct_noop,                              // Null clear function
+                        irods::clearOutStruct_noop,                              // Null clear function
                         (funcPtr) CALL_SET_GRID_CONFIGURATION_VALUE};
     // clang-format on
 

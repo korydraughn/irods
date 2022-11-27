@@ -136,7 +136,8 @@ extern "C" {
                             "BinBytesBuf_PI", 0,                        // Out PI / bs flag
                             op,                 // operation
                             "api_authenticate", // operation name
-                            nullptr,            // null clear fcn
+                            [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
+                            [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
                             (funcPtr)CALL_AUTHENTICATE};
 
         auto* api = new irods::api_entry{def};

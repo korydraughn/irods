@@ -1,3 +1,4 @@
+#include "irods/irods_pack_table.hpp"
 #include "irods/plugins/api/api_plugin_number.h"
 #include "irods/plugins/api/delay_server_migration_types.h"
 #include "irods/rodsDef.h"
@@ -219,7 +220,8 @@ auto plugin_factory(const std::string& _instance_name,
                         nullptr, 0,                              // Out PI / bs flag
                         op,                                      // Operation
                         "api_set_delay_server_migration_info",   // Operation name
-                        nullptr,                                 // Null clear function
+                        irods::clearInStruct_noop,                                 // Null clear function
+                        irods::clearOutStruct_noop,                                 // Null clear function
                         (funcPtr) CALL_SET_DELAY_SERVER_MIGRATION_INFO};
     // clang-format on
 

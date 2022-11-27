@@ -42,7 +42,7 @@ jmp_buf Jenv;
 namespace ix = irods::experimental;
 
 // clang-format off
-using log_agent  = irods::experimental::log::server;
+using log_agent  = irods::experimental::log::agent;
 using log_server = irods::experimental::log::server;
 // clang-format on
 
@@ -248,6 +248,15 @@ int rsApiHandler(rsComm_t*   rsComm,
         myInStruct = nullptr;
     }
 
+    if (myOutStruct) {
+        if (RsApiTable[apiInx]->clearOutStruct) {
+            RsApiTable[apiInx]->clearOutStruct(myOutStruct);
+        }
+
+        std::free(myOutStruct);
+        myOutStruct = nullptr;
+    }
+
     if (retVal >= 0 && status < 0) {
         return status;
     }
@@ -260,12 +269,12 @@ int sendAndProcApiReply(rsComm_t* rsComm, int apiInx, int status, void*& myOutSt
     const int retval = sendApiReply(rsComm, apiInx, status, myOutStruct, myOutBsBBuf);
 
     clearBBuf(myOutBsBBuf);
-
+#if 0
     if (myOutStruct) {
         std::free(myOutStruct);
         myOutStruct = nullptr;
     }
-
+#endif
     freeRErrorContent(&rsComm->rError);
 
     // Check for portal operation.
@@ -310,7 +319,7 @@ int sendApiReply(rsComm_t* rsComm, int apiInx, int retVal, void*& myOutStruct, b
             &outStructBBuf,
             (char*) RsApiTable[apiInx]->outPackInstruct,
             RodsPackTable,
-            FREE_POINTER,
+            0,
             rsComm->irodsProt,
             rsComm->cliVersion.relVersion);
 

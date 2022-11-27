@@ -1,3 +1,4 @@
+#include "irods/irods_pack_table.hpp"
 #include "irods/plugins/api/api_plugin_number.h"
 #include "irods/rodsDef.h"
 #include "irods/rcConnect.h"
@@ -518,7 +519,8 @@ auto plugin_factory(const std::string& _instance_name,
                         nullptr, 0,             // Out PI / bs flag
                         op,                     // Operation
                         "api_touch",            // Operation name
-                        nullptr,                // Clear function
+                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
+                        irods::clearOutStruct_noop, // clear output function
                         (funcPtr) CALL_TOUCH};
     // clang-format on
 

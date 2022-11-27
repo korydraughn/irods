@@ -348,7 +348,8 @@ auto plugin_factory(const std::string& _instance_name,
                         "BinBytesBuf_PI", 0,             // Out PI / bs flag
                         op,                              // Operation
                         "api_get_file_descriptor_info",  // Operation name
-                        nullptr,                         // Null clear function
+                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
+                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
                         (funcPtr) CALL_GET_FD_INFO};
     // clang-format on
 
