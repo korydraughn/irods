@@ -363,10 +363,38 @@ void setup_signal_handlers()
     irods::set_unrecoverable_signal_handlers();
 } // setup_signal_handlers
 
+// NOLINTNEXTLINE(modernize-use-trailing-return-type)
+int setup_unix_domain_socket_for_listening(sockaddr_un _socket_addr)
+{
+    const auto sfd = socket(AF_UNIX, SOCK_STREAM, 0);
+
+    if (sfd < 0) {
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
+        log_agent_factory::error("Unable to create socket in runIrodsAgent, errno = [{}]: {}", errno, strerror(errno));
+        return SYS_SOCK_OPEN_ERR;
+    }
+
+    // Delete socket if it already exists.
+    unlink(_socket_addr.sun_path); // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    if (bind(sfd, reinterpret_cast<struct sockaddr*>(&_socket_addr), sizeof(sockaddr_un)) < 0) {
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
+        log_agent_factory::error("Unable to bind socket in runIrodsAgent, errno [{}]: {}", errno, strerror(errno));
+        return SYS_SOCK_BIND_ERR;
+    }
+
+    if (listen(sfd, 5) < 0) { // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers)
+        constexpr const char* msg = "Unable to set up socket for listening in runIrodsAgent, errno [{}]: {}";
+        log_agent_factory::error(msg, errno, strerror(errno)); // NOLINT(concurrency-mt-unsafe)
+        return SYS_SOCK_LISTEN_ERR;
+    }
+
+    return sfd;
+} // setup_unix_domain_socket_for_listening
+
 int runIrodsAgentFactory(sockaddr_un agent_addr)
 {
-    //RsComm rsComm;
-
     namespace log = irods::experimental::log;
 
     log::set_server_type("agent_factory");
@@ -374,43 +402,27 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     irods::server_properties::instance().capture();
     log_agent_factory::set_level(log::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT_FACTORY));
 
-    // Attach the error stack object to the logger and release it once this function returns.
-    //log::set_error_object(&rsComm.rError);
-    //irods::at_scope_exit release_error_stack{[] { log::set_error_object(nullptr); }};
-
     log_agent_factory::info("Initializing agent factory ...");
 
     setup_signal_handlers();
 
     initProcLog();
 
-    const int listen_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    const auto listen_socket = setup_unix_domain_socket_for_listening(agent_addr);
     if (listen_socket < 0) {
-        log_agent_factory::error("Unable to create socket in runIrodsAgent, errno = [{}]: {}", errno, strerror(errno));
-        return SYS_SOCK_OPEN_ERR;
-    }
-
-    // Delete socket if it already exists.
-    unlink(agent_addr.sun_path);
-
-    unsigned int len = sizeof(agent_addr);
-
-    if (bind(listen_socket, (struct sockaddr*) &agent_addr, len) < 0) {
-        log_agent_factory::error("Unable to bind socket in runIrodsAgent, errno [{}]: {}", errno, strerror(errno));
-        return SYS_SOCK_BIND_ERR;
-    }
-
-    if (listen(listen_socket, 5) < 0) {
-        log_agent_factory::error(
-            "Unable to set up socket for listening in runIrodsAgent, errno [{}]: {}", errno, strerror(errno));
-        return SYS_SOCK_LISTEN_ERR;
+        return listen_socket;
     }
 
     struct sockaddr_un client_addr;
-    const int conn_socket = accept(listen_socket, (struct sockaddr*) &client_addr, &len);
-    if (conn_socket < 0) {
-        log_agent_factory::error(
-            "Failed to accept client socket in runIrodsAgent, errno [{}]: {}", errno, strerror(errno));
+
+    const auto client_socket = [listen_socket, &client_addr] {
+        unsigned int len = sizeof(sockaddr_un);
+        return accept(listen_socket, reinterpret_cast<struct sockaddr*>(&client_addr), &len);
+    }();
+
+    if (client_socket < 0) {
+        constexpr const char* msg = "Failed to accept client socket in runIrodsAgent, errno [{}]: {}";
+        log_agent_factory::error(msg, errno, strerror(errno)); // NOLINT(concurrency-mt-unsafe)
         return SYS_SOCK_ACCEPT_ERR;
     }
 
@@ -421,12 +433,12 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
 
         fd_set read_socket;
         FD_ZERO(&read_socket);
-        FD_SET(conn_socket, &read_socket);
+        FD_SET(client_socket, &read_socket);
 
         struct timeval time_out;
         time_out.tv_sec = 0;
         time_out.tv_usec = 30 * 1000;
-        const int ready = select(conn_socket + 1, &read_socket, nullptr, nullptr, &time_out);
+        const int ready = select(client_socket + 1, &read_socket, nullptr, nullptr, &time_out);
 
         // Check the ready socket
         if (-1 == ready) {
@@ -449,7 +461,7 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
         // If 0 bytes are received, socket has been closed
         // If a socket address is on the line, create it and fork a child process
         char in_buf[1024]{};
-        const ssize_t bytes_received = recv(conn_socket, in_buf, sizeof(in_buf), 0);
+        const ssize_t bytes_received = recv(client_socket, in_buf, sizeof(in_buf), 0);
 
         if (-1 == bytes_received) {
             log_agent_factory::error("Error receiving data from rodsServer, errno = [{}]: {}", errno, strerror(errno));
@@ -486,20 +498,18 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
             return ec;
         }
 
-        {
-            // Send acknowledgement that socket has been created.
-            constexpr const char ack_buffer[] = "OK";
-            const auto bytes_sent = send(conn_socket, ack_buffer, sizeof(ack_buffer), 0);
-            if (bytes_sent < 0) {
-                constexpr const char* msg = "[{}] - Error sending acknowledgment to rodsServer, errno = [{}][{}]";
-                log_agent_factory::error(msg, __func__, errno, strerror(errno));
-                return SYS_SOCK_READ_ERR;
-            }
+        // Send acknowledgement that socket has been created.
+        constexpr const char ack_buffer[] = "OK";
+        const auto bytes_sent = send(client_socket, ack_buffer, sizeof(ack_buffer), 0);
+        if (bytes_sent < 0) {
+            constexpr const char* msg = "[{}] - Error sending acknowledgment to rodsServer, errno = [{}][{}]";
+            log_agent_factory::error(msg, __func__, errno, strerror(errno));
+            return SYS_SOCK_READ_ERR;
         }
 
         // Wait for connection message from main server.
         std::memset(in_buf, 0, sizeof(in_buf));
-        recv(conn_socket, in_buf, sizeof(in_buf), 0);
+        recv(client_socket, in_buf, sizeof(in_buf), 0);
         if (std::strncmp(in_buf, "connection_successful", sizeof(in_buf)) != 0) {
             constexpr const char* msg = "[{}:{}] - received failure message in connecting to socket from server";
             log_agent_factory::error(msg, __func__, __LINE__);
@@ -549,7 +559,7 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
             // can choose to restart the server. Shutting the agent factory down in this way just causes
             // the main server process to fork a new one.
 
-            if (close(conn_socket) < 0) {
+            if (close(client_socket) < 0) {
                 log_agent_factory::error("close(conn_socket) failed with errno = [{}]: {}", errno, strerror(errno));
             }
 
@@ -761,8 +771,6 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     __lsan_do_leak_check();
 #endif
 
-    //return status; // This returns to the agent factory respawn thread in the main server process.
-    //std::exit((0 == status) ? 0 : 1);
     _exit((0 == status) ? 0 : 1);
 }
 
