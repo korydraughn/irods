@@ -105,15 +105,12 @@ auto rsExecMyRule(RsComm* _comm, ExecMyRuleInp* _exec_inp, MsParamArray** _out_p
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     trimMsParamArray(rei.msParamArray, _exec_inp->outParamDesc);
 
-    // TODO Copy the msparam array
-#if 0
-    *_out_param_arr = rei.msParamArray;
-#else
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
     *_out_param_arr = static_cast<MsParamArray*>(std::malloc(sizeof(MsParamArray)));
     std::memset(*_out_param_arr, 0, sizeof(MsParamArray));
     replMsParamArray(rei.msParamArray, *_out_param_arr);
-#endif
+
+    // Detach the MsParamArray from the REI.
     rei.msParamArray = nullptr;
 
     if (!inst_name.empty() && err.code() < 0) {
