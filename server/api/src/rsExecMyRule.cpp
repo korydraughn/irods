@@ -32,7 +32,7 @@ auto rsExecMyRule(RsComm* _comm, ExecMyRuleInp* _exec_inp, MsParamArray** _out_p
         }
 
         std::string ret_string = "Available rule engine plugin instances:\n";
-        for (auto& name : instance_names) {
+        for (const auto& name : instance_names) {
             ret_string += "\t";
             ret_string += name;
             ret_string += "\n";
@@ -80,6 +80,8 @@ auto rsExecMyRule(RsComm* _comm, ExecMyRuleInp* _exec_inp, MsParamArray** _out_p
         _exec_inp->inpParamArray = static_cast<MsParamArray*>(std::malloc(sizeof(MsParamArray)));
         std::memset(_exec_inp->inpParamArray, 0, sizeof(MsParamArray));
     }
+
+    // This exposes the MsParamArray provided by the client (or recently allocated) to the NREP.
     rei.msParamArray = _exec_inp->inpParamArray;
 
     rstrcpy(rei.ruleName, EXEC_MY_RULE_KW, NAME_LEN); // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
@@ -93,11 +95,11 @@ auto rsExecMyRule(RsComm* _comm, ExecMyRuleInp* _exec_inp, MsParamArray** _out_p
         irods::re_plugin_globals->global_re_mgr, &rei);
     irods::error err = re_ctx_mgr.exec_rule_text(inst_name, my_rule_text, _exec_inp->inpParamArray, out_param_desc);
 
+    // If the client didn't specify a target REP, clear all error information. This is by design.
     if (inst_name.empty()) {
         freeRErrorContent(&rei.rsComm->rError);
     }
-
-    if (!inst_name.empty() && !err.ok()) {
+    else if (!err.ok()) {
         log_api::error("{}: {}, {}", __func__, err.code(), err.result());
         return err.code(); // NOLINT(bugprone-narrowing-conversions, cppcoreguidelines-narrowing-conversions)
     }
