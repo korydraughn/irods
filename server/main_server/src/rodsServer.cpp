@@ -1,6 +1,5 @@
 #include "irods/rodsServer.hpp"
 
-#include "boost/thread/cv_status.hpp"
 #include "irods/client_api_allowlist.hpp"
 #include "irods/client_connection.hpp"
 #include "irods/irods_at_scope_exit.hpp"
@@ -129,8 +128,6 @@ boost::mutex              ReadReqCondMutex;
 boost::mutex              SpawnReqCondMutex;
 boost::condition_variable ReadReqCond;
 boost::condition_variable SpawnReqCond;
-//bool read_request_has_work = false;
-//bool spawn_request_thread_has_work = false;
 
 namespace
 {
@@ -2213,7 +2210,6 @@ int addConnReqToQueue(rsComm_t* rsComm, int sock)
     myConnReq->sock = sock;
     myConnReq->remoteAddr = rsComm->remoteAddr;
     queueAgentProc(myConnReq, &ConnReqHead, BOTTOM_POS);
-    //read_request_has_work = true;
 
     ReadReqCond.notify_all(); // NOTE: Check all vs one.
     read_req_lock.unlock();
@@ -2243,7 +2239,6 @@ agentProc_t* getConnReqFromQueue()
             break;
         }
 
-        //ReadReqCond.wait(read_req_lock, [] { return read_request_has_work; });
         ReadReqCond.wait(read_req_lock);
         if (!ConnReqHead) {
             read_req_lock.unlock();
@@ -2255,8 +2250,6 @@ agentProc_t* getConnReqFromQueue()
         read_req_lock.unlock();
         break;
     }
-
-    //read_request_has_work = false;
 
     return myConnReq;
 }
@@ -2293,19 +2286,8 @@ void task_spawn_manager()
             break;
         }
 
-#if 1
         boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex);
         SpawnReqCond.wait(spwn_req_lock); // TODO This form of wait is not recommended due to spurious wake ups, etc.
-#else
-        boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex, boost::defer_lock);
-        while (true) {
-            spwn_req_lock.lock();
-            const auto status = SpawnReqCond.wait_for(spwn_req_lock, boost::chrono::milliseconds{250});
-            if (status == boost::cv_status::no_timeout) {
-                break;
-            }
-        }
-#endif
 
         while (SpawnReqHead) {
             agentProc_t* mySpawnReq = SpawnReqHead;
@@ -2335,8 +2317,6 @@ void task_spawn_manager()
 
             spwn_req_lock.lock();
         }
-
-        //spawn_request_thread_has_work = false;
 
         spwn_req_lock.unlock();
 
@@ -2438,8 +2418,6 @@ void readWorkerTask()
             boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex);
 
             queueAgentProc(myConnReq, &SpawnReqHead, BOTTOM_POS);
-
-            //spawn_request_thread_has_work = true;
 
             SpawnReqCond.notify_all(); // NOTE:: look into notify_one vs notify_all
         }
