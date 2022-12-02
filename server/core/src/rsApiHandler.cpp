@@ -315,9 +315,9 @@ int sendApiReply(rsComm_t* rsComm, int apiInx, int retVal, void*& myOutStruct, b
 
     if (RsApiTable[apiInx]->outPackInstruct && myOutStruct) {
         status = pack_struct(
-            (char*) myOutStruct,
+            static_cast<char*>(myOutStruct),
             &outStructBBuf,
-            (char*) RsApiTable[apiInx]->outPackInstruct,
+            RsApiTable[apiInx]->outPackInstruct,
             RodsPackTable,
             0,
             rsComm->irodsProt,
@@ -342,7 +342,7 @@ int sendApiReply(rsComm_t* rsComm, int apiInx, int retVal, void*& myOutStruct, b
 
     if ( rsComm->rError.len > 0 ) {
         status = pack_struct(
-            (char*) &rsComm->rError,
+            &rsComm->rError,
             &rErrorBBuf,
             "RError_PI",
             RodsPackTable,
