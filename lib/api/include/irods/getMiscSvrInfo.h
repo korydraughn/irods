@@ -1,7 +1,7 @@
 #ifndef IRODS_GET_MISC_SVR_INFO_H
 #define IRODS_GET_MISC_SVR_INFO_H
 
-struct RcComm;
+#include "irods/rcConnect.h"
 
 // there is no input struct. Therefore, the inPackInstruct is NULL
 // miscSvrInfo_t is the output struct
@@ -12,7 +12,7 @@ struct RcComm;
 
 typedef struct MiscSvrInfo {
     int serverType;     // RCAT_ENABLED or RCAT_NOT_ENABLED
-    int serverBootTime; // TODO uint (non-standard) to int - ABI break!
+    uint serverBootTime;
     char relVersion[NAME_LEN];    // the release version number
     char apiVersion[NAME_LEN];    // the API version number
     char rodsZone[NAME_LEN];      // the zone of this server
@@ -23,6 +23,6 @@ typedef struct MiscSvrInfo {
 #ifdef __cplusplus
 extern "C"
 #endif
-int rcGetMiscSvrInfo(struct RcComm *conn, miscSvrInfo_t **outSvrInfo );
+int rcGetMiscSvrInfo(rcComm_t *conn, miscSvrInfo_t **outSvrInfo );
 
 #endif // IRODS_GET_MISC_SVR_INFO_H
