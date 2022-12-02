@@ -257,14 +257,14 @@ replBytesBuf( const bytesBuf_t* in) {
 
 int fillMsParam(msParam_t* msParam, const char* label, const char* type, void* inOutStruct, bytesBuf_t* inpOutBuf)
 {
-    if ( label != NULL ) {
-        msParam->label = strdup( label );
+    if (label) {
+        msParam->label = strdup(label);
     }
 
-    msParam->type = type ? strdup( type ) : NULL;
+    msParam->type = type ? strdup(type) : nullptr;
 
-    if (inOutStruct != NULL && msParam->type != NULL && strcmp(msParam->type, STR_MS_T) == 0) {
-        msParam->inOutStruct = ( void * ) strdup( ( char * )inOutStruct );
+    if (inOutStruct && msParam->type && std::strcmp(msParam->type, STR_MS_T) == 0) {
+        msParam->inOutStruct = strdup(static_cast<char*>(inOutStruct));
     }
     else {
         msParam->inOutStruct = inOutStruct;
@@ -561,7 +561,7 @@ int clearMsParam(msParam_t* msParam, int freeInOutStruct)
 
     if (msParam->inOutStruct) {
         if (msParam->type) {
-            if (msParam->type && std::strcmp(msParam->type, STR_MS_T) == 0) {
+            if (std::strcmp(msParam->type, STR_MS_T) == 0) {
                 std::free(msParam->inOutStruct);
             }
             else if (std::strcmp(msParam->type, ExecCmdOut_MS_T) == 0) {
