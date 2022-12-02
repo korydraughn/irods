@@ -262,7 +262,7 @@ void reap_terminated_agents()
     int agent_status{};
 
     while ((agent_pid = waitpid(-1, &agent_status, WNOHANG)) > 0) {
-        log_agent_factory::info("Reaped agent [{}] ...", agent_pid);
+        log_agent_factory::trace("Reaped agent [{}] ...", agent_pid);
 
         if (WIFEXITED(agent_status)) { // NOLINT(hicpp-signed-bitwise)
             const int exit_status = WEXITSTATUS(agent_status); // NOLINT(hicpp-signed-bitwise)
@@ -532,32 +532,31 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     // This is where the agent logic actually begins.
     //
 
-    log::set_server_type("agent");
-
-    log_agent::trace("Agent forked. Initializing ...");
-
-    close(listen_socket);
-
-    // Restore signal dispositions for agents.
-    std::signal(SIGABRT, SIG_DFL);
-    std::signal(SIGINT,  SIG_DFL);
-    std::signal(SIGHUP,  SIG_DFL);
-    std::signal(SIGTERM, SIG_DFL);
-    std::signal(SIGCHLD, SIG_DFL);
-    std::signal(SIGUSR1, SIG_DFL);
-    std::signal(SIGPIPE, SIG_DFL);
-
     int status{};
 
     try {
-        // Reload server_config.json into memory for the newly forked agent process.
-        irods::environment_properties::instance().capture();
+        log::set_server_type("agent");
 
-        // should we check this return code??
+        // Reload irods_environment.json and server_config.json for the newly forked agent process.
+        irods::environment_properties::instance().capture();
+        irods::server_properties::instance().capture();
+
+        log_agent::trace("Agent forked. Initializing ...");
+
+        close(listen_socket);
+
+        // Restore signal dispositions for agents.
+        std::signal(SIGABRT, SIG_DFL);
+        std::signal(SIGINT,  SIG_DFL);
+        std::signal(SIGHUP,  SIG_DFL);
+        std::signal(SIGTERM, SIG_DFL);
+        std::signal(SIGCHLD, SIG_DFL);
+        std::signal(SIGUSR1, SIG_DFL);
+        std::signal(SIGPIPE, SIG_DFL);
+
         status = receiveDataFromServer(conn_tmp_socket);
         if (status < 0) {
             log_agent::error("receiveDataFromServer failed [error_code=[{}]].", status);
-            //return err.code(); // TODO Should we return here?
         }
 
         close(conn_tmp_socket);
