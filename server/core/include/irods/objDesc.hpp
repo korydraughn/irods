@@ -26,10 +26,9 @@
 // Values in l1desc_t is the desired value.
 // Values in dataObjInfo are the values in rcat.
 //
-// If you're adding a non-trivial type to this structure, you must also update
-// init_l1desc()'s implementation.
+// If you modify this data type, you must also update init_l1desc() and copy_l1desc().
 //
-// Attempting to use memset on this data structure will result in undefined behavior.
+// Attempting to use memset on this data structure will result in Undefined Behavior.
 typedef struct l1desc {
     int l3descInx;
     int inuseFlag;
