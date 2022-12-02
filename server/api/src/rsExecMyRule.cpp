@@ -95,7 +95,9 @@ auto rsExecMyRule(RsComm* _comm, ExecMyRuleInp* _exec_inp, MsParamArray** _out_p
         irods::re_plugin_globals->global_re_mgr, &rei);
     irods::error err = re_ctx_mgr.exec_rule_text(inst_name, my_rule_text, _exec_inp->inpParamArray, out_param_desc);
 
-    // If the client didn't specify a target REP, clear all error information. This is by design.
+    // If the client didn't specify a target REP, clear all error information.
+    // Doing this maintains the behavior seen by executing "irule" without specifying a target REP.
+    // This is further explained due to the fact that "irule" invokes this API endpoint directly to do its work.
     if (inst_name.empty()) {
         freeRErrorContent(&rei.rsComm->rError);
     }
