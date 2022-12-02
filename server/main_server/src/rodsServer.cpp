@@ -1561,7 +1561,7 @@ serverExit() // TODO What OS would hit this code path? Windows?
 
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
     // Calling this function is likely not async-signal-safe, but it is okay because
-    // if the code has been compiled with Address Sanitizer enabled. For that reason,
+    // the code has been compiled with Address Sanitizer enabled. For that reason,
     // we can assume that the binary is not running in a production environment.
     __lsan_do_leak_check();
 #endif
