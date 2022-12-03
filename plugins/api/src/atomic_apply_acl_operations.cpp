@@ -569,18 +569,22 @@ auto plugin_factory(const std::string& _instance_name,
     irods::client_api_allowlist::add(ATOMIC_APPLY_ACL_OPERATIONS_APN);
 #endif // RODS_SERVER
 
+    const auto clear_bbuf_adapter = [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); };
+
     // clang-format off
-    irods::apidef_t def{ATOMIC_APPLY_ACL_OPERATIONS_APN,            // API number
-                        RODS_API_VERSION,                           // API version
-                        NO_USER_AUTH,                               // Client auth
-                        NO_USER_AUTH,                               // Proxy auth
-                        "BinBytesBuf_PI", 0,                        // In PI / bs flag
-                        "BinBytesBuf_PI", 0,                        // Out PI / bs flag
-                        op,                                         // Operation
-                        "api_atomic_apply_acl_operations",          // Operation name
-                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
-                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
-                        (funcPtr) CALL_ATOMIC_APPLY_ACL_OPERATIONS};
+    irods::apidef_t def{
+        ATOMIC_APPLY_ACL_OPERATIONS_APN,    // API number
+        RODS_API_VERSION,                   // API version
+        NO_USER_AUTH,                       // Client auth
+        NO_USER_AUTH,                       // Proxy auth
+        "BinBytesBuf_PI", 0,                // In PI / bs flag
+        "BinBytesBuf_PI", 0,                // Out PI / bs flag
+        op,                                 // Operation
+        "api_atomic_apply_acl_operations",  // Operation name
+        clear_bbuf_adapter,                 // Clear input function
+        clear_bbuf_adapter,                 // Clear output function
+        (funcPtr) CALL_ATOMIC_APPLY_ACL_OPERATIONS
+    };
     // clang-format on
 
     auto* api = new irods::api_entry{def};
@@ -592,5 +596,4 @@ auto plugin_factory(const std::string& _instance_name,
     api->out_pack_value = BytesBuf_PI;
 
     return api;
-}
-
+} // plugin_factory

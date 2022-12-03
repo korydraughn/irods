@@ -109,17 +109,19 @@ auto plugin_factory(const std::string& _instance_name,
                     const std::string& _context) -> irods::api_entry*
 {
     // clang-format off
-    irods::apidef_t def{GET_GRID_CONFIGURATION_VALUE_APN,     // API number
-                        RODS_API_VERSION,                     // API version
-                        LOCAL_PRIV_USER_AUTH,                 // Client auth
-                        LOCAL_PRIV_USER_AUTH,                 // Proxy auth
-                        "GridConfigurationInp_PI", 0,         // In PI / bs flag
-                        "GridConfigurationOut_PI", 0,         // Out PI / bs flag
-                        op,                                   // Operation
-                        "api_get_grid_configuration_value",   // Operation name
-                        irods::clearInStruct_noop,                              // Null clear function
-                        irods::clearOutStruct_noop,
-                        (funcPtr) CALL_GET_GRID_CONFIGURATION_VALUE};
+    irods::apidef_t def{
+        GET_GRID_CONFIGURATION_VALUE_APN,       // API number
+        RODS_API_VERSION,                       // API version
+        LOCAL_PRIV_USER_AUTH,                   // Client auth
+        LOCAL_PRIV_USER_AUTH,                   // Proxy auth
+        "GridConfigurationInp_PI", 0,           // In PI / bs flag
+        "GridConfigurationOut_PI", 0,           // Out PI / bs flag
+        op,                                     // Operation
+        "api_get_grid_configuration_value",     // Operation name
+        irods::clearInStruct_noop,              // Clear input function
+        irods::clearOutStruct_noop,             // Clear output function
+        (funcPtr) CALL_GET_GRID_CONFIGURATION_VALUE
+    };
     // clang-format on
 
     auto* api = new irods::api_entry{def};
@@ -131,5 +133,4 @@ auto plugin_factory(const std::string& _instance_name,
     api->out_pack_value = GridConfigurationOut_PI;
 
     return api;
-}
-
+} // plugin_factory

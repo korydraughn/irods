@@ -339,18 +339,22 @@ auto plugin_factory(const std::string& _instance_name,
     irods::client_api_allowlist::add(GET_FILE_DESCRIPTOR_INFO_APN);
 #endif // RODS_SERVER
 
+    const auto clear_bbuf_adapter = [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); };
+
     // clang-format off
-    irods::apidef_t def{GET_FILE_DESCRIPTOR_INFO_APN,    // API number
-                        RODS_API_VERSION,                // API version
-                        NO_USER_AUTH,                    // Client auth
-                        NO_USER_AUTH,                    // Proxy auth
-                        "BinBytesBuf_PI", 0,             // In PI / bs flag
-                        "BinBytesBuf_PI", 0,             // Out PI / bs flag
-                        op,                              // Operation
-                        "api_get_file_descriptor_info",  // Operation name
-                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
-                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
-                        (funcPtr) CALL_GET_FD_INFO};
+    irods::apidef_t def{
+        GET_FILE_DESCRIPTOR_INFO_APN,    // API number
+        RODS_API_VERSION,                // API version
+        NO_USER_AUTH,                    // Client auth
+        NO_USER_AUTH,                    // Proxy auth
+        "BinBytesBuf_PI", 0,             // In PI / bs flag
+        "BinBytesBuf_PI", 0,             // Out PI / bs flag
+        op,                              // Operation
+        "api_get_file_descriptor_info",  // Operation name
+        clear_bbuf_adapter,             // clear input function
+        clear_bbuf_adapter,             // clear output function
+        (funcPtr) CALL_GET_FD_INFO
+    };
     // clang-format on
 
     auto* api = new irods::api_entry{def};
@@ -362,5 +366,4 @@ auto plugin_factory(const std::string& _instance_name,
     api->out_pack_value = BytesBuf_PI;
 
     return api;
-}
-
+} // plugin_factory

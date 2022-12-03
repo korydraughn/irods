@@ -119,35 +119,38 @@ namespace
 
 #endif // RODS_SERVER
 
-extern "C" {
-    irods::api_entry* plugin_factory(const std::string&, const std::string&)
-    {
+extern "C"
+irods::api_entry* plugin_factory(const std::string&, const std::string&)
+{
 #ifdef RODS_SERVER
-        irods::client_api_allowlist::add(AUTHENTICATION_APN);
+    irods::client_api_allowlist::add(AUTHENTICATION_APN);
 #endif
 
-        // =-=-=-=-=-=-=-
-        // create a api def object
-        irods::apidef_t def{AUTHENTICATION_APN, // api number
-                            RODS_API_VERSION,   // api version
-                            NO_USER_AUTH,       // client auth
-                            NO_USER_AUTH,       // proxy auth
-                            "BinBytesBuf_PI", 0,                        // In PI / bs flag
-                            "BinBytesBuf_PI", 0,                        // Out PI / bs flag
-                            op,                 // operation
-                            "api_authenticate", // operation name
-                            [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
-                            [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
-                            (funcPtr)CALL_AUTHENTICATE};
+    const auto clear_bbuf_adapter = [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); };
 
-        auto* api = new irods::api_entry{def};
+    // clang-format off
+    irods::apidef_t def{
+        AUTHENTICATION_APN,     // api number
+        RODS_API_VERSION,       // api version
+        NO_USER_AUTH,           // client auth
+        NO_USER_AUTH,           // proxy auth
+        "BinBytesBuf_PI", 0,    // In PI / bs flag
+        "BinBytesBuf_PI", 0,    // Out PI / bs flag
+        op,                     // operation
+        "api_authenticate",     // operation name
+        clear_bbuf_adapter,     // clear input function
+        clear_bbuf_adapter,     // clear output function
+        (funcPtr)CALL_AUTHENTICATE
+    };
+    // clang-format on
 
-        api->in_pack_key = "BinBytesBuf_PI";
-        api->in_pack_value = BytesBuf_PI;
+    auto* api = new irods::api_entry{def};
 
-        api->out_pack_key = "BinBytesBuf_PI";
-        api->out_pack_value = BytesBuf_PI;
+    api->in_pack_key = "BinBytesBuf_PI";
+    api->in_pack_value = BytesBuf_PI;
 
-        return api;
-    } // plugin_factory
-} // extern "C"
+    api->out_pack_key = "BinBytesBuf_PI";
+    api->out_pack_value = BytesBuf_PI;
+
+    return api;
+} // plugin_factory

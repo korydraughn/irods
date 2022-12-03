@@ -167,17 +167,19 @@ auto plugin_factory(const std::string& _instance_name,
 #endif // RODS_SERVER
 
     // clang-format off
-    irods::apidef_t def{REPLICA_OPEN_APN,                // API number
-                        RODS_API_VERSION,                // API version
-                        NO_USER_AUTH,                    // Client auth
-                        NO_USER_AUTH,                    // Proxy auth
-                        "DataObjInp_PI", 0,              // In PI / bs flag
-                        "BinBytesBuf_PI", 0,             // Out PI / bs flag
-                        op,                              // Operation
-                        "api_replica_open",              // Operation name
-                        clearDataObjInp,                 // Clear function
-                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
-                        (funcPtr) CALL_REPLICA_OPEN};
+    irods::apidef_t def{
+        REPLICA_OPEN_APN,                // API number
+        RODS_API_VERSION,                // API version
+        NO_USER_AUTH,                    // Client auth
+        NO_USER_AUTH,                    // Proxy auth
+        "DataObjInp_PI", 0,              // In PI / bs flag
+        "BinBytesBuf_PI", 0,             // Out PI / bs flag
+        op,                              // Operation
+        "api_replica_open",              // Operation name
+        clearDataObjInp,                 // Clear input function
+        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // Clear output function
+        (funcPtr) CALL_REPLICA_OPEN
+    };
     // clang-format on
 
     auto* api = new irods::api_entry{def};
@@ -189,5 +191,4 @@ auto plugin_factory(const std::string& _instance_name,
     api->out_pack_value = BytesBuf_PI;
 
     return api;
-}
-
+} // plugin_factory

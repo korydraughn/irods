@@ -641,18 +641,22 @@ auto plugin_factory(const std::string& _instance_name,
     irods::client_api_allowlist::add(DATA_OBJECT_FINALIZE_APN);
 #endif // RODS_SERVER
 
+    const auto clear_bbuf_adapter = [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); };
+
     // clang-format off
-    irods::apidef_t def{DATA_OBJECT_FINALIZE_APN,                   // API number
-                        RODS_API_VERSION,                           // API version
-                        NO_USER_AUTH,                               // Client auth
-                        NO_USER_AUTH,                               // Proxy auth
-                        "BinBytesBuf_PI", 0,                        // In PI / bs flag
-                        "BinBytesBuf_PI", 0,                        // Out PI / bs flag
-                        op,                                         // Operation
-                        "data_object_finalize",                     // Operation name
-                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear input function
-                        [](void* _p) { clearBBuf(static_cast<BytesBuf*>(_p)); }, // clear output function
-                        (funcPtr) CALL_DATA_OBJECT_FINALIZE};
+    irods::apidef_t def{
+        DATA_OBJECT_FINALIZE_APN,   // API number
+        RODS_API_VERSION,           // API version
+        NO_USER_AUTH,               // Client auth
+        NO_USER_AUTH,               // Proxy auth
+        "BinBytesBuf_PI", 0,        // In PI / bs flag
+        "BinBytesBuf_PI", 0,        // Out PI / bs flag
+        op,                         // Operation
+        "data_object_finalize",     // Operation name
+        clear_bbuf_adapter,         // clear input function
+        clear_bbuf_adapter,         // clear output function
+        (funcPtr) CALL_DATA_OBJECT_FINALIZE
+    };
     // clang-format on
 
     auto* api = new irods::api_entry{def};
@@ -664,5 +668,4 @@ auto plugin_factory(const std::string& _instance_name,
     api->out_pack_value = BytesBuf_PI;
 
     return api;
-}
-
+} // plugin_factory
