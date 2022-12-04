@@ -725,7 +725,7 @@ int replDataObjInfo(DataObjInfo* _dst, DataObjInfo* _src)
     std::memset(_dst, 0, sizeof(DataObjInfo));
 
     *_dst = *_src;
-    copyKeyVal(&_src->condInput, &_dst->condInput);
+    replKeyVal(&_src->condInput, &_dst->condInput);
     replSpecColl(_src->specColl, &_dst->specColl);
 
     if (_src->next) {
@@ -1696,6 +1696,8 @@ void clearDataObjInfo(void* _p)
     clearKeyVal(&q->condInput);
     free_pointer(q->specColl);
     freeAllDataObjInfo(q->next);
+
+    std::memset(q, 0, sizeof(DataObjInfo));
 }
 
 void clearSimpleQueryOut(void* _p)

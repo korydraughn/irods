@@ -224,23 +224,16 @@ namespace irods
     auto duplicate_l1_descriptor(const l1desc& _src) -> l1desc
     {
         l1desc dest;
+
+        init_l1desc(dest);
         copy_l1desc(dest, _src);
 
-        if (_src.dataObjInp) {
-            DataObjInp* doi = static_cast<DataObjInp*>(std::malloc(sizeof(DataObjInp)));
-            replDataObjInp(_src.dataObjInp, doi);
-            dest.dataObjInp = doi;
+        // Keep the first DataObjInfo in the linked list and free the rest.
+        if (dest.dataObjInfo) {
+            auto* rest = dest.dataObjInfo->next;
+            freeAllDataObjInfo(rest);
+            dest.dataObjInfo->next = nullptr;
         }
-
-        if (_src.dataObjInfo) {
-            auto [obj, obj_lm] = irods::experimental::replica::duplicate_replica(*_src.dataObjInfo);
-            dest.dataObjInfo = obj_lm.release();
-        }
-
-        // TODO: need duplication logic
-        dest.remoteZoneHost = nullptr;
-        dest.otherDataObjInfo = nullptr;
-        dest.replDataObjInfo = nullptr;
 
         return dest;
     } // duplicate_l1_descriptor

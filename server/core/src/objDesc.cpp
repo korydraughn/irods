@@ -91,21 +91,15 @@ auto copy_l1desc(l1desc& _dst, const l1desc& _src) -> void
     _dst.lockFd = _src.lockFd;
 
     if (_src.dataObjInp) {
-        if (!_dst.dataObjInp) {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
-            _dst.dataObjInp = static_cast<DataObjInp*>(std::malloc(sizeof(DataObjInp)));
+        if (_dst.dataObjInp) {
+            clearDataObjInp(&_dst);
         }
         else {
-            // Free any memory previously allocated by the L1desc.
-            clearKeyVal(&_dst.dataObjInp->condInput);
-
-            if (_dst.dataObjInp->specColl) {
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
-                std::free(_dst.dataObjInp->specColl);
-            }
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
+            _dst.dataObjInp = static_cast<DataObjInp*>(std::malloc(sizeof(DataObjInp)));
+            std::memset(_dst.dataObjInp, 0, sizeof(DataObjInp));
         }
 
-        std::memset(_dst.dataObjInp, 0, sizeof(DataObjInp));
         replDataObjInp(_src.dataObjInp, _dst.dataObjInp);
     }
     else {
@@ -113,16 +107,15 @@ auto copy_l1desc(l1desc& _dst, const l1desc& _src) -> void
     }
 
     if (_src.dataObjInfo) {
-        if (!_dst.dataObjInfo) {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
-            _dst.dataObjInfo = static_cast<DataObjInfo*>(std::malloc(sizeof(DataObjInfo)));
-        }
-        else {
-            // Free any memory previously allocated by the L1desc.
+        if (_dst.dataObjInfo) {
             clearDataObjInfo(_dst.dataObjInfo);
         }
+        else {
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
+            _dst.dataObjInfo = static_cast<DataObjInfo*>(std::malloc(sizeof(DataObjInfo)));
+            std::memset(_dst.dataObjInfo, 0, sizeof(DataObjInfo));
+        }
 
-        std::memset(_dst.dataObjInfo, 0, sizeof(DataObjInfo));
         replDataObjInfo(_dst.dataObjInfo, _src.dataObjInfo);
     }
     else {
