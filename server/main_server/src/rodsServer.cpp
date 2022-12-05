@@ -1,5 +1,6 @@
 #include "irods/rodsServer.hpp"
 
+#include "boost/thread/cv_status.hpp"
 #include "irods/client_api_allowlist.hpp"
 #include "irods/client_connection.hpp"
 #include "irods/irods_at_scope_exit.hpp"
@@ -71,6 +72,7 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <ctime>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -127,6 +129,8 @@ boost::mutex              ReadReqCondMutex;
 boost::mutex              SpawnReqCondMutex;
 boost::condition_variable ReadReqCond;
 boost::condition_variable SpawnReqCond;
+//bool read_request_has_work = false;
+//bool spawn_request_thread_has_work = false;
 
 namespace
 {
@@ -967,7 +971,7 @@ namespace
         closedir(dirPtr);
 
         return savedStatus;
-    }
+    } // purgeLockFileDir
 
     void task_purge_lock_file()
     {
@@ -1020,13 +1024,89 @@ namespace
             agentProc->next = NULL;
         }
         return 0;
-    }
+    } // queueAgentProc
+
+    void launch_read_worker_threads()
+    {
+        for (int i = 0; i < NUM_READ_WORKER_THR; ++i) {
+            try {
+                ReadWorkerThread[i] = new boost::thread(readWorkerTask);
+            }
+            catch (const boost::thread_resource_error&) {
+                THROW(SYS_THREAD_RESOURCE_ERR, "Error launching read worker threads.");
+            }
+        }
+    } // launch_read_worker_threads
+
+    void launch_spawn_manager_thread()
+    {
+        try {
+            SpawnManagerThread = new boost::thread(task_spawn_manager);
+        }
+        catch (const boost::thread_resource_error&) {
+            THROW(SYS_THREAD_RESOURCE_ERR, "Error launching spawn management thread.");
+        }
+    } // launch_spawn_manager_thread
+
+    void launch_purge_lock_file_thread(std::string_view _server_role)
+    {
+        // Start purge lock file thread
+        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == _server_role) {
+            try {
+                PurgeLockFileThread = new boost::thread(task_purge_lock_file);
+            }
+            catch (const boost::thread_resource_error&) {
+                log_server::error(
+                    "boost encountered a thread_resource_error during task_purge_lock_file thread construction in {}.",
+                    __func__);
+            }
+        }
+    } // launch_purge_lock_file_thread
+
+    void join_purge_lock_file_thread(std::string_view _server_role)
+    {
+        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == _server_role) {
+            try {
+                PurgeLockFileThread->join();
+            }
+            catch (const boost::thread_resource_error&) {
+                log_server::error("boost encountered a thread_resource_error during join.");
+            }
+        }
+    } // join_purge_lock_file_thread
+
+    void join_spawn_manager_thread()
+    {
+        SpawnReqCond.notify_all();
+
+        try {
+            SpawnManagerThread->join();
+        }
+        catch (const boost::thread_resource_error&) {
+            log_server::error("boost encountered a thread_resource_error during spawn manager thread.");
+        }
+    } // join_spawn_manager_thread
+
+    void join_read_worker_threads()
+    {
+        for (int i = 0; i < NUM_READ_WORKER_THR; ++i) {
+            ReadReqCond.notify_all();
+
+            try {
+                ReadWorkerThread[i]->join();
+            }
+            catch (const boost::thread_resource_error&) {
+                log_server::error("boost encountered a thread_resource_error during read worker thread.");
+            }
+        }
+    } // join_read_worker_threads
 } // anonymous namespace
 
 int main(int argc, char** argv)
 {
     int c;
-    char tmpStr1[100], tmpStr2[100];
+    char tmpStr1[100];
+    char tmpStr2[100];
     bool write_to_stdout = false;
     bool enable_test_mode = false;
 
@@ -1043,7 +1123,8 @@ int main(int argc, char** argv)
     	rodsLogSqlReq(1);
     }
 
-    ServerBootTime = time(nullptr);
+    ServerBootTime = std::time(nullptr);
+
     while ((c = getopt(argc, argv, "tuvVqsh")) != EOF) {
         switch (c) {
             case 't':
@@ -1177,12 +1258,14 @@ int main(int argc, char** argv)
             // When the server is starting up, agent_spawning_pid will be zero. Therefore,
             // we skip checking for the agent factory on startup.
             if (agent_spawning_pid > 0 && waitpid(agent_spawning_pid, nullptr, WNOHANG) != -1) {
-                log_server::info("Agent factory [{}] still exists.", agent_spawning_pid);
                 return;
             }
 
             log_server::info("Forking agent factory ...");
 
+            // FIXME If the agent factory terminates, we need to make sure that all mutexes are
+            // unlocked while forking the new agent factory. Ultimately, this means we must introduce
+            // some signaling mechanism to instruct threads to wait until the new agent factory appears.
             agent_spawning_pid = fork();
 
             if (agent_spawning_pid == 0) {
@@ -1329,41 +1412,9 @@ int main(int argc, char** argv)
         // Launch the control plane.
         irods::server_control_plane ctrl_plane(irods::KW_CFG_SERVER_CONTROL_PLANE_PORT, is_control_plane_accepting_requests);
 
-        // Start read worker thread
-        for (int i = 0; i < NUM_READ_WORKER_THR; ++i) {
-            try {
-                ReadWorkerThread[i] = new boost::thread(readWorkerTask);
-            }
-            catch (const boost::thread_resource_error&) {
-                log_server::error(
-                    "boost encountered a thread_resource_error during readWorkerTask thread construction in {}.",
-                    __func__);
-                return SYS_THREAD_RESOURCE_ERR;
-            }
-        }
-
-        // Start spawn manager thread
-        try {
-            SpawnManagerThread = new boost::thread(task_spawn_manager);
-        }
-        catch (const boost::thread_resource_error&) {
-            log_server::error(
-                "boost encountered a thread_resource_error during task_spawn_manager thread construction in {}.",
-                __func__);
-            return SYS_THREAD_RESOURCE_ERR;
-        }
-
-        // Start purge lock file thread
-        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role) {
-            try {
-                PurgeLockFileThread = new boost::thread(task_purge_lock_file);
-            }
-            catch (const boost::thread_resource_error&) {
-                log_server::error(
-                    "boost encountered a thread_resource_error during task_purge_lock_file thread construction in {}.",
-                    __func__);
-            }
-        }
+        launch_read_worker_threads();
+        launch_spawn_manager_thread();
+        launch_purge_lock_file_thread(svc_role);
 
         fd_set sockMask;
         FD_ZERO(&sockMask);
@@ -1472,39 +1523,12 @@ int main(int argc, char** argv)
             addConnReqToQueue(&svrComm, newSock);
         }
 
-        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role) {
-            try {
-                PurgeLockFileThread->join();
-            }
-            catch (const boost::thread_resource_error&) {
-                log_server::error("boost encountered a thread_resource_error during join in {}.", __func__);
-            }
-        }
+        join_purge_lock_file_thread(svc_role);
 
         procChildren(&ConnectedAgentHead);
 
-        // Stop spawn manager thread
-        SpawnReqCond.notify_all();
-        try {
-            SpawnManagerThread->join();
-        }
-        catch (const boost::thread_resource_error&) {
-            log_server::error(
-                "boost encountered a thread_resource_error during spawn manager thread join in {}.", __func__);
-        }
-
-        // Stop read worker threads
-        for (int i = 0; i < NUM_READ_WORKER_THR; ++i) {
-            ReadReqCond.notify_all();
-
-            try {
-                ReadWorkerThread[i]->join();
-            }
-            catch (const boost::thread_resource_error&) {
-                log_server::error(
-                    "boost encountered a thread_resource_error during read worker thread join in {}.", __func__);
-            }
-        }
+        join_spawn_manager_thread();
+        join_read_worker_threads();
 
         irods::server_state::set_state(irods::server_state::server_state::exited);
     }
@@ -1545,7 +1569,7 @@ serverExit()
     __lsan_do_leak_check();
 #endif
 
-    _exit(1);
+    _exit(sig);
 }
 
 int procChildren(agentProc_t** agentProcHead)
@@ -2189,6 +2213,7 @@ int addConnReqToQueue(rsComm_t* rsComm, int sock)
     myConnReq->sock = sock;
     myConnReq->remoteAddr = rsComm->remoteAddr;
     queueAgentProc(myConnReq, &ConnReqHead, BOTTOM_POS);
+    //read_request_has_work = true;
 
     ReadReqCond.notify_all(); // NOTE: Check all vs one.
     read_req_lock.unlock();
@@ -2218,6 +2243,7 @@ agentProc_t* getConnReqFromQueue()
             break;
         }
 
+        //ReadReqCond.wait(read_req_lock, [] { return read_request_has_work; });
         ReadReqCond.wait(read_req_lock);
         if (!ConnReqHead) {
             read_req_lock.unlock();
@@ -2229,6 +2255,8 @@ agentProc_t* getConnReqFromQueue()
         read_req_lock.unlock();
         break;
     }
+
+    //read_request_has_work = false;
 
     return myConnReq;
 }
@@ -2265,8 +2293,19 @@ void task_spawn_manager()
             break;
         }
 
+#if 1
         boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex);
-        SpawnReqCond.wait(spwn_req_lock);
+        SpawnReqCond.wait(spwn_req_lock); // TODO This form of wait is not recommended due to spurious wake ups, etc.
+#else
+        boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex, boost::defer_lock);
+        while (true) {
+            spwn_req_lock.lock();
+            const auto status = SpawnReqCond.wait_for(spwn_req_lock, boost::chrono::milliseconds{250});
+            if (status == boost::cv_status::no_timeout) {
+                break;
+            }
+        }
+#endif
 
         while (SpawnReqHead) {
             agentProc_t* mySpawnReq = SpawnReqHead;
@@ -2296,6 +2335,8 @@ void task_spawn_manager()
 
             spwn_req_lock.lock();
         }
+
+        //spawn_request_thread_has_work = false;
 
         spwn_req_lock.unlock();
 
@@ -2397,6 +2438,8 @@ void readWorkerTask()
             boost::unique_lock<boost::mutex> spwn_req_lock(SpawnReqCondMutex);
 
             queueAgentProc(myConnReq, &SpawnReqHead, BOTTOM_POS);
+
+            //spawn_request_thread_has_work = true;
 
             SpawnReqCond.notify_all(); // NOTE:: look into notify_one vs notify_all
         }
