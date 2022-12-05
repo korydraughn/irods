@@ -678,7 +678,11 @@ namespace
             execv(args[0], args.data());
 
             // If execv() fails, the POSIX standard recommends using _exit() instead of
-            // exit() to keep the child from corrupting the parent's memory.
+            // exit() to avoid flushing stdio buffers and handlers registered by the parent.
+            //
+            // In the case of C++, this is necessary to avoid triggering destructors as there may
+            // be invariants that could be violated due to the use of fork() (e.g. assertion made
+            // by the boost::mutex implementation regarding pthread_mutex_destroy()).
             _exit(1);
         }
     } // launch_delay_server
@@ -1260,9 +1264,6 @@ int main(int argc, char** argv)
 
             log_server::info("Forking agent factory ...");
 
-            // FIXME If the agent factory terminates, we need to make sure that all mutexes are
-            // unlocked while forking the new agent factory. Ultimately, this means we must introduce
-            // some signaling mechanism to instruct threads to wait until the new agent factory appears.
             agent_spawning_pid = fork();
 
             if (agent_spawning_pid == 0) {
@@ -1271,12 +1272,35 @@ int main(int argc, char** argv)
                 ProcessType = AGENT_PT;
 
                 try {
+                    const auto ec = runIrodsAgentFactory(local_addr);
+
+                    log_server::critical("Agent factory returned with error code [{}].", ec);
+
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+                    // This function must be called here due to the use of _exit() (just below). Address Sanitizer
+                    // (ASan) relies on std::atexit handlers to report its findings. _exit() does not trigger any
+                    // of the handlers registered by ASan, therefore, we manually run ASan just before the agent
+                    // factory exits.
+                    __lsan_do_leak_check();
+#endif
+
                     // Collapse non-zero error codes into one.
-                    std::exit(runIrodsAgentFactory(local_addr) == 0 ? 0 : 1);
+                    //
+                    // The agent factory is normally shut down via the SIGTERM signal. However, if the agent factory
+                    // fails to fork an agent, it will return SYS_FORK_ERROR here.
+                    //
+                    // If the agent factory terminates for whatever reason, is respawned by the main server process,
+                    // and then fails to fork an agent, the agent factory will most likely exit with a SIGABRT due to
+                    // a failed assertion in boost::mutex or boost::condition_variable. Destructing a mutex while it
+                    // is locked is not allowed by the Boost.Thread library.
+                    //
+                    // The only way to avoid this situation is to use _exit(). Using _exit() is safe here because this
+                    // is the final step in shutting down the agent factory process.
+                    _exit(ec == 0 ? 0 : 1);
                 }
                 catch (...) {
                     // If an exception is thrown for any reason, terminate the agent factory.
-                    std::exit(1);
+                    _exit(1);
                 }
             }
             else if (agent_spawning_pid > 0) {
