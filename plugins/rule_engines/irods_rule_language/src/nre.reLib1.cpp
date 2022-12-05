@@ -303,8 +303,6 @@ execMyRuleWithSaveFlag( char * ruleDef, msParamArray_t *inMsParamArray, const ch
     }
 
     char *outParamNames[MAX_PARAMS_LEN];
-    // FIXME extractVarNames can produce a buffer overflow!
-    // It doesn't consider the size of outParamNames!
     int n = extractVarNames( outParamNames, outParamsDesc );
     appendOutputToInput( inMsParamArray, outParamNames, n );
 
