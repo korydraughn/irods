@@ -28,10 +28,6 @@
 
 namespace irods
 {
-    // NOOP function for clearInStruct and clearOutStruct
-    //void clearInStruct_noop(void*); // TODO Remove
-    //void clearOutStruct_noop(void*); // TODO Remove
-
     struct apidef_t {
         // =-=-=-=-=-=-=-
         // attributes
