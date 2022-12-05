@@ -1547,7 +1547,7 @@ void
 #if defined(linux_platform) || defined(aix_platform) || defined(solaris_platform) || defined(osx_platform)
 serverExit( int sig )
 #else
-serverExit()
+serverExit() // TODO What OS would hit this code path? Windows?
 #endif
 {
     recordServerProcess(nullptr); // Unlink the process id file.
