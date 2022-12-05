@@ -35,8 +35,11 @@
 #include "irods/version.hpp"
 #include "irods/replica_state_table.hpp"
 
+#include <csignal>
+#include <cstdlib>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 
 #include <fmt/format.h>
@@ -253,7 +256,7 @@ void irodsAgentSignalExit([[maybe_unused]] int _signal)
     // Because the agent factory does not call any of the exec-family functions,
     // the POSIX standard recommends using _exit() instead of exit() to keep the
     // child from corrupting the parent's memory.
-    _exit(1);
+    _exit(_signal);
 }
 
 void reap_terminated_agents()
@@ -262,13 +265,15 @@ void reap_terminated_agents()
     int agent_status{};
 
     while ((agent_pid = waitpid(-1, &agent_status, WNOHANG)) > 0) {
+        log_agent_factory::info("Reaped agent [{}] ...", agent_pid);
+
         if (WIFEXITED(agent_status)) { // NOLINT(hicpp-signed-bitwise)
             const int exit_status = WEXITSTATUS(agent_status); // NOLINT(hicpp-signed-bitwise)
             if (exit_status != 0) {
                 log_agent_factory::error("Agent process [{}] exited with status [{}].", agent_pid, exit_status);
             }
             else {
-                log_agent_factory::debug("Agent process [{}] exited with status [{}].", agent_pid, exit_status);
+                log_agent_factory::info("Agent process [{}] exited with status [{}].", agent_pid, exit_status); // TODO restore to debug
             }
         }
         else if (WIFSIGNALED(agent_status)) { // NOLINT(hicpp-signed-bitwise)
@@ -288,6 +293,26 @@ void reap_terminated_agents()
     }
 } // reap_terminated_agents
 
+void handle_sigchld([[maybe_unused]] int _signum, siginfo_t* _sinfo, [[maybe_unused]] void* _unused)
+{
+    auto saved_errno = errno;
+
+    if (CLD_EXITED != _sinfo->si_code) {
+        log_agent_factory::info("Wrong si_code [{}].", _sinfo->si_code);
+    }
+    else if (int agent_status; waitpid(_sinfo->si_pid, &agent_status, 0) == -1) {
+        log_agent_factory::info("waitpid failed [errno=[{}]].", errno);
+    }
+    else if (!WIFEXITED(agent_status)) {
+        log_agent_factory::info("WIFEXITED was false.");
+    }
+    else {
+        log_agent_factory::info("Agent exited with error code [{}].", WEXITSTATUS(agent_status));
+    }
+
+    errno = saved_errno;
+} // handle_sigchld
+
 void set_eviction_age_for_dns_and_hostname_caches()
 {
     using key_path_t = irods::configuration_parser::key_path_t;
@@ -306,8 +331,6 @@ void set_eviction_age_for_dns_and_hostname_caches()
 
 void set_log_levels_for_all_log_categories()
 {
-    irods::server_properties::instance().capture();
-
     log::agent::set_level(log::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT));
     log::legacy::set_level(log::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_LEGACY));
     log::resource::set_level(log::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_RESOURCE));
@@ -327,13 +350,22 @@ void setup_signal_handlers()
     signal(SIGCHLD, SIG_DFL); // Setting SIGCHLD to SIG_IGN is not portable.
     signal(SIGUSR1, irodsAgentSignalExit);
     signal(SIGPIPE, SIG_IGN);
-
+#if 0
+    struct sigaction sa;
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = handle_sigchld;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGCHLD, &sa, nullptr) == -1) {
+        log_agent_factory::error("Failed to register signal handler for SIGCHLD (sigaction).");
+        std::exit(1);
+    }
+#endif
     irods::set_unrecoverable_signal_handlers();
 } // setup_signal_handlers
 
 int runIrodsAgentFactory(sockaddr_un agent_addr)
 {
-    RsComm rsComm;
+    //RsComm rsComm;
 
     namespace log = irods::experimental::log;
 
@@ -343,8 +375,8 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     log_agent_factory::set_level(log::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT_FACTORY));
 
     // Attach the error stack object to the logger and release it once this function returns.
-    log::set_error_object(&rsComm.rError);
-    irods::at_scope_exit release_error_stack{[] { log::set_error_object(nullptr); }};
+    //log::set_error_object(&rsComm.rError);
+    //irods::at_scope_exit release_error_stack{[] { log::set_error_object(nullptr); }};
 
     log_agent_factory::info("Initializing agent factory ...");
 
@@ -417,8 +449,7 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
         // If 0 bytes are received, socket has been closed
         // If a socket address is on the line, create it and fork a child process
         char in_buf[1024]{};
-        int tmp_socket{};
-        const ssize_t bytes_received = recv(conn_socket, &in_buf, sizeof(in_buf), 0);
+        const ssize_t bytes_received = recv(conn_socket, in_buf, sizeof(in_buf), 0);
 
         if (-1 == bytes_received) {
             log_agent_factory::error("Error receiving data from rodsServer, errno = [{}]: {}", errno, strerror(errno));
@@ -437,32 +468,33 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
         std::strncpy(tmp_socket_addr.sun_path, in_buf, sizeof(tmp_socket_addr.sun_path));
         unsigned int len = sizeof(tmp_socket_addr);
 
-        tmp_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+        const auto listen_tmp_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 
         // Delete socket if it already exists.
         unlink(tmp_socket_addr.sun_path);
 
-        if (-1 == bind(tmp_socket, (struct sockaddr*) &tmp_socket_addr, len)) {
+        if (-1 == bind(listen_tmp_socket, (struct sockaddr*) &tmp_socket_addr, len)) {
             constexpr auto ec = SYS_SOCK_BIND_ERR;
             log_agent_factory::error(ERROR(ec, "Unable to bind socket in receiveDataFromServer").result());
             return ec;
         }
 
-        if (-1 == listen(tmp_socket, 5)) {
+        if (-1 == listen(listen_tmp_socket, 5)) {
             constexpr auto ec = SYS_SOCK_LISTEN_ERR;
             constexpr const char* msg = "Failed to set up socket for listening in receiveDataFromServer";
             log_agent_factory::error(ERROR(ec, msg).result());
             return ec;
         }
 
-        // Send acknowledgement that socket has been created.
-        char ack_buffer[256]{};
-        len = std::snprintf(ack_buffer, sizeof(ack_buffer), "OK");
-        const auto bytes_sent = send(conn_socket, ack_buffer, len, 0);
-        if (bytes_sent < 0) {
-            constexpr const char* msg = "[{}] - Error sending acknowledgment to rodsServer, errno = [{}][{}]";
-            log_agent_factory::error(msg, __func__, errno, strerror(errno));
-            return SYS_SOCK_READ_ERR;
+        {
+            // Send acknowledgement that socket has been created.
+            constexpr const char ack_buffer[] = "OK";
+            const auto bytes_sent = send(conn_socket, ack_buffer, sizeof(ack_buffer), 0);
+            if (bytes_sent < 0) {
+                constexpr const char* msg = "[{}] - Error sending acknowledgment to rodsServer, errno = [{}][{}]";
+                log_agent_factory::error(msg, __func__, errno, strerror(errno));
+                return SYS_SOCK_READ_ERR;
+            }
         }
 
         // Wait for connection message from main server.
@@ -472,14 +504,14 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
             constexpr const char* msg = "[{}:{}] - received failure message in connecting to socket from server";
             log_agent_factory::error(msg, __func__, __LINE__);
 
-            if (close(tmp_socket) < 0) {
-                log_agent_factory::error("close(tmp_socket) failed with errno = [{}]: {}", errno, strerror(errno));
+            if (close(listen_tmp_socket) < 0) {
+                log_agent_factory::error("close(listen_tmp_socket) failed with errno = [{}]: {}", errno, strerror(errno));
             }
 
             continue;
         }
 
-        conn_tmp_socket = accept(tmp_socket, (struct sockaddr*) &tmp_socket_addr, &len);
+        conn_tmp_socket = accept(listen_tmp_socket, (struct sockaddr*) &tmp_socket_addr, &len);
         if (-1 == conn_tmp_socket) {
             constexpr auto ec = SYS_SOCK_ACCEPT_ERR;
             log_agent_factory::error(ERROR(ec, "Failed to accept client socket in receiveDataFromServer").result());
@@ -494,6 +526,9 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
 
         const auto agent_pid = fork();
 
+        // This socket will not be used by the agent factory or agent, so close it.
+        close(listen_tmp_socket);
+
         if (agent_pid == 0) {
             // This is the child process.
             // Agent logic starts outside of the while-loop.
@@ -502,14 +537,7 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
         else if (agent_pid > 0) {
             // This is the parent process.
             // Clean up and prepare to fork more agents upon request.
-
-            if (close(conn_tmp_socket) < 0) {
-                log_agent_factory::error("close(conn_tmp_socket) failed with errno = [{}]: {}", errno, strerror(errno));
-            }
-
-            if (close(tmp_socket) < 0) {
-                log_agent_factory::error("close(tmp_socket) failed with errno = [{}]: {}", errno, strerror(errno));
-            }
+            close(conn_tmp_socket);
         }
         else if (agent_pid < 0) {
             // The call to fork() failed.
@@ -539,6 +567,20 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
 
     log_agent::trace("Agent forked. Initializing ...");
 
+    close(listen_socket);
+
+    // This seems to have fixed the issue with agents not being reaped by the agent factory.
+    // However, if we don't restore the disposition of SIGABRT, every agent will produce a stacktrace on exit.
+    // The current question is, should agents have custom signal handlers?
+    std::signal(SIGABRT, SIG_DFL);
+    //std::signal(SIGABRT, [](int _signum) { log_agent::error("Agent caught SIGABRT [{}]!", _signum); _exit(_signum); }); // Agents are definitely hitting this!
+    std::signal(SIGINT,  SIG_DFL);
+    std::signal(SIGHUP,  SIG_DFL);
+    std::signal(SIGTERM, SIG_DFL);
+    std::signal(SIGCHLD, SIG_DFL);
+    std::signal(SIGUSR1, SIG_DFL);
+    std::signal(SIGPIPE, SIG_DFL);
+
     int status{};
 
     try {
@@ -554,7 +596,7 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
             //return err.code(); // TODO Should we return here?
         }
 
-        irods::server_properties::instance().capture();
+        close(conn_tmp_socket);
 
         set_eviction_age_for_dns_and_hostname_caches();
         set_log_levels_for_all_log_categories();
@@ -573,8 +615,13 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
         return SYS_LIBRARY_ERROR;
     }
 
-    std::memset(&rsComm, 0, sizeof(RsComm));
-    rsComm.thread_ctx = static_cast<thread_context*>(malloc(sizeof(thread_context)));
+    RsComm rsComm{};
+
+    log::set_error_object(&rsComm.rError);
+    irods::at_scope_exit release_error_stack{[] { log::set_error_object(nullptr); }};
+
+    //std::memset(&rsComm, 0, sizeof(RsComm));
+    rsComm.thread_ctx = static_cast<thread_context*>(std::malloc(sizeof(thread_context)));
 
     status = initRsCommWithStartupPack(&rsComm, nullptr);
 
@@ -710,7 +757,13 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     (0 == status) ? log_agent::debug("Agent [{}] exiting with status = {}", getpid(), status)
                   : log_agent::error("Agent [{}] exiting with status = {}", getpid(), status);
 
-    return status;
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+    __lsan_do_leak_check();
+#endif
+
+    //return status; // This returns to the agent factory respawn thread in the main server process.
+    //std::exit((0 == status) ? 0 : 1);
+    _exit((0 == status) ? 0 : 1);
 }
 
 static void set_rule_engine_globals(RsComm* _comm)
