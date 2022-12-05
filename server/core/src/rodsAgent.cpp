@@ -454,13 +454,13 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
         // Delete socket if it already exists.
         unlink(tmp_socket_addr.sun_path);
 
-        if (-1 == bind(listen_tmp_socket, (struct sockaddr*) &tmp_socket_addr, len)) {
+        if (bind(listen_tmp_socket, (struct sockaddr*) &tmp_socket_addr, len) == -1) {
             constexpr auto ec = SYS_SOCK_BIND_ERR;
             log_agent_factory::error(ERROR(ec, "Unable to bind socket in receiveDataFromServer").result());
             return ec;
         }
 
-        if (-1 == listen(listen_tmp_socket, 5)) {
+        if (listen(listen_tmp_socket, 5) == -1) {
             constexpr auto ec = SYS_SOCK_LISTEN_ERR;
             constexpr const char* msg = "Failed to set up socket for listening in receiveDataFromServer";
             log_agent_factory::error(ERROR(ec, msg).result());
@@ -519,7 +519,7 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
             close(conn_tmp_socket);
         }
         else if (agent_pid < 0) {
-            log_agent_factory::error("Agent factory failed to fork agent. Shutting down agent factory ...");
+            log_agent_factory::critical("Agent factory failed to fork agent. Shutting down agent factory ...");
 
             close(client_socket);
             close(listen_socket);
