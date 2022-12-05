@@ -104,7 +104,7 @@ int receiveDataFromServer(int conn_tmp_socket)
     std::snprintf(ack_buffer.data(), ack_buffer.size(), "OK"); // NOLINT(cppcoreguidelines-pro-type-vararg)
 
     while (!data_complete) {
-        std::fill(std::begin(in_buf), std::end(in_buf), 0);
+        std::memset(in_buf.data(), 0, in_buf.size());
         num_bytes = recv(conn_tmp_socket, in_buf.data(), in_buf.size(), 0);
 
         if (num_bytes < 0) {
@@ -247,15 +247,12 @@ void irodsAgentSignalExit([[maybe_unused]] int _signal)
     }
 
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-    // Calling this function is likely not async-signal-safe, but it is okay because
-    // if the code has been compiled with Address Sanitizer enabled. For that reason,
-    // we can assume that the binary is not running in a production environment.
+    // Calling this function is likely not async-signal-safe, but that's okay because
+    // the code has been compiled with Address Sanitizer enabled. For that reason, we
+    // can assume that the binary is not running in a production environment.
     __lsan_do_leak_check();
 #endif
 
-    // Because the agent factory does not call any of the exec-family functions,
-    // the POSIX standard recommends using _exit() instead of exit() to keep the
-    // child from corrupting the parent's memory.
     _exit(_signal);
 }
 
@@ -273,7 +270,7 @@ void reap_terminated_agents()
                 log_agent_factory::error("Agent process [{}] exited with status [{}].", agent_pid, exit_status);
             }
             else {
-                log_agent_factory::info("Agent process [{}] exited with status [{}].", agent_pid, exit_status); // TODO restore to debug
+                log_agent_factory::debug("Agent process [{}] exited with status [{}].", agent_pid, exit_status);
             }
         }
         else if (WIFSIGNALED(agent_status)) { // NOLINT(hicpp-signed-bitwise)
@@ -522,22 +519,10 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
             close(conn_tmp_socket);
         }
         else if (agent_pid < 0) {
-            // The call to fork() failed.
+            log_agent_factory::error("Agent factory failed to fork agent. Shutting down agent factory ...");
 
-            log_agent_factory::error("fork() failed in rodsAgent process factory.");
-
-            // TODO Why do we shut down everything here?
-            // This feels unnecessary. If the agent factory isn't working correctly, the administrator
-            // can choose to restart the server. Shutting the agent factory down in this way just causes
-            // the main server process to fork a new one.
-
-            if (close(client_socket) < 0) {
-                log_agent_factory::error("close(conn_socket) failed with errno = [{}]: {}", errno, strerror(errno));
-            }
-
-            if (close(listen_socket) < 0) {
-                log_agent_factory::error("close(listen_socket) failed with errno = [{}]: {}", errno, strerror(errno));
-            }
+            close(client_socket);
+            close(listen_socket);
 
             return SYS_FORK_ERROR;
         }
@@ -547,15 +532,14 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     // This is where the agent logic actually begins.
     //
 
+    log::set_server_type("agent");
+
     log_agent::trace("Agent forked. Initializing ...");
 
     close(listen_socket);
 
-    // This seems to have fixed the issue with agents not being reaped by the agent factory.
-    // However, if we don't restore the disposition of SIGABRT, every agent will produce a stacktrace on exit.
-    // The current question is, should agents have custom signal handlers?
+    // Restore signal dispositions for agents.
     std::signal(SIGABRT, SIG_DFL);
-    //std::signal(SIGABRT, [](int _signum) { log_agent::error("Agent caught SIGABRT [{}]!", _signum); _exit(_signum); }); // Agents are definitely hitting this!
     std::signal(SIGINT,  SIG_DFL);
     std::signal(SIGHUP,  SIG_DFL);
     std::signal(SIGTERM, SIG_DFL);
@@ -566,8 +550,6 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     int status{};
 
     try {
-        log::set_server_type("agent");
-
         // Reload server_config.json into memory for the newly forked agent process.
         irods::environment_properties::instance().capture();
 
@@ -736,13 +718,32 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     std::free(rsComm.thread_ctx);
     std::free(rsComm.auth_scheme);
 
-    (0 == status) ? log_agent::debug("Agent [{}] exiting with status = {}", getpid(), status)
-                  : log_agent::error("Agent [{}] exiting with status = {}", getpid(), status);
+    // clang-format off
+    (0 == status)
+        ? log_agent::debug("Agent [{}] exiting with status = {}", getpid(), status)
+        : log_agent::error("Agent [{}] exiting with status = {}", getpid(), status);
+    // clang-format on
 
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+    // This function must be called here due to the use of _exit() (just below). Address Sanitizer (ASan)
+    // relies on std::atexit handlers to report its findings. _exit() does not trigger any of the handlers
+    // registered by ASan, therefore, we manually run ASan just before the agent exits.
     __lsan_do_leak_check();
 #endif
 
+    // _exit() must be called here due to a design limitation involving forked processes and mutexes.
+    //
+    // It has been observed that if the agent factory is respawned by the main server process, global
+    // mutexes will be locked 99% of the time. These global mutexes can never be unlocked following the
+    // call to fork().
+    //
+    // iRODS makes use of C++ libraries that make assertions around the handling of mutexes (e.g. boost::mutex).
+    // If these assertions are violated, SIGABRT is triggered. For that reason, we cannot allow agents to
+    // execute std::exit() or return up the call chain. Doing so would result in SIGABRT. For the most part,
+    // using _exit() is perfectly fine here because this is the final step in shutting down the agent process.
+    // 
+    // The key word here is process. Following this call, the OS will reclaim all memory associated with
+    // the terminated agent process.
     _exit((0 == status) ? 0 : 1);
 }
 
