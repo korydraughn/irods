@@ -293,26 +293,6 @@ void reap_terminated_agents()
     }
 } // reap_terminated_agents
 
-void handle_sigchld([[maybe_unused]] int _signum, siginfo_t* _sinfo, [[maybe_unused]] void* _unused)
-{
-    auto saved_errno = errno;
-
-    if (CLD_EXITED != _sinfo->si_code) {
-        log_agent_factory::info("Wrong si_code [{}].", _sinfo->si_code);
-    }
-    else if (int agent_status; waitpid(_sinfo->si_pid, &agent_status, 0) == -1) {
-        log_agent_factory::info("waitpid failed [errno=[{}]].", errno);
-    }
-    else if (!WIFEXITED(agent_status)) {
-        log_agent_factory::info("WIFEXITED was false.");
-    }
-    else {
-        log_agent_factory::info("Agent exited with error code [{}].", WEXITSTATUS(agent_status));
-    }
-
-    errno = saved_errno;
-} // handle_sigchld
-
 void set_eviction_age_for_dns_and_hostname_caches()
 {
     using key_path_t = irods::configuration_parser::key_path_t;
@@ -350,16 +330,7 @@ void setup_signal_handlers()
     signal(SIGCHLD, SIG_DFL); // Setting SIGCHLD to SIG_IGN is not portable.
     signal(SIGUSR1, irodsAgentSignalExit);
     signal(SIGPIPE, SIG_IGN);
-#if 0
-    struct sigaction sa;
-    sa.sa_flags = SA_SIGINFO;
-    sa.sa_sigaction = handle_sigchld;
-    sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGCHLD, &sa, nullptr) == -1) {
-        log_agent_factory::error("Failed to register signal handler for SIGCHLD (sigaction).");
-        std::exit(1);
-    }
-#endif
+
     irods::set_unrecoverable_signal_handlers();
 } // setup_signal_handlers
 
