@@ -101,6 +101,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallDirs.cmake)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
+add_compile_options(-O0 -ggdb)
 if (IRODS_DISABLE_COMPILER_OPTIMIZATIONS)
   add_compile_options(-O0)
 endif()
