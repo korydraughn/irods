@@ -9,6 +9,8 @@
 
 #include <algorithm>
 
+extern int ProcessType; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
 namespace
 {
     using log_agent = irods::experimental::log::agent;
@@ -120,9 +122,10 @@ namespace irods
 
                 // Skip the API plugin if it was loaded before.
                 if (_api_tbl.is_plugin_loaded(path.c_str())) {
-                    // TODO Do these calls to the logger require guards (i.e. ProcessType != CLIENT_PT)?
-                    log_agent::debug(
-                        "init_api_table :: API plugin [{}] has already been loaded. Skipping ...", path.stem());
+                    if (CLIENT_PT != ::ProcessType) {
+                        log_agent::debug(
+                            "init_api_table :: API plugin [{}] has already been loaded. Skipping ...", path.stem());
+                    }
                     continue;
                 }
 
@@ -153,9 +156,10 @@ namespace irods
                                 "api_instance",
                                 "api_context");
                 if (ret.ok() && entry) {
-                    // TODO Do these calls to the logger require guards (i.e. ProcessType != CLIENT_PT)?
-                    log_agent::debug(
-                        "init_api_table :: adding {} - [{}] - [{}].", entry->apiNumber, entry->operation_name, name);
+                    if (CLIENT_PT != ::ProcessType) {
+                        log_agent::debug(
+                            "init_api_table :: adding {} - [{}] - [{}].", entry->apiNumber, entry->operation_name, name);
+                    }
 
                     // =-=-=-=-=-=-=-
                     // ask the plugin to fill in the api and pack
