@@ -182,7 +182,7 @@ int replMsParamArray(msParamArray_t* in, msParamArray_t* out)
         auto* msp = out->msParam[i] = static_cast<MsParam*>(std::malloc(sizeof(MsParam)));
         std::memset(msp, 0, sizeof(MsParam));
         if (const auto ec = replMsParam(in->msParam[i], msp); ec < 0) {
-            rodsLogError(LOG_ERROR, ec, "Error when calling replMsParam in %s", __func__);
+            log_msi::error("An error occurred while replicating MsParam [line={}]", __LINE__);
             return ec;
         }
     }
