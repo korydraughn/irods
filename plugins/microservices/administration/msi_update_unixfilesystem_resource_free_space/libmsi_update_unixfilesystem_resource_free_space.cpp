@@ -1,15 +1,26 @@
+#include "client_connection.hpp"
+#include "execMyRule.h"
+#include "generalAdmin.h"
+#include "getRodsEnv.h"
+#include "irods_at_scope_exit.hpp"
+#include "irods_log.hpp"
+#include "irods_ms_plugin.hpp"
+#include "irods_plugin_name_generator.hpp"
+#include "irods_resource_constants.hpp"
+#include "irods_resource_manager.hpp"
+#include "irods_resource_plugin.hpp"
 #include "msParam.h"
 #include "rcMisc.h"
+#include "rodsErrorTable.h"
 #include "rsGeneralAdmin.hpp"
-#include "irods_ms_plugin.hpp"
-#include "irods_resource_plugin.hpp"
-#include "irods_resource_manager.hpp"
-#include "irods_plugin_name_generator.hpp"
-#include "generalAdmin.h"
-#include "irods_log.hpp"
+
 #include <sys/statvfs.h>
+
+#include <boost/asio/ip/host_name.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+
+#include <fmt/format.h>
 
 extern irods::resource_manager resc_mgr;
 
@@ -60,6 +71,68 @@ msi_update_unixfilesystem_resource_free_space(msParam_t *resource_name_msparam, 
         return rei->status;
     }
 
+    std::string host;
+    if (const auto err = resource_ptr->get_property<std::string>(irods::RESOURCE_LOCATION, host); !err.ok()) {
+        rodsLog(LOG_ERROR, "[%s]: failed to get resource location for [%s]", __func__, resource_name_cstring);
+        irods::log(err);
+        return err.status();
+    }
+
+    // Redirect to the server which hosts the target resource.
+    if (boost::asio::ip::host_name() != host) {
+        try {
+            rodsEnv env;
+            _getRodsEnv(env);
+
+            rodsLog(LOG_DEBUG, "[%s] Redirecting to [%s].", __func__, host.c_str());
+
+            // TODO Should this be a proxied connection?
+            // Does it matter who executed this microservice?
+            //
+            // I don't think it does because the update is actually performed using the service account irods user.
+            // See the lines near the end of this function.
+            irods::experimental::client_connection conn{host, env.rodsPort, env.rodsUserName, env.rodsZone};
+
+            // TODO Execute a rule.
+            ExecMyRuleInp input{};
+
+            // TODO How do we figure out which rule engine to target? This may require a change to rxExecMyRule().
+            // The name of the REP instance can be changed by the administrator.
+            // At this time, seems the only thing we can do is run the rule code against all REPs.
+            // Or maybe the MSI grows a new argument that allows the admin to specify a rule engine?
+            //addKeyVal(&input.condInput, irods::KW_CFG_INSTANCE_NAME, "");
+
+            const auto rule_text = fmt::format("@external { msi_update_unixfilesystem_resource_free_space('{}'); }", resource_name_cstring);
+            rodsLog(LOG_DEBUG, "[%s] Executing rule text [%s] on remote server [%s].", __func__, rule_text.c_str(), host.c_str());
+            rule_text.copy(input.myRule, sizeof(ExecMyRuleInp::myRule) - 1);
+
+            MsParamArray* out_array{};
+            irods::at_scope_exit free_out_array{[&out_array] {
+                clearMsParamArray(out_array, true);
+                out_array = nullptr;
+            }};
+
+            const auto ec = rcExecMyRule(static_cast<RcComm*>(conn), &input, &out_array);
+
+            if (ec < 0) {
+                rodsLog(LOG_ERROR, "[%s] rcExecMyRule failed with error code [%d].", __func__, ec);
+                return ec;
+            }
+
+            rodsLog(LOG_DEBUG, "[%s] rcExecMyRule returned [%d].", __func__, ec);
+
+            return ec;
+        }
+        catch (const irods::exception& e) {
+            rodsLog(LOG_ERROR, "[%s] Caught exception: %s", __func__, e.client_display_what());
+            return e.code();
+        }
+        catch (const std::exception& e) {
+            rodsLog(LOG_ERROR, "[%s] Caught exception: %s", __func__, e.what());
+            return SYS_LIBRARY_ERROR;
+        }
+    }
+
     std::string resource_vault_path;
     const irods::error get_resource_vault_path_error = resource_ptr->get_property<std::string>(irods::RESOURCE_PATH, resource_vault_path);
     if (!get_resource_vault_path_error.ok()) {
@@ -106,15 +179,6 @@ msi_update_unixfilesystem_resource_free_space(msParam_t *resource_name_msparam, 
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    generalAdminInp_t admin_in;
-    memset(&admin_in, 0, sizeof(admin_in));
-    admin_in.arg0 = "modify";
-    admin_in.arg1 = "resource";
-    admin_in.arg2 = resource_name_cstring;
-    admin_in.arg3 = "freespace";
-    admin_in.arg4 = free_space_in_bytes_string.c_str();
-
-
     rodsEnv service_account_environment;
     const int getRodsEnv_ret = getRodsEnv(&service_account_environment);
     if (getRodsEnv_ret < 0) {
@@ -139,6 +203,14 @@ msi_update_unixfilesystem_resource_free_space(msParam_t *resource_name_msparam, 
         rodsLog(LOG_ERROR, "[%s]: clientLogin failure [%d]", __FUNCTION__, clientLogin_ret);
         return clientLogin_ret;
     }
+
+    generalAdminInp_t admin_in;
+    memset(&admin_in, 0, sizeof(admin_in));
+    admin_in.arg0 = "modify";
+    admin_in.arg1 = "resource";
+    admin_in.arg2 = resource_name_cstring;
+    admin_in.arg3 = "freespace";
+    admin_in.arg4 = free_space_in_bytes_string.c_str();
 
     const int rcGeneralAdmin_ret = rcGeneralAdmin(admin_connection, &admin_in);
     rcDisconnect(admin_connection);
