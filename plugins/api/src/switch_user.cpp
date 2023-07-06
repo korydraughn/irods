@@ -57,9 +57,9 @@ namespace
     // Function Prototypes
     //
 
-    auto call_switch_user(irods::api_entry*, RsComm*, SwitchUserInput*) -> int;
+    auto call_switch_user(irods::api_entry*, RsComm*, const SwitchUserInput*) -> int;
 
-    auto rs_switch_user(RsComm*, SwitchUserInput*) -> int;
+    auto rs_switch_user(RsComm*, const SwitchUserInput*) -> int;
 
     auto check_input(const SwitchUserInput*) -> int;
 
@@ -67,15 +67,15 @@ namespace
 
     auto update_privilege_level(AuthInfo&, adm::user_type, const std::string_view, const std::string_view) -> void;
 
-    auto update_server_to_server_connections(RsComm&) -> void;
+    auto update_server_to_server_connections(RsComm&, const SwitchUserInput&) -> void;
 
     //
     // Function Implementations
     //
 
-    auto call_switch_user(irods::api_entry* _api, RsComm* _comm, SwitchUserInput* _input) -> int
+    auto call_switch_user(irods::api_entry* _api, RsComm* _comm, const SwitchUserInput* _input) -> int
     {
-        return _api->call_handler<SwitchUserInput*>(_comm, _input);
+        return _api->call_handler<const SwitchUserInput*>(_comm, _input);
     } // call_switch_user
 
     auto check_input(const SwitchUserInput* _input) -> int
@@ -121,24 +121,36 @@ namespace
         }
     } // update_privilege_level
 
-    auto update_server_to_server_connections(RsComm& _comm) -> void
+    auto update_server_to_server_connections(RsComm& _comm, const SwitchUserInput& _input) -> void
     {
-        const auto switch_user_or_disconnect = [&client = _comm.clientUser](rodsServerHost& _host) {
+        const auto switch_user_or_disconnect = [&](rodsServerHost& _host) {
             if (!_host.conn) {
                 log_api::trace("No connection to remote host [{}].", _host.hostName->name);
                 return;
             }
 
-            // Disconnect if the remote server's version is older than 4.3.1.
+            // Disconnect if the client requested that all server-to-server connections be closed or
+            // if the remote server's version is older than 4.3.1.
+            //
             // Remember, only iRODS 4.3.1 and later support the switch user API plugin.
-            if (*irods::to_version(_host.conn->svrVersion->relVersion) < irods::version{4, 3, 1}) {
+            if (_input.close_svr_to_svr_connections == 1 || *irods::to_version(_host.conn->svrVersion->relVersion) < irods::version{4, 3, 1}) {
+                log_api::trace("Closing server-to-server connection to remote host [{}].", _host.hostName->name);
                 rcDisconnect(_host.conn);
                 _host.conn = nullptr;
                 return;
             }
 
+            // Create a copy of the SwitchUserInput and update it for connections created due to server
+            // redirection.
+            auto input_copy = _input;
+
+            // Server-to-server connections are proxy connections created by the server. That means the
+            // identity of the proxy user matches that of the local iRODS administrator. The proxy user
+            // for these connections MUST NOT be updated.
+            input_copy.update_proxy_user = 0;
+
             // At this point, we know the remote server supports this API plugin.
-            if (const auto ec = rc_switch_user(_host.conn, client.userName, client.rodsZone); ec != 0) {
+            if (const auto ec = rc_switch_user(_host.conn, &input_copy); ec != 0) {
                 log_api::error(
                     "rc_switch_user failed on remote host [{}] with error_code [{}]. Disconnecting from remote host.",
                     _host.hostName->name,
@@ -159,7 +171,7 @@ namespace
         }
     } // update_server_to_server_connections
 
-    auto rs_switch_user(RsComm* _comm, SwitchUserInput* _input) -> int
+    auto rs_switch_user(RsComm* _comm, const SwitchUserInput* _input) -> int
     {
         try {
             // Only administrators are allowed to invoke this API.
@@ -204,9 +216,8 @@ namespace
             update_user_info(client, _input->username, _input->zone, user_type_string);
             update_privilege_level(client.authInfo, *user_type, _input->zone, local_zone);
 
-            // Update the proxy user identity associated with the RsComm if this connection does NOT represent
-            // a server-to-server connection.
-            if (!irods::server_property_exists(irods::AGENT_CONN_KW)) {
+            // Update the proxy user identity associated with the RsComm if requested by the client.
+            if (1 == _input->update_proxy_user) {
                 auto proxy = _comm->proxyUser;
 
                 update_user_info(proxy, _input->username, _input->zone, user_type_string);
@@ -224,9 +235,9 @@ namespace
             }
 
             // iRODS agents do not disconnect from other nodes following a redirect. For long running agents,
-            // this means the API plugin must invoke rc_switch_user() on each connection or disconnect each
+            // this means the API plugin must invoke rc_switch_user on each connection or disconnect each
             // connection.
-            update_server_to_server_connections(*_comm);
+            update_server_to_server_connections(*_comm, *_input);
 
             return 0;
         }
@@ -244,7 +255,7 @@ namespace
         }
     } // rs_switch_user
 
-    using operation = std::function<int(RsComm*, SwitchUserInput*)>;
+    using operation = std::function<int(RsComm*, const SwitchUserInput*)>;
     const operation op = rs_switch_user;
     auto fn_ptr = reinterpret_cast<funcPtr>(call_switch_user);
 } // anonymous namespace
@@ -257,7 +268,7 @@ namespace
 
 namespace
 {
-    using operation = std::function<int(RsComm*, SwitchUserInput*)>;
+    using operation = std::function<int(RsComm*, const SwitchUserInput*)>;
     const operation op{};
     funcPtr fn_ptr = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 } // anonymous namespace
