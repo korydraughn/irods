@@ -40,6 +40,7 @@
     "irods_replica_state_table",
     "irods_rerror_stack",
     "irods_resource_administration",
+    "irods_resource_manager",
     "irods_scoped_privileged_client",
     "irods_server_properties",
     "irods_shared_memory_object",

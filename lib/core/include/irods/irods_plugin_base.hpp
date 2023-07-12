@@ -76,12 +76,17 @@ namespace irods
 
         plugin_base& operator=(const plugin_base& _rhs)
         {
+            if (this == &_rhs) {
+                return *this;
+            }
+
             instance_name_     = _rhs.instance_name_;
             context_           = _rhs.context_;
             interface_version_ = _rhs.interface_version_;
             operations_        = _rhs.operations_;
             start_operation_   = _rhs.start_operation_;
             stop_operation_    = _rhs.stop_operation_;
+
             return *this;
         } // operator=
 

@@ -15,7 +15,8 @@ namespace irods {
 
     const std::string RESC_CHILD_MAP_PROP( "resource_child_map_property" );
     const std::string RESC_PARENT_PROP( "resource_parent_property" );
-    typedef lookup_table< std::pair< std::string, resource_ptr > > resource_child_map;
+
+    using resource_child_map = lookup_table<std::pair<std::string, resource_ptr>>;
 
 // =-=-=-=-=-=-=-
     /**
@@ -48,10 +49,11 @@ namespace irods {
 
             // =-=-=-=-=-=-=-
             /// @brief copy ctor
-            resource( const resource& _rhs ) :
-              plugin_base{ _rhs },
-              children_{_rhs.children_},
-              parent_{_rhs.parent_} {
+            resource(const resource& _rhs)
+                : plugin_base{_rhs}
+                , children_{_rhs.children_}
+                , parent_{_rhs.parent_}
+            {
             } // cctor
 
             // =-=-=-=-=-=-=-
