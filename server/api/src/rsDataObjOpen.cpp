@@ -903,7 +903,9 @@ namespace
         }
 
         DataObjInfo* info_head{};
-        std::string hierarchy{};
+        std::string hierarchy;
+
+        const auto free_info = irods::at_scope_exit{[&info_head] { freeAllDataObjInfo(info_head); }};
 
         try {
             std::tie(info_head, hierarchy) = get_data_object_info_for_open(*rsComm, *dataObjInp);
@@ -930,8 +932,6 @@ namespace
 
             return SYS_UNKNOWN_ERROR;
         }
-
-        const auto free_info = irods::at_scope_exit{[&info_head] { if (info_head) freeAllDataObjInfo(info_head); }};
 
         try {
             if (dataObjInp->openFlags & O_CREAT) {
