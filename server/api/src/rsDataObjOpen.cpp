@@ -781,6 +781,10 @@ namespace
                     irods::resolve_resource_hierarchy(operation, &_comm, _inp, &info_head);
             }
             catch (const irods::exception& e) {
+                if (info_head) {
+                    freeAllDataObjInfo(info_head);
+                }
+
                 // If the data object does not exist, then the exception will contain
                 // an error code of CAT_NO_ROWS_FOUND.
                 if (e.code() == CAT_NO_ROWS_FOUND) {
