@@ -640,7 +640,6 @@ int
 rsMvCollToTrash( rsComm_t *rsComm, collInp_t *rmCollInp ) {
     int status;
     char trashPath[MAX_NAME_LEN];
-    dataObjCopyInp_t dataObjRenameInp;
     genQueryInp_t genQueryInp;
     genQueryOut_t *genQueryOut = NULL;
     int continueInx;
@@ -746,14 +745,13 @@ rsMvCollToTrash( rsComm_t *rsComm, collInp_t *rmCollInp ) {
         }
     }
 
-    memset( &dataObjRenameInp, 0, sizeof( dataObjRenameInp ) );
+    dataObjCopyInp_t dataObjRenameInp{};
+    irods::at_scope_exit clear_dataObjCopyInp{[&dataObjRenameInp] { clearDataObjCopyInp(&dataObjRenameInp); }};
 
-    dataObjRenameInp.srcDataObjInp.oprType =
-        dataObjRenameInp.destDataObjInp.oprType = RENAME_COLL;
+    dataObjRenameInp.srcDataObjInp.oprType = dataObjRenameInp.destDataObjInp.oprType = RENAME_COLL;
 
     rstrcpy( dataObjRenameInp.destDataObjInp.objPath, trashPath, MAX_NAME_LEN );
-    rstrcpy( dataObjRenameInp.srcDataObjInp.objPath, rmCollInp->collName,
-             MAX_NAME_LEN );
+    rstrcpy( dataObjRenameInp.srcDataObjInp.objPath, rmCollInp->collName, MAX_NAME_LEN );
 
     status = rsDataObjRename( rsComm, &dataObjRenameInp );
 
