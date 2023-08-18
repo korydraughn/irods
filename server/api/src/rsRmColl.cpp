@@ -648,6 +648,8 @@ rsMvCollToTrash( rsComm_t *rsComm, collInp_t *rmCollInp ) {
 
     /* check permission of files */
 
+    irods::at_scope_exit clean_genQueryInp{[&genQueryInp] { clearGenQueryInp(&genQueryInp); }};
+
     memset( &genQueryInp, 0, sizeof( genQueryInp ) );
     status = rsQueryDataObjInCollReCur( rsComm, rmCollInp->collName,
                                         &genQueryInp, &genQueryOut, ACCESS_DELETE_OBJECT, 0 );
