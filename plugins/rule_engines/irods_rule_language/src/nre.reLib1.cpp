@@ -1,5 +1,3 @@
-#include "irods/execCmd.h"
-#include "irods/msParam.h"
 #include "irods/rodsKeyWdDef.h"
 #define HAS_MICROSDEF_T
 #include "irods/rodsConnect.h"
@@ -266,26 +264,7 @@ void appendOutputToInput(MsParamArray* inpParamArray, char** outParamNames, int 
         }
 
         if (!is_in_msParamArray) {
-            const char* type = nullptr;
-            ExecCmdOut* inOutStruct = nullptr;
-
-            // This check protects the server from a memory leak which is produced when
-            // a rule is run, but no output is returned via "ruleExecOut".
-            //
-            // The memory leak is triggered when a client runs irule and writes a message
-            // to the server log instead of stdout/stderr, but also specifies ruleExecOut
-            // as an output parameter. This results in a leak because the type information
-            // is lost and rsExecMyRule calls trimMsParamArray. trimMsParamArray will not
-            // free the contents of a MsParam if the type information is unavailable.
-            if (param_name == "ruleExecOut") {
-                // Notice we don't call strdup or allocate a brand new char buffer for the
-                // type. The reason for this is because addMsParam calls strdup indirectly.
-                type = ExecCmdOut_MS_T;
-                inOutStruct = static_cast<ExecCmdOut*>(std::malloc(sizeof(ExecCmdOut)));
-                std::memset(inOutStruct, 0, sizeof(ExecCmdOut));
-            }
-
-            addMsParam(inpParamArray, outParamNames[i], type, inOutStruct, nullptr);
+            addMsParam(inpParamArray, outParamNames[i], nullptr, nullptr, nullptr);
         }
     }
 }

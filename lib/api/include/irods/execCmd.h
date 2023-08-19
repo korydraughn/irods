@@ -1,5 +1,5 @@
-#ifndef IRODS_EXEC_CMD_H
-#define IRODS_EXEC_CMD_H
+#ifndef EXEC_CMD_H__
+#define EXEC_CMD_H__
 
 #include "irods/rodsConnect.h"
 #include "irods/procApiRequest.h"
@@ -29,4 +29,4 @@ extern "C"
 #endif
 int rcExecCmd( rcComm_t *conn, execCmd_t *execCmdInp, execCmdOut_t **execCmdOut );
 
-#endif // IRODS_EXEC_CMD_H
+#endif
