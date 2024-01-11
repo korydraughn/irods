@@ -1,5 +1,6 @@
 #include "rodsAgent.hpp"
 #include "reconstants.hpp"
+#include "rodsErrorTable.h"
 #include "rsApiHandler.hpp"
 #include "icatHighLevelRoutines.hpp"
 #include "miscServerFunct.hpp"
@@ -132,8 +133,8 @@ int receiveDataFromServer( int conn_tmp_socket ) {
             }
 
             if (i == tmpStr.size()) {
-                // No equal sign was found
-                continue;
+                rodsLog(LOG_ERROR, "%s: Malformed payload: please check the client's settings for invalid characters.", __func__);
+                return SYS_AGENT_INIT_ERR;
             }
 
             std::string lhs = tmpStr.substr(0, i);
