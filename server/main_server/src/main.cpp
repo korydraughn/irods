@@ -1,5 +1,8 @@
 #include <irods/irods_at_scope_exit.hpp>
+#include <irods/irods_configuration_keywords.hpp>
 #include <irods/irods_logger.hpp>
+#include <irods/irods_server_properties.hpp>
+#include <irods/rcGlobalExtern.h> // For ProcessType
 
 #include <boost/asio.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
@@ -21,12 +24,46 @@
 #include <string_view>
 #include <thread>
 
+#ifdef __cpp_lib_filesystem
+#  include <filesystem>
+#else
+#  include <boost/filesystem.hpp>
+#endif
+
+// __has_feature is a Clang specific feature.
+// The preprocessor code below exists so that other compilers can be used (e.g. GCC).
+#ifndef __has_feature
+#  define __has_feature(feature) 0
+#endif
+
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#  include <sanitizer/lsan_interface.h>
+
+// Defines default options for running iRODS with Address Sanitizer enabled.
+// This is a convenience function which allows the iRODS server to start without
+// having to specify options via environment variables.
+extern "C" const char* __asan_default_options()
+{
+    // See root CMakeLists.txt file for definition.
+    return IRODS_ADDRESS_SANITIZER_DEFAULT_OPTIONS;
+} // __asan_default_options
+#endif
+
 namespace
 {
+#ifdef __cpp_lib_filesystem
+    namespace fs = std::filesystem;
+#else
+    namespace fs = boost::filesystem;
+#endif
+
     using log_server = irods::experimental::log::server;
 
     volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+    pid_t g_pid_af;
+    pid_t g_pid_ds;
 
     auto print_usage() -> void;
     auto print_version_info() -> void;
@@ -35,12 +72,14 @@ namespace
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
     auto init_logger(const nlohmann::json& _config) -> void;
-    auto setup_signal_handlers() -> void;
+    auto setup_signal_handlers() -> int;
 } // anonymous namespace
 
 int main(int _argc, char* _argv[])
 {
-    std::string config_path;
+    ProcessType = SERVER_PT; // This process identifies itself as a server.
+
+    std::string config_dir_path;
 
     namespace po = boost::program_options;
 
@@ -48,7 +87,7 @@ int main(int _argc, char* _argv[])
 
     // clang-format off
     opts_desc.add_options()
-        ("config-file,f", po::value<std::string>(), "")
+        ("config-directory,f", po::value<std::string>(), "")
         ("jsonschema-file", po::value<std::string>(), "")
         ("dump-config-template", "")
         ("dump-default-jsonschema", "")
@@ -59,7 +98,7 @@ int main(int _argc, char* _argv[])
     // clang-format on
 
     po::positional_options_description pod;
-    pod.add("config-file", 1);
+    pod.add("config-directory", 1);
 
     try {
         po::variables_map vm;
@@ -86,8 +125,8 @@ int main(int _argc, char* _argv[])
             return 0;
         }
 
-        if (auto iter = vm.find("config-file"); std::end(vm) != iter) {
-            config_path = std::move(iter->second.as<std::string>());
+        if (auto iter = vm.find("config-directory"); std::end(vm) != iter) {
+            config_dir_path = std::move(iter->second.as<std::string>());
         }
         else {
             fmt::print(stderr, "Error: Missing [CONFIG_FILE_PATH] parameter.");
@@ -101,7 +140,7 @@ int main(int _argc, char* _argv[])
         // TODO What does it mean to daemonize and use a unique pidfile name?
         // Perhaps daemonization means there's only one instance running on the machine?
         // What if the pidfile name was derived from the config file path? Only one instance can work.
-        // But, what if redirection is disabled by the admin?
+        // But, what if server redirection is disabled by the admin?
         std::string pid_file = "/var/run/irods.pid";
         if (const auto iter = vm.find("pid-file"); std::end(vm) != iter) {
             pid_file = std::move(iter->second.as<std::string>());
@@ -122,16 +161,18 @@ int main(int _argc, char* _argv[])
 
     try {
         // Load configuration.
-        config = json::parse(std::ifstream{config_path});
+        // TODO Pick one of the following.
+        config = json::parse(std::ifstream{fs::path{config_dir_path} / "server_config.json"});
+        irods::server_properties::instance().capture(); // TODO This MUST NOT assume /etc/irods/server_config.json.
 
         // TODO Validate configuration.
 #if 0
-        const auto config = json::parse(std::ifstream{vm["config-file"].as<std::string>()});
+        const auto config = json::parse(std::ifstream{vm["config-directory"].as<std::string>()});
         irods::http::globals::set_configuration(config);
 
         {
             const auto schema_file = (vm.count("jsonschema-file") > 0) ? vm["jsonschema-file"].as<std::string>() : "";
-            if (!is_valid_configuration(schema_file, vm["config-file"].as<std::string>())) {
+            if (!is_valid_configuration(schema_file, vm["config-directory"].as<std::string>())) {
                 return 1;
             }
         }
@@ -155,38 +196,51 @@ int main(int _argc, char* _argv[])
             boost::interprocess::create_only, mq_name, max_number_of_msg, max_msg_size};
 
         // Launch agent factory.
-        auto pid_af = fork();
-        if (0 == pid_af) {
-            char pname[] = "irodsAgent";
+        log_server::info("{}: Launching Agent Factory.", __func__);
+        g_pid_af = fork();
+        if (0 == g_pid_af) {
+            char pname[] = "irodsAgent5";
             char parent_mq_name[] = "irodsd_mq";
-            char* args[] = {pname, parent_mq_name, nullptr};
+            char* args[] = {pname, config_dir_path.data(), parent_mq_name, nullptr};
             execv(pname, args);
             _exit(1);
         }
-        else if (-1 == pid_af) {
-            fmt::print(stderr, "Error: could not launch agent factory.\n");
+        else if (-1 == g_pid_af) {
+            log_server::error("{}: Could not launch agent factory.", __func__);
             return 1;
         }
-        fmt::print("agent factory pid = [{}]\n", pid_af);
+        log_server::info("{}: Agent Factory PID = [{}].", __func__, g_pid_af);
 
+#if 0
         // Fork delay server if this server is the leader.
-        auto pid_ds = fork();
-        if (0 == pid_ds) {
+        log_server::info("{}: Launching Delay Server.", __func__);
+        auto g_pid_ds = fork();
+        if (0 == g_pid_ds) {
             char pname[] = "irodsDelayServer";
             char* args[] = {pname, nullptr};
             execv(pname, args);
             _exit(1);
         }
-        else if (-1 == pid_ds) {
-            kill(pid_af, SIGTERM);
-            fmt::print(stderr, "Error: could not launch delay server.\n");
+        else if (-1 == g_pid_ds) {
+            kill(g_pid_af, SIGTERM);
+            waitpid(g_pid_af, nullptr, 0);
+            log_server::error("{}: Could not launch delay server.", __func__);
             return 1;
         }
-        fmt::print("delay server pid = [{}]\n", pid_ds);
+        log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
+#endif
 
         // Setting up signal handlers here removes the need for reacting to shutdown signals
         // such as SIGINT and SIGTERM during the startup sequence.
-        setup_signal_handlers();
+        if (setup_signal_handlers() == -1) {
+            log_server::error("{}: Error setting up signal handlers for main server process.", __func__);
+            // TODO Wrap in a function.
+            kill(g_pid_af, SIGTERM);
+            //kill(g_pid_ds, SIGTERM);
+            waitpid(g_pid_af, nullptr, 0);
+            //waitpid(g_pid_ds, nullptr, 0);
+            return 1;
+        }
 
         // Enter parent process main loop.
         // 
@@ -216,25 +270,19 @@ int main(int _argc, char* _argv[])
                 break;
             }
 
-            // TODO Reap child processes.
+            // TODO Reap child processes: agent factory, delay server
             // TODO Fork agent factory and/or delay server again if necessary.
         }
 
         // Start shutting everything down.
 
-#ifdef IRODS_LAUNCH_CONTROL_PLANE
-        kill(pid_cp, SIGTERM);
-#endif
-        kill(pid_af, SIGTERM);
-        kill(pid_ds, SIGTERM);
+        kill(g_pid_af, SIGTERM);
+        //kill(g_pid_ds, SIGTERM);
 
-#ifdef IRODS_LAUNCH_CONTROL_PLANE
-        waitpid(pid_cp, nullptr, 0);
-#endif
-        waitpid(pid_ds, nullptr, 0);
-        waitpid(pid_af, nullptr, 0);
+        waitpid(g_pid_af, nullptr, 0);
+        //waitpid(g_pid_ds, nullptr, 0);
 
-        fmt::print("Shutdown complete.\n");
+        log_server::info("{}: Shutdown complete.", __func__);
 
         return 0;
     }
@@ -287,20 +335,20 @@ Options:
     {
         // Become a background process.
         switch (fork()) {
-            case -1: _exit(-1);
-            case 0: break;
+            case -1: _exit(1);
+            case  0: break;
             default: _exit(0);
         }
 
         // Become session leader.
         if (setsid() == -1) {
-            _exit(-1);
+            _exit(1);
         }
 
         // Make sure we aren't the session leader.
         switch (fork()) {
-            case -1: _exit(-1);
-            case 0: break;
+            case -1: _exit(1);
+            case  0: break;
             default: _exit(0);
         }
 
@@ -319,22 +367,24 @@ Options:
             close(fd);
         }
 
+        // clang-format off
         constexpr auto fd_stdin  = 0;
         constexpr auto fd_stdout = 1;
         constexpr auto fd_stderr = 2;
+        // clang-format on
 
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         auto fd = open("/dev/null", O_RDWR);
         if (fd_stdin != fd) {
-            _exit(-1);
+            _exit(1);
         }
 
         if (dup2(fd, fd_stdout) != fd_stdout) {
-            _exit(-1);
+            _exit(1);
         }
 
         if (dup2(fd, fd_stderr) != fd_stderr) {
-            _exit(-1);
+            _exit(1);
         }
     } // daemonize
 
@@ -345,7 +395,7 @@ Options:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg, hicpp-signed-bitwise)
         const auto fd = open(_pid_file.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (fd == -1) {
-            //log_server::error("Could not open PID file.");
+            fmt::print("Could not open PID file.\n");
             return 1;
         }
 
@@ -353,7 +403,7 @@ Options:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         const auto flags = fcntl(fd, F_GETFD);
         if (flags == -1) {
-            //log_server::error("Could not retrieve open flags for PID file.");
+            fmt::print("Could not retrieve open flags for PID file.\n");
             return 1;
         }
 
@@ -362,7 +412,7 @@ Options:
         // Keep in mind that record locks are NOT inherited by forked child processes.
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg, hicpp-signed-bitwise)
         if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1) {
-            //log_server::error("Could not set FD_CLOEXEC on PID file.");
+            fmt::print("Could not set FD_CLOEXEC on PID file.\n");
             return 1;
         }
 
@@ -379,21 +429,21 @@ Options:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         if (fcntl(fd, F_SETLK, &input) == -1) {
             if (EAGAIN == errno || EACCES == errno) {
-                //log_server::error("Could not acquire write lock for PID file. Another instance "
-                                  //"could be running already.");
+                fmt::print("Could not acquire write lock for PID file. Another instance "
+                           "could be running already.\n");
                 return 1;
             }
         }
         
         if (ftruncate(fd, 0) == -1) {
-            //log_server::error("Could not truncate PID file's contents.");
+            fmt::print("Could not truncate PID file's contents.\n");
             return 1;
         }
 
         const auto contents = fmt::format("{}\n", getpid());
         // NOLINTNEXTLINE(google-runtime-int)
         if (write(fd, contents.data(), contents.size()) != static_cast<long>(contents.size())) {
-            //log_server::error("Could not write PID to PID file.");
+            fmt::print("Could not write PID to PID file.\n");
             return 1;
         }
 
@@ -405,43 +455,54 @@ Options:
         namespace logger = irods::experimental::log;
 
         logger::init(false, false);
-        irods::server_properties::instance().capture(); // FIXME
-        log_server::set_level(ix::log::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER)); // FIXME
+        log_server::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
         logger::set_server_type("server");
-        logger::set_server_zone(_config.at(irods::KW_CFG_ZONE_NAME).get<std::string>()); // FIXME
-        logger::set_server_hostname(hostname); // TODO Get hostname from config file.
+        logger::set_server_zone(_config.at(irods::KW_CFG_ZONE_NAME).get<std::string>());
+        logger::set_server_hostname(boost::asio::ip::host_name());
     } // init_logger
 
-    auto setup_signal_handlers() -> void
+    auto setup_signal_handlers() -> int
     {
+        // DO NOT memset sigaction structures!
+
         // SIGINT
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        struct sigaction sa_terminate;
+        struct sigaction sa_terminate; // NOLINT(cppcoreguidelines-pro-type-member-init)
         sigemptyset(&sa_terminate.sa_mask);
         sa_terminate.sa_flags = 0;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
         sa_terminate.sa_handler = [](int) { g_terminate = 1; };
         if (sigaction(SIGINT, &sa_terminate, nullptr) == -1) {
-            // TODO Handle error.
+            return -1;
         }
 
         // SIGTERM
         if (sigaction(SIGTERM, &sa_terminate, nullptr) == -1) {
-            // TODO Handle error.
+            return -1;
         }
 
         // SIGHUP
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        struct sigaction sa_sighup;
+        struct sigaction sa_sighup; // NOLINT(cppcoreguidelines-pro-type-member-init)
         sigemptyset(&sa_sighup.sa_mask);
         sa_sighup.sa_flags = 0;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
         sa_sighup.sa_handler = [](int) { g_reload_config = 1; };
         if (sigaction(SIGTERM, &sa_sighup, nullptr) == -1) {
-            // TODO Handle error.
+            return -1;
         }
+#if 0
+        // SIGCHLD
+        // This signal is disabled by default.
+        struct sigaction sa_sigchld; // NOLINT(cppcoreguidelines-pro-type-member-init)
+        sigemptyset(&sa_sigchld.sa_mask);
+        sa_sigchld.sa_flags = SA_NOCLDSTOP; // Do not trigger handler when child receives SIGSTOP.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access, cppcoreguidelines-pro-type-cstyle-cast)
+        sa_sigchld.sa_handler = SIG_IGN;
+        if (sigaction(SIGCHLD, &sa_sigchld, nullptr) == -1) {
+            return -1;
+        }
+#endif
+        // TODO Handle other signals.
 
-        // TODO SIGCHLD
-        // TODO SIGPIPE
+        return 0;
     } // setup_signal_handlers
 } // anonymous namespace
