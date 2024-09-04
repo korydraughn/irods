@@ -61,6 +61,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <span>
 
 #ifdef __cpp_lib_filesystem
 #  include <filesystem>
@@ -167,6 +168,7 @@ int main(int _argc, char* _argv[])
         // - shared memory for replica access table, dns cache, hostname cache?
         // - delay server salt
 
+        // To see log messages from rsyslog, you must add irodsAgent5 to /etc/rsyslog.d/00-irods.conf.
         init_logger(config);
 
         log_af::info("{}: Initializing loggers for agent factory.", __func__);
@@ -198,11 +200,11 @@ int main(int _argc, char* _argv[])
         log_af::info("{}: Initializing shared memory for agent factory.", __func__);
 
         namespace hnc = irods::experimental::net::hostname_cache;
-        hnc::init("irods_hostname_cache", irods::get_hostname_cache_shared_memory_size());
+        hnc::init("irods_hostname_cache5", irods::get_hostname_cache_shared_memory_size());
         irods::at_scope_exit deinit_hostname_cache{[] { hnc::deinit(); }};
 
         namespace dnsc = irods::experimental::net::dns_cache;
-        dnsc::init("irods_dns_cache", irods::get_dns_cache_shared_memory_size());
+        dnsc::init("irods_dns_cache5", irods::get_dns_cache_shared_memory_size());
         irods::at_scope_exit deinit_dns_cache{[] { dnsc::deinit(); }};
 
         irods::experimental::replica_access_table::init();
@@ -276,9 +278,11 @@ int main(int _argc, char* _argv[])
         unsigned int priority{};
 #endif
 
+        log_af::info("{}: Waiting for client request.", __func__);
         while (true) {
             if (g_terminate) {
                 log_af::info("{}: Received shutdown instruction. Exiting agent factory main loop.", __func__);
+                // TODO Send shutdown message to main server process.
                 break;
             }
 
@@ -286,7 +290,6 @@ int main(int _argc, char* _argv[])
                 log_af::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
             }
 
-            log_af::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
             std::this_thread::sleep_for(std::chrono::seconds{1});
         }
 
@@ -322,7 +325,7 @@ namespace
         // SIGINT
         struct sigaction sa_terminate; // NOLINT(cppcoreguidelines-pro-type-member-init)
         sigemptyset(&sa_terminate.sa_mask);
-        sa_terminate.sa_flags = SIGHUP;
+        sa_terminate.sa_flags = 0;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
         sa_terminate.sa_handler = [](int) { g_terminate = 1; };
         if (sigaction(SIGINT, &sa_terminate, nullptr) == -1) {
@@ -340,7 +343,7 @@ namespace
         sa_sighup.sa_flags = 0;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
         sa_sighup.sa_handler = [](int) { g_reload_config = 1; };
-        if (sigaction(SIGTERM, &sa_sighup, nullptr) == -1) {
+        if (sigaction(SIGHUP, &sa_sighup, nullptr) == -1) {
             return -1;
         }
 #if 0

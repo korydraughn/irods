@@ -92,7 +92,7 @@ int main(int _argc, char* _argv[])
         ("dump-config-template", "")
         ("dump-default-jsonschema", "")
         ("daemonize,d", "")
-        ("pid-file,P", "")
+        ("pid-file,P", po::value<std::string>(), "")
         ("help,h", "")
         ("version,v", "");
     // clang-format on
@@ -184,11 +184,12 @@ int main(int _argc, char* _argv[])
         // - delay server salt
 
         init_logger(config);
-        
+
         // This message queue gives child processes a way to notify the parent process.
         // This will only be used by the agent factory because iRODS 5.0 won't have a control plane.
         // Or at least that's the plan.
-        constexpr const auto* mq_name = "irodsd_mq"; // TODO Make this name unique.
+        log_server::info("{}: Creating communication channel between main server process and agent factory.", __func__);
+        constexpr const auto* mq_name = "irodsServer5"; // TODO Make this name unique.
         constexpr auto max_number_of_msg = 1; // Set to 1 to protect against duplicate/spamming of messages.
         constexpr auto max_msg_size = 512; 
         boost::interprocess::message_queue::remove(mq_name);
@@ -199,8 +200,8 @@ int main(int _argc, char* _argv[])
         log_server::info("{}: Launching Agent Factory.", __func__);
         g_pid_af = fork();
         if (0 == g_pid_af) {
-            char pname[] = "irodsAgent5";
-            char parent_mq_name[] = "irodsd_mq";
+            char pname[] = "/usr/sbin/irodsAgent5";
+            char parent_mq_name[] = "irodsServer5";
             char* args[] = {pname, config_dir_path.data(), parent_mq_name, nullptr};
             execv(pname, args);
             _exit(1);
@@ -255,20 +256,29 @@ int main(int _argc, char* _argv[])
         unsigned int priority{};
 
         while (true) {
-            // TODO Handle messages from agent factory: shutdown
-            msg_buf.fill(0);
-
-            // TODO Change to try_receive() or equivalent.
-            // This MUST NOT block.
-            pproc_mq.receive(msg_buf.data(), msg_buf.size(), recvd_size, priority);
-
-            std::string_view msg(msg_buf.data(), recvd_size);
-            fmt::print("irodsd: received message: [{}], recvd_size: [{}]\n", msg, recvd_size);
-
-            if (msg == "shutdown") {
-                fmt::print("Received shutdown instruction from control plane.\n");
+            if (g_terminate) {
+                log_server::info("{}: Received shutdown instruction. Exiting agent factory main loop.", __func__);
                 break;
             }
+
+            if (g_reload_config) {
+                log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
+                g_reload_config = 0;
+            }
+#if 0
+            // TODO Handle messages from agent factory: shutdown
+            msg_buf.fill(0);
+            if (pproc_mq.try_receive(msg_buf.data(), msg_buf.size(), recvd_size, priority)) {
+                std::string_view msg(msg_buf.data(), recvd_size);
+                fmt::print("irodsd: received message: [{}], recvd_size: [{}]\n", msg, recvd_size);
+
+                if (msg == "shutdown") {
+                    fmt::print("Received shutdown instruction from control plane.\n");
+                    break;
+                }
+            }
+#endif
+            std::this_thread::sleep_for(std::chrono::seconds{1});
 
             // TODO Reap child processes: agent factory, delay server
             // TODO Fork agent factory and/or delay server again if necessary.
@@ -486,7 +496,7 @@ Options:
         sa_sighup.sa_flags = 0;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
         sa_sighup.sa_handler = [](int) { g_reload_config = 1; };
-        if (sigaction(SIGTERM, &sa_sighup, nullptr) == -1) {
+        if (sigaction(SIGHUP, &sa_sighup, nullptr) == -1) {
             return -1;
         }
 #if 0
