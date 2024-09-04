@@ -61,7 +61,6 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include <span>
 
 #ifdef __cpp_lib_filesystem
 #  include <filesystem>
