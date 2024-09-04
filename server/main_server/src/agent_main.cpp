@@ -287,6 +287,7 @@ int main(int _argc, char* _argv[])
 
             if (g_reload_config) {
                 log_af::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
+                g_reload_config = 0;
             }
 
             std::this_thread::sleep_for(std::chrono::seconds{1});

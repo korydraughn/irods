@@ -263,6 +263,7 @@ int main(int _argc, char* _argv[])
 
             if (g_reload_config) {
                 log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
+                kill(SIGHUP, g_pid_af);
                 g_reload_config = 0;
             }
 #if 0
