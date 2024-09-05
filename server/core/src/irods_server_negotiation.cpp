@@ -71,22 +71,29 @@ namespace irods
 /// @brief function which manages the TLS and Auth negotiations with the client
     error client_server_negotiation_for_server(
         irods::network_object_ptr _ptr,
-        std::string&               _result ) {
+        std::string&               _result,
+        RsComm* _comm)
+    {
         // =-=-=-=-=-=-=-
         // manufacture an rei for the applyRule
         ruleExecInfo_t rei{};
 
-        // If issues arise from this local rsComm either from lack of information,
-        // such as the missing rsComm.myEnv, or environment variable mismatch, use
-        // the existing rsComm higher up the call stack.
-        rsComm_t rsComm{};
-        auto comm_status{initRsCommWithStartupPack(&rsComm, nullptr)};
-
-        if (comm_status < 0) {
-            return ERROR(comm_status, "failed to initialize rsComm for rule execution information");
+        if (_comm) {
+            rei.rsComm = _comm;
         }
+        else {
+            // If issues arise from this local rsComm either from lack of information,
+            // such as the missing rsComm.myEnv, or environment variable mismatch, use
+            // the existing rsComm higher up the call stack.
+            rsComm_t rsComm{};
+            auto comm_status{initRsCommWithStartupPack(&rsComm, nullptr)};
 
-        rei.rsComm = &rsComm;
+            if (comm_status < 0) {
+                return ERROR(comm_status, "failed to initialize rsComm for rule execution information");
+            }
+
+            rei.rsComm = &rsComm;
+        }
 
         std::string rule_result;
         std::list<boost::any> params;
@@ -104,7 +111,7 @@ namespace irods
 
         // =-=-=-=-=-=-=-
         // check to see if a negotiation was requested
-        if ( !do_client_server_negotiation_for_server() ) {
+        if (!do_client_server_negotiation_for_server(rei.rsComm->option)) {
             // =-=-=-=-=-=-=-
             // if it was not but we require SSL then error out
             if ( CS_NEG_REQUIRE == rule_result ) {

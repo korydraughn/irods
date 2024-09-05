@@ -211,7 +211,8 @@ namespace irods
     /// =-=-=-=-=-=-=-
     /// @brief function which determines if a client/server negotiation is needed
     ///        on the server side
-    bool do_client_server_negotiation_for_server( ) {
+    bool do_client_server_negotiation_for_server(const char* _neg) {
+#if 0
         // =-=-=-=-=-=-=-
         // check the SP_OPTION for the string stating a negotiation is requested
         char* opt_ptr = getenv( RODS_CS_NEG );
@@ -233,6 +234,11 @@ namespace irods
         // =-=-=-=-=-=-=-
         // otherwise, its a go.
         return true;
+#else
+        // if it is set then check for our magic token which requests
+        // the negotiation, if it is not the magic token, move on
+        return _neg && std::string_view{_neg}.find(REQ_SVR_NEG) != std::string_view::npos;
+#endif
     } // do_client_server_negotiation_for_server
 
     /// =-=-=-=-=-=-=-

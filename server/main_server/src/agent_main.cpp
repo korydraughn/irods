@@ -26,21 +26,34 @@
 #include "irods/irods_at_scope_exit.hpp"
 #include "irods/irods_buffer_encryption.hpp" // For RE cache salt
 #include "irods/irods_client_api_table.hpp"
+#include "irods/irods_client_server_negotiation.hpp"
 #include "irods/irods_configuration_keywords.hpp"
 #include "irods/irods_configuration_parser.hpp" // For key_path_t
+#include "irods/irods_dynamic_cast.hpp"
+#include "irods/irods_environment_properties.hpp"
 #include "irods/irods_exception.hpp"
 #include "irods/irods_logger.hpp"
+#include "irods/irods_network_factory.hpp"
+#include "irods/irods_network_object.hpp"
 #include "irods/irods_re_plugin.hpp"
 #include "irods/irods_server_api_table.hpp"
 #include "irods/irods_server_properties.hpp"
+#include "irods/irods_threads.hpp"
 #include "irods/locks.hpp" // For removeMutex TODO remove eventually
 #include "irods/miscServerFunct.hpp" // For get_catalog_service_role
+#include "irods/plugin_lifetime_manager.hpp"
 #include "irods/rcConnect.h"
 #include "irods/rcGlobalExtern.h" // For ProcessType
 #include "irods/replica_access_table.hpp"
+#include "irods/replica_state_table.hpp"
 #include "irods/rodsErrorTable.h"
+#include "irods/rsApiHandler.hpp"
+#include "irods/rsGlobalExtern.hpp"
 #include "irods/rsIcatOpr.hpp"
 #include "irods/sharedmemory.hpp"
+#include "irods/sockComm.h"
+#include "irods/sockCommNetworkInterface.hpp"
+#include "irods/sslSockComm.h"
 
 #include <boost/asio.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
@@ -49,6 +62,7 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -96,6 +110,7 @@ namespace
 #endif
 
     using log_af = irods::experimental::log::agent_factory;
+    using log_agent = irods::experimental::log::agent;
 
     volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -111,6 +126,12 @@ namespace
     // TODO Refactor these functions.
     auto initServer(RsComm& _comm) -> int;
     auto initServerMain(RsComm& _comm, const bool _enable_test_mode, const bool _write_to_stdout) -> int;
+
+    auto handle_client_request(int _socket_fd) -> int;
+    auto cleanup() -> void;
+    auto cleanupAndExit(int status) -> void;
+    auto set_rule_engine_globals(RsComm& _comm) -> void;
+    auto agentMain(RsComm& _comm) -> int;
 } // anonymous namespace
 
 int main(int _argc, char* _argv[])
@@ -160,6 +181,7 @@ int main(int _argc, char* _argv[])
         // Load configuration.
         // TODO Pick one of the following.
         config = json::parse(std::ifstream{fs::path{config_dir_path} / "server_config.json"});
+        irods::environment_properties::instance().capture();
         irods::server_properties::instance().capture(); // TODO This MUST NOT assume /etc/irods/server_config.json.
 
         // TODO Init base systems for parent process.
@@ -186,6 +208,12 @@ int main(int _argc, char* _argv[])
         logger::rule_engine::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_RULE_ENGINE));
         logger::sql::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SQL));
 
+        log_af::info("{}: Initializing signal handlers for agent factory.", __func__);
+        if (setup_signal_handlers() == -1) {
+            log_af::error("{}: Error setting up signal handlers for agent factory process.", __func__);
+            return 1;
+        }
+
         log_af::info("{}: Initializing client allowlist for agent factory.", __func__);
         irods::client_api_allowlist::init();
 
@@ -209,7 +237,6 @@ int main(int _argc, char* _argv[])
         irods::experimental::replica_access_table::init();
         irods::at_scope_exit deinit_replica_access_table{[] { irods::experimental::replica_access_table::deinit(); }};
 
-        // TODO Initialize zone information for request processing.
         log_af::info("{}: Initializing zone information for agent factory.", __func__);
 
         // Set the default value for evicting DNS cache entries.
@@ -222,7 +249,6 @@ int main(int _argc, char* _argv[])
             key_path_t{irods::KW_CFG_ADVANCED_SETTINGS, irods::KW_CFG_HOSTNAME_CACHE, irods::KW_CFG_EVICTION_AGE_IN_SECONDS},
             irods::get_hostname_cache_eviction_age());
 
-        // TODO
         if (const auto res = createAndSetRECacheSalt(); !res.ok()) {
             log_af::error("{}: createAndSetRECacheSalt error.\n{}", __func__, res.result());
             return 1;
@@ -232,11 +258,20 @@ int main(int _argc, char* _argv[])
             log_af::error("{}: Failed to initialize shared memory for plugins. [error code={}]", __func__, res.code());
             return 1;
         }
-        irods::at_scope_exit remove_shared_memory{[] { deinit_shared_memory_for_plugins(); }};
+        irods::at_scope_exit remove_shared_memory{[pid_af = getpid()] {
+            // Only the agent factory is allowed to deinit the shared memory associated
+            // with plugins. This is especially important because the NREP's shared memory
+            // is shared by all agents running on the server.
+            if (getpid() == pid_af) {
+                deinit_shared_memory_for_plugins();
+            }
+        }};
 
         // TODO Why is this necessary?
         irods::re_plugin_globals = std::make_unique<irods::global_re_plugin_mgr>();
 
+        // Initialize zone information for request processing.
+        // initServerMain starts the listening socket and stores it in svrComm.
         // TODO initServerMain can likely be simplified.
         RsComm svrComm; // RsComm contains a std::string, so never memset this type!
         if (const auto ec = initServerMain(svrComm, false, false); ec < 0) {
@@ -255,14 +290,6 @@ int main(int _argc, char* _argv[])
             boost::interprocess::create_only, mq_name, max_number_of_msg, max_msg_size};
 #endif
 
-        // Setting up signal handlers here removes the need for reacting to shutdown signals
-        // such as SIGINT and SIGTERM during the startup sequence.
-        log_af::info("{}: Initializing signal handlers for agent factory.", __func__);
-        if (setup_signal_handlers() == -1) {
-            log_af::error("{}: Error setting up signal handlers for agent factory process.", __func__);
-            return 1;
-        }
-
         // Enter parent process main loop.
         // 
         // This process should never introduce threads. Everything it cares about must be handled
@@ -276,6 +303,9 @@ int main(int _argc, char* _argv[])
         boost::interprocess::message_queue::size_type recvd_size{};
         unsigned int priority{};
 #endif
+        fd_set sockMask;
+        FD_ZERO(&sockMask); // NOLINT(readability-isolate-declaration)
+        //SvrSock = svrComm.sock; // TODO Unused - remove
 
         log_af::info("{}: Waiting for client request.", __func__);
         while (true) {
@@ -290,7 +320,53 @@ int main(int _argc, char* _argv[])
                 g_reload_config = 0;
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds{1});
+            // NOLINTNEXTLINE(hicpp-signed-bitwise, cppcoreguidelines-pro-bounds-constant-array-index)
+            FD_SET(svrComm.sock, &sockMask);
+
+            int numSock = 0;
+            struct timeval time_out; // NOLINT(cppcoreguidelines-pro-type-member-init)
+            time_out.tv_sec  = 0;
+            time_out.tv_usec = 500 * 1000;
+
+            // FIXME Replace use of select() with epoll() or Boost.Asio.
+            while ((numSock = select(svrComm.sock + 1, &sockMask, nullptr, nullptr, &time_out)) < 0) {
+                if (EINTR == errno) {
+                    log_af::trace("{}: select() interrupted", __func__);
+                    // NOLINTNEXTLINE(hicpp-signed-bitwise, cppcoreguidelines-pro-bounds-constant-array-index)
+                    FD_SET(svrComm.sock, &sockMask);
+                    continue;
+                }
+
+                log_af::error("{}: select() error, errno = {}", __func__, errno);
+                return 1;
+            }
+
+            if (0 == numSock) {
+                continue;
+            }
+
+            const int newSock = rsAcceptConn(&svrComm);
+            if (newSock < 0) {
+                log_af::info("{}: rsAcceptConn() error, errno = {}", __func__, errno);
+                continue;
+            }
+
+            // Fork agent to handle client request.
+
+            const auto agent_pid = fork();
+            if (agent_pid == 0) {
+                close(svrComm.sock); // Close the listening socket.
+                return handle_client_request(newSock);
+            }
+
+            if (agent_pid > 0) {
+                // TODO Add pid to agent pid list for control-plane-like status API.
+                // TODO Setup signal handler to reap agents and remove pids from pid list.
+                close(newSock);
+            }
+            else {
+                log_af::critical("Failed to fork agent. errno={}", errno);
+            }
         }
 
         // Start shutting everything down.
@@ -346,18 +422,28 @@ namespace
         if (sigaction(SIGHUP, &sa_sighup, nullptr) == -1) {
             return -1;
         }
-#if 0
+
         // SIGCHLD
         // This signal is disabled by default.
         struct sigaction sa_sigchld; // NOLINT(cppcoreguidelines-pro-type-member-init)
         sigemptyset(&sa_sigchld.sa_mask);
-        sa_sigchld.sa_flags = SA_NOCLDSTOP; // Do not trigger handler when child receives SIGSTOP.
+        sa_sigchld.sa_flags = 0;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access, cppcoreguidelines-pro-type-cstyle-cast)
-        sa_sigchld.sa_handler = SIG_IGN;
+        sa_sigchld.sa_handler = [](int) {
+            const auto saved_errno = errno;
+
+            pid_t pid;
+            int status;
+            while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+                // TODO Remove agent pid from pid list.
+            }
+
+            errno = saved_errno;
+        };
         if (sigaction(SIGCHLD, &sa_sigchld, nullptr) == -1) {
             return -1;
         }
-#endif
+
         // TODO Handle other signals.
 
         return 0;
@@ -571,18 +657,16 @@ namespace
             return e.code();
         }
 
-#if 0
-        _comm->sock = sockOpenForInConn(_comm, &zone_port, nullptr, SOCK_STREAM);
-        if (_comm->sock < 0) {
-            log_af::error("{}: sockOpenForInConn error. status = {}", __func__, _comm->sock);
-            return _comm->sock;
+        _comm.sock = sockOpenForInConn(&_comm, &zone_port, nullptr, SOCK_STREAM);
+        if (_comm.sock < 0) {
+            log_af::error("{}: sockOpenForInConn error. status = {}", __func__, _comm.sock);
+            return _comm.sock;
         }
 
-        if (listen(_comm->sock, MAX_LISTEN_QUE) < 0) {
+        if (listen(_comm.sock, MAX_LISTEN_QUE) < 0) {
             log_af::error("{}: listen failed, errno: {}", __func__, errno);
             return SYS_SOCK_LISTEN_ERR;
         }
-#endif
 
         log_af::info("rodsServer Release version {} - API Version {} is up", RODS_REL_VERSION, RODS_API_VERSION);
 
@@ -603,4 +687,432 @@ namespace
 #endif
         return 0;
     } // initServerMain
+
+    auto handle_client_request(int _socket_fd) -> int
+    {
+        // TODO Reset signal dispositions.
+
+        irods::experimental::log::set_server_type("agent");
+
+        // Artificially create a conn object in order to create a network object.
+        // This is gratuitous but necessary to maintain the consistent interface.
+        RcComm tmp_comm{};
+
+        irods::network_object_ptr net_obj;
+        irods::error ret = irods::network_factory(&tmp_comm, net_obj);
+
+        if (!ret.ok() || !net_obj.get()) {
+            log_agent::error("{}: Failed to initialize network object for client request.", __func__);
+            return 1;
+        }
+
+        //net_obj->socket_handle(_comm.sock);
+        net_obj->socket_handle(_socket_fd);
+        startupPack_t* startupPack = nullptr;
+        struct timeval tv;
+        tv.tv_sec = READ_STARTUP_PACK_TOUT_SEC;
+        tv.tv_usec = 0;
+
+        if (const auto res = readStartupPack(net_obj, &startupPack, &tv); !res.ok()) {
+            log_agent::error("{}: readStartupPack failed, [error code={}]", res.code());
+            sendVersion(net_obj, res.code(), 0, nullptr, 0);
+            mySockClose(net_obj->socket_handle());
+            return 0;
+        }
+
+        if (startupPack->connectCnt > /* MAX_SVR_SVR_CONNECT_CNT */ 7) {
+            sendVersion(net_obj, SYS_EXCEED_CONNECT_CNT, 0, nullptr, 0);
+            mySockClose(net_obj->socket_handle());
+            std::free(startupPack);
+            return 0;
+        }
+
+        if (std::strcmp(startupPack->option, RODS_HEARTBEAT_T) == 0) {
+            const char* heartbeat = RODS_HEARTBEAT_T;
+            const int heartbeat_length = std::strlen(heartbeat);
+            int bytes_to_send = heartbeat_length;
+
+            while (bytes_to_send) {
+                const int bytes_sent = send(net_obj->socket_handle(), &(heartbeat[heartbeat_length - bytes_to_send]), bytes_to_send, 0);
+                const int errsav = errno;
+                if (errsav != EINTR) {
+                    log_agent::error("{}: Socket error encountered during heartbeat; socket returned {}",
+                                      __func__, strerror(errsav));
+                    break;
+                }
+
+                if (bytes_sent > 0) {
+                    bytes_to_send -= bytes_sent;
+                }
+            }
+
+            mySockClose(net_obj->socket_handle());
+            std::free(startupPack);
+            return 0;
+        }
+
+        if (startupPack->clientUser[0] != '\0') {
+            if (const auto ec = chkAllowedUser(startupPack->clientUser, startupPack->clientRodsZone); ec < 0) {
+                sendVersion(net_obj, ec, 0, nullptr, 0);
+                mySockClose(net_obj->socket_handle());
+                std::free(startupPack);
+                return 0;
+            }
+        }
+
+        //
+        // This is where we return to iRODS 4.3 logic.
+        //
+
+        RsComm rsComm{};
+
+        // Originally set via an environment variable in initRsCommWithStartupPack in iRODS 4.2+.
+        rsComm.sock = _socket_fd;
+
+        irods::experimental::log::set_error_object(&rsComm.rError);
+        irods::at_scope_exit release_error_stack{[] { irods::experimental::log::set_error_object(nullptr); }};
+
+        rsComm.thread_ctx = static_cast<thread_context*>(std::malloc(sizeof(thread_context)));
+
+        //int status = initRsCommWithStartupPack(&rsComm, nullptr); // TODO This call relies on reading env variables to init rsComm.
+        int status = initRsCommWithStartupPack(&rsComm, startupPack); // This version just uses the startupPack.
+
+        // manufacture a network object for comms
+        //irods::network_object_ptr net_obj;
+        ret = irods::network_factory(&rsComm, net_obj);
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+        }
+
+        if (status < 0) {
+            log_agent::error("initRsCommWithStartupPack error: [{}]", status);
+            sendVersion(net_obj, status, 0, nullptr, 0);
+            cleanupAndExit(status);
+        }
+
+        irods::re_plugin_globals.reset(new irods::global_re_plugin_mgr);
+        irods::re_plugin_globals->global_re_mgr.call_start_operations();
+
+        status = getRodsEnv(&rsComm.myEnv);
+
+        if (status < 0) {
+            log_agent::error("agentMain :: getRodsEnv failed");
+            sendVersion(net_obj, SYS_AGENT_INIT_ERR, 0, nullptr, 0);
+            cleanupAndExit(status);
+        }
+
+        // load server side pluggable api entries
+        irods::api_entry_table&  RsApiTable   = irods::get_server_api_table();
+        irods::pack_entry_table& ApiPackTable = irods::get_pack_table();
+        ret = irods::init_api_table(RsApiTable, ApiPackTable, false);
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+            return 1;
+        }
+
+        // load client side pluggable api entries
+        irods::api_entry_table& RcApiTable = irods::get_client_api_table();
+        ret = irods::init_api_table(RcApiTable, ApiPackTable, false);
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+            return 1;
+        }
+
+        std::string svc_role;
+        ret = get_catalog_service_role(svc_role);
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+            return 1;
+        }
+
+        // TODO Huh?
+#if 0
+        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role) {
+            if (std::strstr(rsComm.myEnv.rodsDebug, "CAT") != nullptr) {
+                chlDebug(rsComm.myEnv.rodsDebug);
+            }
+        }
+#endif
+
+        status = initAgent(RULE_ENGINE_TRY_CACHE, &rsComm);
+
+        if (status < 0) {
+            log_agent::error("agentMain :: initAgent failed: {}", status);
+            sendVersion(net_obj, SYS_AGENT_INIT_ERR, 0, nullptr, 0);
+            cleanupAndExit(status);
+        }
+
+        if (rsComm.clientUser.userName[0] != '\0') {
+            status = chkAllowedUser(rsComm.clientUser.userName, rsComm.clientUser.rodsZone);
+
+            if (status < 0) {
+                sendVersion(net_obj, status, 0, nullptr, 0);
+                cleanupAndExit(status);
+            }
+        }
+
+        // handle negotiations with the client regarding TLS if requested
+        // this scope block makes valgrind happy
+        {
+            std::string neg_results;
+            ret = irods::client_server_negotiation_for_server(net_obj, neg_results, &rsComm);
+            if (!ret.ok() || neg_results == irods::CS_NEG_FAILURE) {
+                // send a 'we failed to negotiate' message here??
+                // or use the error stack rule engine thingie
+                log_agent::error(PASS(ret).result());
+                sendVersion(net_obj, SERVER_NEGOTIATION_ERROR, 0, nullptr, 0);
+                cleanupAndExit(ret.code());
+            }
+            else {
+                // copy negotiation results to comm for action by network objects
+                std::snprintf(rsComm.negotiation_results, sizeof(rsComm.negotiation_results), "%s", neg_results.c_str());
+            }
+        }
+
+        // send the server version and status as part of the protocol. Put
+        // rsComm.reconnPort as the status
+        ret = sendVersion(net_obj, status, rsComm.reconnPort, rsComm.reconnAddr, rsComm.cookie);
+
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+            sendVersion(net_obj, SYS_AGENT_INIT_ERR, 0, nullptr, 0);
+            cleanupAndExit(status);
+        }
+
+        // TODO Remove this
+        //logAgentProc(&rsComm);
+
+        // call initialization for network plugin as negotiated
+        irods::network_object_ptr new_net_obj;
+        ret = irods::network_factory(&rsComm, new_net_obj);
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+            return 1;
+        }
+
+        ret = sockAgentStart(new_net_obj);
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+            return 1;
+        }
+
+        const auto cleanup_and_free_rsComm_members = [&rsComm] {
+            cleanup();
+            if (rsComm.thread_ctx) {
+                std::free(rsComm.thread_ctx); // NOLINT(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory)
+            }
+            if (rsComm.auth_scheme) {
+                std::free(rsComm.auth_scheme); // NOLINT(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory)
+            }
+        };
+
+        new_net_obj->to_server(&rsComm);
+        status = agentMain(rsComm);
+
+        // call initialization for network plugin as negotiated
+        ret = sockAgentStop( new_net_obj );
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+            cleanup_and_free_rsComm_members();
+            return 1;
+        }
+
+        new_net_obj->to_server(&rsComm);
+
+        cleanup_and_free_rsComm_members();
+
+        // clang-format off
+        (0 == status)
+            ? log_agent::debug("Agent [{}] exiting with status = {}", getpid(), status)
+            : log_agent::error("Agent [{}] exiting with status = {}", getpid(), status);
+        // clang-format on
+
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+        // This function must be called here due to the use of _exit() (just below). Address Sanitizer (ASan)
+        // relies on std::atexit handlers to report its findings. _exit() does not trigger any of the handlers
+        // registered by ASan, therefore, we manually run ASan just before the agent exits.
+        __lsan_do_leak_check();
+#endif
+
+        // _exit() must be called here due to a design limitation involving forked processes and mutexes.
+        //
+        // It has been observed that if the agent factory is respawned by the main server process, global
+        // mutexes will be locked 99% of the time. These global mutexes can never be unlocked following the
+        // call to fork().
+        //
+        // iRODS makes use of C++ libraries that make assertions around the handling of mutexes (e.g. boost::mutex).
+        // If these assertions are violated, SIGABRT is triggered. For that reason, we cannot allow agents to
+        // execute std::exit() or return up the call chain. Doing so would result in SIGABRT. For the most part,
+        // using _exit() is perfectly fine here because this is the final step in shutting down the agent process.
+        //
+        // The key word here is process. Following this call, the OS will reclaim all memory associated with
+        // the terminated agent process.
+        //_exit((0 == status) ? 0 : 1); // TODO Remove since the process model is different.
+        return (0 == status) ? 0 : 1;
+    } // handle_client_request
+
+    auto cleanup() -> void
+    {
+        std::string svc_role;
+        irods::error ret = get_catalog_service_role(svc_role);
+        if (!ret.ok()) {
+            log_agent::error(PASS(ret).result());
+        }
+
+        if (INITIAL_DONE == InitialState) {
+            close_all_l1_descriptors(*ThisComm);
+
+            // This agent's PID must be erased from all replica access table entries as it will soon no longer exist.
+            irods::experimental::replica_access_table::erase_pid(getpid());
+
+            irods::replica_state_table::deinit();
+
+            disconnectAllSvrToSvrConn();
+        }
+
+        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role) {
+            disconnectRcat();
+        }
+
+        irods::re_plugin_globals->global_re_mgr.call_stop_operations();
+    } // cleanup
+
+    auto cleanupAndExit(int status) -> void
+    {
+        cleanup();
+
+        if (status >= 0) {
+            std::exit(0); // NOLINT(concurrency-mt-unsafe)
+        }
+
+        std::exit(1); // NOLINT(concurrency-mt-unsafe)
+    } // cleanupAndExit
+
+    auto set_rule_engine_globals(RsComm& _comm) -> void
+    {
+        irods::set_server_property<std::string>(irods::CLIENT_USER_NAME_KW, _comm.clientUser.userName);
+        irods::set_server_property<std::string>(irods::CLIENT_USER_ZONE_KW, _comm.clientUser.rodsZone);
+        irods::set_server_property<int>(irods::CLIENT_USER_PRIV_KW, _comm.clientUser.authInfo.authFlag);
+        irods::set_server_property<std::string>(irods::PROXY_USER_NAME_KW, _comm.proxyUser.userName);
+        irods::set_server_property<std::string>(irods::PROXY_USER_ZONE_KW, _comm.proxyUser.rodsZone);
+        irods::set_server_property<int>(irods::PROXY_USER_PRIV_KW, _comm.clientUser.authInfo.authFlag);
+    } // set_rule_engine_globals
+
+    auto agentMain(RsComm& _comm) -> int
+    {
+        int status = 0;
+
+        // compiler backwards compatibility hack
+        // see header file for more details
+        irods::dynamic_cast_hack();
+
+        while (status >= 0) {
+            // set default to the native auth scheme here.
+            if (!_comm.auth_scheme) {
+                _comm.auth_scheme = strdup("native");
+            }
+            // The following is an artifact of the legacy authentication plugins. This operation is
+            // only useful for certain plugins which are not supported in 4.3.0, so it is being
+            // left out of compilation for now. Once we have determined that this is safe to do in
+            // general, this section can be removed.
+#if 0
+            // construct an auth object based on the scheme specified in the comm
+            irods::auth_object_ptr auth_obj;
+            if (const auto err = irods::auth_factory(_comm.auth_scheme, &_comm.rError, auth_obj); !err.ok()) {
+                irods::experimental::api::plugin_lifetime_manager::destroy();
+
+                irods::log(PASSMSG(fmt::format(
+                    "Failed to factory an auth object for scheme: \"{}\".",
+                    _comm.auth_scheme), err));
+
+                return err.code();
+            }
+
+            irods::plugin_ptr ptr;
+            if (const auto err = auth_obj->resolve(irods::AUTH_INTERFACE, ptr); !err.ok()) {
+                irods::experimental::api::plugin_lifetime_manager::destroy();
+
+                irods::log(PASSMSG(fmt::format(
+                    "Failed to resolve the auth plugin for scheme: \"{}\".",
+                    _comm.auth_scheme), err));
+
+                return err.code();
+            }
+
+            irods::auth_ptr auth_plugin = boost::dynamic_pointer_cast<irods::auth>(ptr);
+
+            // Call agent start
+            if (const auto err = auth_plugin->call<const char*>(_comm, irods::AUTH_AGENT_START, auth_obj, ""); !err.ok()) {
+                irods::experimental::api::plugin_lifetime_manager::destroy();
+
+                irods::log(PASSMSG(fmt::format(
+                    "Failed during auth plugin agent start for scheme: \"{}\".",
+                    _comm.auth_scheme), err));
+
+                return err.code();
+            }
+#endif
+
+            // add the user info to the server properties for
+            // reach by the operation wrapper for access by the
+            // dynamic policy enforcement points
+            try {
+                set_rule_engine_globals(_comm);
+            }
+            catch (const irods::exception& e) {
+                log_agent::error("set_rule_engine_globals failed:\n{}", e.what());
+            }
+
+            if (_comm.ssl_do_accept) {
+                status = sslAccept(&_comm);
+                if (status < 0) {
+                    log_agent::error("sslAccept failed in agentMain with status {}", status);
+                }
+                _comm.ssl_do_accept = 0;
+            }
+            if (_comm.ssl_do_shutdown) {
+                status = sslShutdown(&_comm);
+                if (status < 0) {
+                    log_agent::error("sslShutdown failed in agentMain with status {}", status);
+                }
+                _comm.ssl_do_shutdown = 0;
+            }
+
+            status = readAndProcClientMsg(&_comm, READ_HEADER_TIMEOUT);
+            if (status < 0) {
+                if (status == DISCONN_STATUS) {
+                    status = 0;
+                    break;
+                }
+            }
+        }
+
+        irods::experimental::api::plugin_lifetime_manager::destroy();
+
+        // determine if we even need to connect, break the
+        // infinite reconnect loop.
+        if (!resc_mgr.need_maintenance_operations()) {
+            return status;
+        }
+
+        // find the icat host
+        rodsServerHost_t* rodsServerHost = 0;
+        status = getRcatHost(PRIMARY_RCAT, 0, &rodsServerHost);
+        if (status < 0) {
+            log_agent::error(ERROR(status, "getRcatHost failed.").result());
+            return status;
+        }
+
+        // connect to the icat host
+        status = svrToSvrConnect(&_comm, rodsServerHost);
+        if ( status < 0 ) {
+            log_agent::error(ERROR(status, "svrToSvrConnect failed.").result());
+            return status;
+        }
+
+        // call post disconnect maintenance operations before exit
+        status = resc_mgr.call_maintenance_operations(rodsServerHost->conn);
+
+        return status;
+    } // agentMain
 } // anonymous namespace

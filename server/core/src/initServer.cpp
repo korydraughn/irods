@@ -700,26 +700,19 @@ initRsCommWithStartupPack( rsComm_t *rsComm, startupPack_t *startupPack ) {
         rsComm->connectCnt = startupPack->connectCnt;
         rsComm->irodsProt = startupPack->irodsProt;
         rsComm->reconnFlag = startupPack->reconnFlag;
-        rstrcpy( rsComm->proxyUser.userName, startupPack->proxyUser,
-                NAME_LEN );
+        rstrcpy( rsComm->proxyUser.userName, startupPack->proxyUser, NAME_LEN );
         if ( strcmp( startupPack->proxyUser, PUBLIC_USER_NAME ) == 0 ) {
             rsComm->proxyUser.authInfo.authFlag = PUBLIC_USER_AUTH;
         }
-        rstrcpy( rsComm->proxyUser.rodsZone, startupPack->proxyRodsZone,
-                NAME_LEN );
-        rstrcpy( rsComm->clientUser.userName, startupPack->clientUser,
-                NAME_LEN );
+        rstrcpy( rsComm->proxyUser.rodsZone, startupPack->proxyRodsZone, NAME_LEN );
+        rstrcpy( rsComm->clientUser.userName, startupPack->clientUser, NAME_LEN );
         if ( strcmp( startupPack->clientUser, PUBLIC_USER_NAME ) == 0 ) {
             rsComm->clientUser.authInfo.authFlag = PUBLIC_USER_AUTH;
         }
-        rstrcpy( rsComm->clientUser.rodsZone, startupPack->clientRodsZone,
-                NAME_LEN );
-        rstrcpy( rsComm->cliVersion.relVersion, startupPack->relVersion,
-                NAME_LEN );
-        rstrcpy( rsComm->cliVersion.apiVersion, startupPack->apiVersion,
-                NAME_LEN );
-        rstrcpy( rsComm->option, startupPack->option, LONG_NAME_LEN );
-    }
+        rstrcpy( rsComm->clientUser.rodsZone, startupPack->clientRodsZone, NAME_LEN );
+        rstrcpy( rsComm->cliVersion.relVersion, startupPack->relVersion, NAME_LEN );
+        rstrcpy( rsComm->cliVersion.apiVersion, startupPack->apiVersion, NAME_LEN );
+        rstrcpy( rsComm->option, startupPack->option, LONG_NAME_LEN ); }
     else {      /* have to depend on env variable */
         tmpStr = getenv( SP_NEW_SOCK );
         if ( tmpStr == NULL ) {
