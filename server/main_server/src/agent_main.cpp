@@ -450,9 +450,15 @@ namespace
         // SIGHUP
         struct sigaction sa_sighup; // NOLINT(cppcoreguidelines-pro-type-member-init)
         sigemptyset(&sa_sighup.sa_mask);
-        sa_sighup.sa_flags = 0;
+        sa_sighup.sa_flags = SA_SIGINFO;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-        sa_sighup.sa_handler = [](int) { g_reload_config = 1; };
+        sa_sighup.sa_sigaction = [](int, siginfo_t* _siginfo, void*) {
+            // Only respond to SIGHUP if the main server process triggered it.
+            // This keeps the main server and its children in sync.
+            if (getppid() == _siginfo->si_pid) {
+                g_reload_config = 1;
+            }
+        };
         if (sigaction(SIGHUP, &sa_sighup, nullptr) == -1) {
             return -1;
         }
