@@ -116,6 +116,7 @@ namespace
     volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     auto init_logger(const nlohmann::json& _config) -> void;
+    auto load_log_levels_for_loggers() -> void;
     auto setup_signal_handlers() -> int;
     auto createAndSetRECacheSalt() -> irods::error;
     auto init_shared_memory_for_plugin(const nlohmann::json& _plugin_object) -> bool;
@@ -149,12 +150,14 @@ int main(int _argc, char* _argv[])
     // clang-format off
     opts_desc.add_options()
         ("config-directory,f", po::value<std::string>(), "")
-        ("message-queue,q", po::value<std::string>(), "");
+        ("message-queue,q", po::value<std::string>(), "")
+        ("boot-time,b", po::value<std::string>(), "");
     // clang-format on
 
     po::positional_options_description pod;
     pod.add("config-directory", 1);
     pod.add("message-queue", 1);
+    pod.add("boot-time", 1);
 
     try {
         po::variables_map vm;
@@ -181,8 +184,13 @@ int main(int _argc, char* _argv[])
         // Load configuration.
         // TODO Pick one of the following.
         config = json::parse(std::ifstream{fs::path{config_dir_path} / "server_config.json"});
-        irods::environment_properties::instance().capture();
+        irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
         irods::server_properties::instance().capture(); // TODO This MUST NOT assume /etc/irods/server_config.json.
+
+        // TODO Consider removing the need for these along with all options.
+        // All logging should be controlled via the new logging system.
+        rodsLogLevel(LOG_NOTICE);
+    	rodsLogSqlReq(0);
 
         // TODO Init base systems for parent process.
         // - logger
@@ -193,20 +201,8 @@ int main(int _argc, char* _argv[])
         init_logger(config);
 
         log_af::info("{}: Initializing loggers for agent factory.", __func__);
-
-        namespace logger = irods::experimental::log;
-
-        logger::agent::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT));
-        logger::api::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_API));
-        logger::authentication::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AUTHENTICATION));
-        logger::database::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_DATABASE));
-        logger::genquery2::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_GENQUERY2));
-        logger::legacy::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_LEGACY));
-        logger::microservice::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_MICROSERVICE));
-        logger::network::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_NETWORK));
-        logger::resource::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_RESOURCE));
-        logger::rule_engine::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_RULE_ENGINE));
-        logger::sql::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SQL));
+        // TODO These MUST NOT assume /etc/irods/server_config.json.
+        load_log_levels_for_loggers();
 
         log_af::info("{}: Initializing signal handlers for agent factory.", __func__);
         if (setup_signal_handlers() == -1) {
@@ -262,6 +258,12 @@ int main(int _argc, char* _argv[])
             // Only the agent factory is allowed to deinit the shared memory associated
             // with plugins. This is especially important because the NREP's shared memory
             // is shared by all agents running on the server.
+            //
+            // TODO Should the agent factory always do this?
+            // What happens if the agent factory terminates before a agent completes?
+            // The agent could be running policy that relies on the shared memory.
+            // Should the agent factory kill all agents immediately since the agents don't
+            // respond to SIGINT / SIGTERM immediately?
             if (getpid() == pid_af) {
                 deinit_shared_memory_for_plugins();
             }
@@ -305,7 +307,6 @@ int main(int _argc, char* _argv[])
 #endif
         fd_set sockMask;
         FD_ZERO(&sockMask); // NOLINT(readability-isolate-declaration)
-        //SvrSock = svrComm.sock; // TODO Unused - remove
 
         log_af::info("{}: Waiting for client request.", __func__);
         while (true) {
@@ -317,6 +318,13 @@ int main(int _argc, char* _argv[])
 
             if (g_reload_config) {
                 log_af::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
+                irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
+
+                // Must use .reload() to avoid accidentally removing the reCacheSalt
+                // from server_properties.
+                irods::server_properties::instance().reload(); // TODO This MUST NOT assume /etc/irods/server_config.json.
+
+                load_log_levels_for_loggers();
                 g_reload_config = 0;
             }
 
@@ -329,7 +337,11 @@ int main(int _argc, char* _argv[])
             time_out.tv_usec = 500 * 1000;
 
             // FIXME Replace use of select() with epoll() or Boost.Asio.
-            while ((numSock = select(svrComm.sock + 1, &sockMask, nullptr, nullptr, &time_out)) < 0) {
+            while ((numSock = select(svrComm.sock + 1, &sockMask, nullptr, nullptr, &time_out)) == -1) {
+                // "select" modifies the timeval structure, so reset it.
+                time_out.tv_sec  = 0;
+                time_out.tv_usec = 500 * 1000;
+
                 if (EINTR == errno) {
                     log_af::trace("{}: select() interrupted", __func__);
                     // NOLINTNEXTLINE(hicpp-signed-bitwise, cppcoreguidelines-pro-bounds-constant-array-index)
@@ -342,6 +354,9 @@ int main(int _argc, char* _argv[])
             }
 
             if (0 == numSock) {
+                // "select" modifies the timeval structure, so reset it.
+                time_out.tv_sec  = 0;
+                time_out.tv_usec = 500 * 1000;
                 continue;
             }
 
@@ -393,6 +408,25 @@ namespace
         logger::set_server_zone(_config.at(irods::KW_CFG_ZONE_NAME).get<std::string>());
         logger::set_server_hostname(boost::asio::ip::host_name());
     } // init_logger
+
+    auto load_log_levels_for_loggers() -> void
+    {
+        namespace logger = irods::experimental::log;
+
+        // TODO These MUST NOT assume /etc/irods/server_config.json.
+        logger::agent::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT));
+        logger::agent_factory::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT_FACTORY));
+        logger::api::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_API));
+        logger::authentication::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AUTHENTICATION));
+        logger::database::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_DATABASE));
+        logger::genquery2::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_GENQUERY2));
+        logger::legacy::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_LEGACY));
+        logger::microservice::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_MICROSERVICE));
+        logger::network::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_NETWORK));
+        logger::resource::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_RESOURCE));
+        logger::rule_engine::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_RULE_ENGINE));
+        logger::sql::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SQL));
+    } // load_log_levels_for_loggers
 
     auto setup_signal_handlers() -> int
     {
@@ -578,8 +612,7 @@ namespace
         // TODO Unnecessary?
         //resc_mgr.print_local_resources();
 
-        // TODO Re-enable eventually.
-        //printZoneInfo();
+        printZoneInfo();
 
         rodsServerHost_t* rodsServerHost{};
         if (const auto ec = getRcatHost(PRIMARY_RCAT, nullptr, &rodsServerHost); ec < 0 || !rodsServerHost) {
@@ -622,6 +655,8 @@ namespace
         }
         //initAndClearProcLog();
 
+        // TODO Verify this is reading from the correct location.
+        // Consider non-pkg installs and pkg installs.
         setRsCommFromRodsEnv(&_comm);
 
         // Load server API table so that API plugins which are needed to stand up the server are
@@ -668,7 +703,7 @@ namespace
             return SYS_SOCK_LISTEN_ERR;
         }
 
-        log_af::info("rodsServer Release version {} - API Version {} is up", RODS_REL_VERSION, RODS_API_VERSION);
+        log_af::info("{}: Server Release version {} - API Version {} is up", __func__, RODS_REL_VERSION, RODS_API_VERSION);
 
         // TODO Likely unnecessary.
         // Record port, PID, and CWD into a well-known file.
@@ -793,6 +828,7 @@ namespace
         irods::re_plugin_globals.reset(new irods::global_re_plugin_mgr);
         irods::re_plugin_globals->global_re_mgr.call_start_operations();
 
+        // TODO Cannot assume /var/lib/irods.
         status = getRodsEnv(&rsComm.myEnv);
 
         if (status < 0) {

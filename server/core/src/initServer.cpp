@@ -504,7 +504,7 @@ initZone( rsComm_t *rsComm ) {
 int
 initAgent( int processType, rsComm_t *rsComm ) {
 
-    initProcLog();
+    //initProcLog(); // TODO Unnecessary. Remove
 
     int status = initServerInfo( 1, rsComm );
     if ( status < 0 ) {

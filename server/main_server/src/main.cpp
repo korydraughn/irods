@@ -1,8 +1,9 @@
-#include <irods/irods_at_scope_exit.hpp>
-#include <irods/irods_configuration_keywords.hpp>
-#include <irods/irods_logger.hpp>
-#include <irods/irods_server_properties.hpp>
-#include <irods/rcGlobalExtern.h> // For ProcessType
+#include "irods/irods_at_scope_exit.hpp"
+#include "irods/irods_configuration_keywords.hpp"
+#include "irods/irods_environment_properties.hpp"
+#include "irods/irods_logger.hpp"
+#include "irods/irods_server_properties.hpp"
+#include "irods/rcGlobalExtern.h" // For ProcessType
 
 #include <boost/asio.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
@@ -62,8 +63,8 @@ namespace
     volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-    pid_t g_pid_af;
-    pid_t g_pid_ds;
+    pid_t g_pid_af; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    pid_t g_pid_ds; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     auto print_usage() -> void;
     auto print_version_info() -> void;
@@ -77,6 +78,9 @@ namespace
 
 int main(int _argc, char* _argv[])
 {
+    // TODO Do something with this, eventually.
+    [[maybe_unused]] const auto boot_time = std::chrono::system_clock::now();
+
     ProcessType = SERVER_PT; // This process identifies itself as a server.
 
     std::string config_dir_path;
@@ -163,7 +167,13 @@ int main(int _argc, char* _argv[])
         // Load configuration.
         // TODO Pick one of the following.
         config = json::parse(std::ifstream{fs::path{config_dir_path} / "server_config.json"});
+        irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
         irods::server_properties::instance().capture(); // TODO This MUST NOT assume /etc/irods/server_config.json.
+
+        // TODO Consider removing the need for these along with all options.
+        // All logging should be controlled via the new logging system.
+        rodsLogLevel(LOG_NOTICE);
+    	rodsLogSqlReq(0);
 
         // TODO Validate configuration.
 #if 0
@@ -185,6 +195,18 @@ int main(int _argc, char* _argv[])
 
         init_logger(config);
 
+        // Setting up signal handlers here removes the need for reacting to shutdown signals
+        // such as SIGINT and SIGTERM during the startup sequence.
+        if (setup_signal_handlers() == -1) {
+            log_server::error("{}: Error setting up signal handlers for main server process.", __func__);
+            // TODO Wrap in a function.
+            kill(g_pid_af, SIGTERM);
+            //kill(g_pid_ds, SIGTERM);
+            waitpid(g_pid_af, nullptr, 0);
+            //waitpid(g_pid_ds, nullptr, 0);
+            return 1;
+        }
+
         // This message queue gives child processes a way to notify the parent process.
         // This will only be used by the agent factory because iRODS 5.0 won't have a control plane.
         // Or at least that's the plan.
@@ -202,7 +224,8 @@ int main(int _argc, char* _argv[])
         if (0 == g_pid_af) {
             char pname[] = "/usr/sbin/irodsAgent5";
             char parent_mq_name[] = "irodsServer5";
-            char* args[] = {pname, config_dir_path.data(), parent_mq_name, nullptr};
+            char boot_time_str[] = ""; // TODO Forward the boot time.
+            char* args[] = {pname, config_dir_path.data(), parent_mq_name, boot_time_str, nullptr};
             execv(pname, args);
             _exit(1);
         }
@@ -231,18 +254,6 @@ int main(int _argc, char* _argv[])
         log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
 #endif
 
-        // Setting up signal handlers here removes the need for reacting to shutdown signals
-        // such as SIGINT and SIGTERM during the startup sequence.
-        if (setup_signal_handlers() == -1) {
-            log_server::error("{}: Error setting up signal handlers for main server process.", __func__);
-            // TODO Wrap in a function.
-            kill(g_pid_af, SIGTERM);
-            //kill(g_pid_ds, SIGTERM);
-            waitpid(g_pid_af, nullptr, 0);
-            //waitpid(g_pid_ds, nullptr, 0);
-            return 1;
-        }
-
         // Enter parent process main loop.
         // 
         // This process should never introduce threads. Everything it cares about must be handled
@@ -264,6 +275,8 @@ int main(int _argc, char* _argv[])
             if (g_reload_config) {
                 log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
                 kill(g_pid_af, SIGHUP);
+                irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
+                irods::server_properties::instance().reload(); // TODO This MUST NOT assume /etc/irods/server_config.json.
                 g_reload_config = 0;
             }
 #if 0
@@ -505,9 +518,9 @@ Options:
         // This signal is disabled by default.
         struct sigaction sa_sigchld; // NOLINT(cppcoreguidelines-pro-type-member-init)
         sigemptyset(&sa_sigchld.sa_mask);
-        sa_sigchld.sa_flags = SA_NOCLDSTOP; // Do not trigger handler when child receives SIGSTOP.
+        sa_sigchld.sa_flags = 0; // Do not trigger handler when child receives SIGSTOP.
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access, cppcoreguidelines-pro-type-cstyle-cast)
-        sa_sigchld.sa_handler = SIG_IGN;
+        sa_sigchld.sa_handler = [](int) {};
         if (sigaction(SIGCHLD, &sa_sigchld, nullptr) == -1) {
             return -1;
         }
