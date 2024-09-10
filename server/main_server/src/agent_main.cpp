@@ -403,6 +403,8 @@ int main(int _argc, char* _argv[])
 
         // Start shutting everything down.
 
+        // TODO Wait for agents to complete.
+
         log_af::info("{}: Shutdown complete.", __func__);
 
         return 0;
