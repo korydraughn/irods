@@ -140,6 +140,8 @@ int main(int _argc, char* _argv[])
     ProcessType = AGENT_PT; // This process identifies itself as the agent factory or an agent.
 
     std::string config_dir_path;
+    std::string hostname_cache_shm_name;
+    std::string dns_cache_shm_name;
 
     // TODO Boost.ProgramOptions isn't necessary.
 
@@ -150,12 +152,16 @@ int main(int _argc, char* _argv[])
     // clang-format off
     opts_desc.add_options()
         ("config-directory,f", po::value<std::string>(), "")
+        ("hostname-cache-shm-name,x", po::value<std::string>(), "")
+        ("dns-cache-shm-name,y", po::value<std::string>(), "")
         ("message-queue,q", po::value<std::string>(), "")
         ("boot-time,b", po::value<std::string>(), "");
     // clang-format on
 
     po::positional_options_description pod;
     pod.add("config-directory", 1);
+    pod.add("hostname-cache-shm-name", 1);
+    pod.add("dns-cache-shm-name", 1);
     pod.add("message-queue", 1);
     pod.add("boot-time", 1);
 
@@ -169,6 +175,22 @@ int main(int _argc, char* _argv[])
         }
         else {
             fmt::print(stderr, "Error: Missing [CONFIG_FILE_PATH] parameter.");
+            return 1;
+        }
+
+        if (auto iter = vm.find("hostname-cache-shm-name"); std::end(vm) != iter) {
+            hostname_cache_shm_name = std::move(iter->second.as<std::string>());
+        }
+        else {
+            fmt::print(stderr, "Error: Missing [HOSTNAME_CACHE_SHM_NAME] parameter.");
+            return 1;
+        }
+
+        if (auto iter = vm.find("dns-cache-shm-name"); std::end(vm) != iter) {
+            dns_cache_shm_name = std::move(iter->second.as<std::string>());
+        }
+        else {
+            fmt::print(stderr, "Error: Missing [DNS_CACHE_SHM_NAME] parameter.");
             return 1;
         }
     }
@@ -222,13 +244,8 @@ int main(int _argc, char* _argv[])
         // TODO Initialize shared memory systems.
         log_af::info("{}: Initializing shared memory for agent factory.", __func__);
 
-        namespace hnc = irods::experimental::net::hostname_cache;
-        hnc::init("irods_hostname_cache5", irods::get_hostname_cache_shared_memory_size());
-        irods::at_scope_exit deinit_hostname_cache{[] { hnc::deinit(); }};
-
-        namespace dnsc = irods::experimental::net::dns_cache;
-        dnsc::init("irods_dns_cache5", irods::get_dns_cache_shared_memory_size());
-        irods::at_scope_exit deinit_dns_cache{[] { dnsc::deinit(); }};
+        irods::experimental::net::hostname_cache::init_no_create(hostname_cache_shm_name);
+        irods::experimental::net::dns_cache::init_no_create(dns_cache_shm_name);
 
         irods::experimental::replica_access_table::init();
         irods::at_scope_exit deinit_replica_access_table{[] { irods::experimental::replica_access_table::deinit(); }};
@@ -455,6 +472,7 @@ namespace
         sa_sighup.sa_sigaction = [](int, siginfo_t* _siginfo, void*) {
             // Only respond to SIGHUP if the main server process triggered it.
             // This keeps the main server and its children in sync.
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             if (getppid() == _siginfo->si_pid) {
                 g_reload_config = 1;
             }

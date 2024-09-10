@@ -94,6 +94,8 @@ inline const packInstruct_t api_pack_table_init[] = {
     {"ExecRuleExpression_PI", ExecRuleExpression_PI, irods::clearInStruct_noop},
     {"CheckAuthCredentialsInput_PI", CheckAuthCredentialsInput_PI, irods::clearInStruct_noop},
     {"Genquery2Input_PI", Genquery2Input_PI, irods::clearInStruct_noop},
+    {"DelayRuleTagInput_PI", DelayRuleTagInput_PI, irods::clearInStruct_noop},
+    {"DelayRuleTagClearInput_PI", DelayRuleTagClearInput_PI, irods::clearInStruct_noop},
     {PACK_TABLE_END_PI, nullptr, irods::clearInStruct_noop},
 };
 

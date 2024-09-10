@@ -151,4 +151,7 @@
 
 #include "irods/replica_truncate.h"
 
+#include "irods/delay_rule_tag.h"
+#include "irods/delay_rule_tag_clear.h"
+
 #endif	// API_HEADER_ALL_H__

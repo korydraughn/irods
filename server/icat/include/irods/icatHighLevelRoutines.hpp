@@ -411,4 +411,33 @@ auto chl_check_auth_credentials(RsComm& _comm,
 auto chl_execute_genquery2_sql(RsComm& _comm, const char* _sql, const std::vector<std::string>* _values, char** _output)
     -> int;
 
+/// \brief High-level wrapper for tagging delay rules.
+///
+/// Triggers policy associated with database operations.
+///
+/// \param[in]  _comm    The communication object.
+/// \param[in]  _rule_id 
+/// \param[out] _tag     
+///
+/// \return An integer.
+/// \retval  0 On success.
+/// \retval <0 On failure.
+///
+/// \since 5.0.0
+auto chl_delay_rule_tag(RsComm& _comm, const char* _rule_id, const char* _tag) -> int;
+
+/// \brief High-level wrapper for removing tags from delay rules.
+///
+/// Triggers policy associated with database operations.
+///
+/// \param[in]  _comm    The communication object.
+/// \param[in]  _rule_id 
+///
+/// \return An integer.
+/// \retval  0 On success.
+/// \retval <0 On failure.
+///
+/// \since 5.0.0
+auto chl_delay_rule_tag_clear(RsComm& _comm, const char* _rule_id) -> int;
+
 #endif // IRODS_ICAT_HIGHLEVEL_ROUTINES_HPP

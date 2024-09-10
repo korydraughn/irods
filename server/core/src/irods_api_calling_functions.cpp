@@ -1149,3 +1149,13 @@ int call_genquery2_inout(irods::api_entry* _api, rsComm_t* _comm, genquery2Inp_t
 {
     return _api->call_handler<genquery2Inp_t*, char**>(_comm, _inp, _out);
 } // call_genquery2_inout
+
+int call_delay_rule_tag(irods::api_entry* _api, rsComm_t* _comm, delayRuleTagInp_t* _inp)
+{
+    return _api->call_handler<delayRuleTagInp_t*>(_comm, _inp);
+} // call_delay_rule_tag
+
+int call_delay_rule_tag_clear(irods::api_entry* _api, rsComm_t* _comm, delayRuleTagClearInp_t* _inp)
+{
+    return _api->call_handler<delayRuleTagClearInp_t*>(_comm, _inp);
+} // call_delay_rule_tag_clear

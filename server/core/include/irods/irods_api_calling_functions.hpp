@@ -1057,4 +1057,18 @@ int call_genquery2_inout(irods::api_entry*, rsComm_t*, genquery2Inp_t*, char**);
 #  define CALL_GENQUERY2_INOUT nullptr // NOLINT(cppcoreguidelines-macro-usage)
 #endif
 
+#ifdef CREATE_API_TABLE_FOR_SERVER
+int call_delay_rule_tag(irods::api_entry*, rsComm_t*, delayRuleTagInp_t*);
+#  define CALL_DELAY_RULE_TAG call_delay_rule_tag
+#else
+#  define CALL_DELAY_RULE_TAG nullptr // NOLINT(cppcoreguidelines-macro-usage)
+#endif
+
+#ifdef CREATE_API_TABLE_FOR_SERVER
+int call_delay_rule_tag_clear(irods::api_entry*, rsComm_t*, delayRuleTagClearInp_t*);
+#  define CALL_DELAY_RULE_TAG_CLEAR call_delay_rule_tag_clear
+#else
+#  define CALL_DELAY_RULE_TAG_CLEAR nullptr // NOLINT(cppcoreguidelines-macro-usage)
+#endif
+
 #endif // IRODS_API_CALLING_FUNCTIONS_HPP

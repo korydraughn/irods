@@ -28,6 +28,20 @@ namespace irods::experimental::net::hostname_cache
     /// \since 4.2.9
     auto deinit() noexcept -> void;
 
+    /// Initializes the dns cache from an existing shared memory object.
+    ///
+    /// This function should only be called on startup of the server.
+    ///
+    /// \param[in] _shm_name The name of the shared memory to create.
+    ///
+    /// \since 5.0.0
+    auto init_no_create(const std::string_view _shm_name) -> void;
+
+    /// TODO
+    ///
+    /// \since 5.0.0
+    auto shared_memory_name() -> std::string_view;
+
     /// Inserts a new mapping or updates an existing mapping within the hostname cache.
     ///
     /// \param[in] _key           The key that will be mapped to \p _alias.

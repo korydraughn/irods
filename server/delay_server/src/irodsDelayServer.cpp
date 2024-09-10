@@ -29,6 +29,7 @@
 #include "irods/rodsClient.h"
 #include "irods/rodsDef.h"
 #include "irods/rodsErrorTable.h"
+#include "irods/rodsKeyWdDef.h"
 #include "irods/rodsPackTable.h"
 #include "irods/rodsUser.h"
 #include "irods/rsGlobalExtern.hpp"
@@ -41,9 +42,9 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <csignal>
 #include <cstdlib>
 #include <cstring>
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -82,7 +83,8 @@ using json   = nlohmann::json;
 
 namespace
 {
-    std::atomic_bool delay_server_terminated{};
+    volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     void init_logger(
         const bool write_to_stdout,
@@ -126,6 +128,47 @@ namespace
         catch (...) {
         }
     } // init_logger
+
+    int setup_signal_handlers()
+    {
+        // DO NOT memset sigaction structures!
+
+        // SIGINT
+        struct sigaction sa_terminate; // NOLINT(cppcoreguidelines-pro-type-member-init)
+        sigemptyset(&sa_terminate.sa_mask);
+        sa_terminate.sa_flags = 0;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+        sa_terminate.sa_handler = [](int) { g_terminate = 1; };
+        if (sigaction(SIGINT, &sa_terminate, nullptr) == -1) {
+            return -1;
+        }
+
+        // SIGTERM
+        if (sigaction(SIGTERM, &sa_terminate, nullptr) == -1) {
+            return -1;
+        }
+
+        // SIGHUP
+        struct sigaction sa_sighup; // NOLINT(cppcoreguidelines-pro-type-member-init)
+        sigemptyset(&sa_sighup.sa_mask);
+        sa_sighup.sa_flags = SA_SIGINFO;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+        sa_sighup.sa_sigaction = [](int, siginfo_t* _siginfo, void*) {
+            // Only respond to SIGHUP if the main server process triggered it.
+            // This keeps the main server and its children in sync.
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+            if (getppid() == _siginfo->si_pid) {
+                g_reload_config = 1;
+            }
+        };
+        if (sigaction(SIGHUP, &sa_sighup, nullptr) == -1) {
+            return -1;
+        }
+
+        // TODO Handle other signals.
+
+        return 0;
+    } // setup_signal_handlers
 
     std::optional<std::string_view> next_executor()
     {
@@ -325,6 +368,9 @@ namespace
                 addKeyVal(&rule_exec_mod_inp.condInput, RULE_PRIORITY_KW, "5");
             }
 
+            // Clear the tag so the rule can be processed in the future.
+            addKeyVal(&rule_exec_mod_inp.condInput, RULE_EXE_STATUS_KW, "");
+
             addKeyVal(&rule_exec_mod_inp.condInput, RULE_LAST_EXE_TIME_KW, current_time);
             addKeyVal(&rule_exec_mod_inp.condInput, RULE_EXE_TIME_KW, next_time);
             if(repeat_rule) {
@@ -503,7 +549,7 @@ namespace
         // Execute rule.
         logger::delay_server::trace("Executing rule [rule_id={}].", _inp.ruleExecId);
         auto status = rcExecRuleExpression(&_comm, &exec_rule);
-        if (delay_server_terminated) {
+        if (g_terminate) {
             logger::delay_server::info("Rule [{}] completed with status [{}] but delay server was terminated.",
                                        _inp.ruleExecId, status);
         }
@@ -553,7 +599,7 @@ namespace
 
     void execute_rule(irods::delay_queue& queue, const std::string_view rule_id)
     {
-        if (delay_server_terminated) {
+        if (g_terminate) {
             return;
         }
 
@@ -566,10 +612,25 @@ namespace
         ix::client_connection conn = get_new_connection(std::nullopt);
 
         try {
+            // TODO Attach the hostname to the delay rule in the catalog only if the exe_status column is null.
+            // This is used to keep other delay servers from picking up delay rules being executed. If the
+            // attach operation fails (i.e. errors out or another delay server grabs it first), remove the
+            // delay rule from the in-memory queue and return.
+            DelayRuleTagInput input{};
+            rule_id.copy(input.rule_id, sizeof(DelayRuleTagInput::rule_id));
+            std::strcpy(input.tag, "X");
+
+            // TODO Replace use of "tag" with "lock".
+            if (const auto ec = rc_delay_rule_tag(static_cast<RcComm*>(conn), &input); ec < 0) {
+                logger::delay_server::trace("{}: Rule ID [{}] has already been tagged. Removing from queue.", __func__, rule_id);
+                queue.dequeue_rule(std::string(rule_exec_submit_inp.ruleExecId));
+                return;
+            }
+
             rule_exec_submit_inp = fill_rule_exec_submit_inp(conn, rule_id);
         }
         catch (const irods::exception& e) {
-            if (delay_server_terminated) {
+            if (g_terminate) {
                 // Get out!
                 return;
             }
@@ -607,7 +668,7 @@ namespace
         }
 
         logger::delay_server::debug("rule [{}] complete", rule_exec_submit_inp.ruleExecId);
-        if (!delay_server_terminated) {
+        if (!g_terminate) {
             logger::delay_server::debug("dequeueing rule [{}]", rule_exec_submit_inp.ruleExecId);
             queue.dequeue_rule(std::string(rule_exec_submit_inp.ruleExecId));
         }
@@ -670,8 +731,14 @@ namespace
             });
         };
 
+        // TODO
+        // Update or replace query_processor with a version that uses GenQuery2.
+        // We need to be able to search for NULL entries.
+        //
+        // Alternatively, whenever a delay rule is inserted, we put an empty string
+        // in the RULE_EXE_STATUS column.
         const auto qstr = fmt::format("SELECT RULE_EXEC_ID, ORDER_DESC(RULE_EXEC_PRIORITY) "
-                                      "WHERE RULE_EXEC_TIME <= '{}'", std::time(nullptr));
+                                      "WHERE RULE_EXEC_TIME <= '{}' AND RULE_EXEC_STATUS != 'X'", std::time(nullptr));
 
         return {qstr, job};
     } // make_delay_queue_query_processor
@@ -752,11 +819,9 @@ int main(int argc, char** argv)
 
     load_client_api_plugins();
 
-    const auto signal_exit_handler = [](int) { delay_server_terminated.store(true); };
-    signal(SIGINT, signal_exit_handler);
-    signal(SIGHUP, signal_exit_handler);
-    signal(SIGTERM, signal_exit_handler);
-    signal(SIGUSR1, signal_exit_handler);
+    if (setup_signal_handlers() == -1) {
+        logger::delay_server::error("{}: Error setting up signal handlers for delay server.", __func__);
+    }
 
     irods::api_entry_table&  api_tbl = irods::get_client_api_table();
     irods::pack_entry_table& pk_tbl = irods::get_pack_table();
@@ -783,7 +848,7 @@ int main(int argc, char** argv)
         // Loop until the server is signaled to shutdown or the max amount of time
         // to sleep has been reached.
         while (true) {
-            if (delay_server_terminated.load()) {
+            if (g_terminate) {
                 logger::delay_server::info("Delay server received shutdown signal.");
                 return;
             }
@@ -833,9 +898,14 @@ int main(int argc, char** argv)
     irods::delay_queue queue{queue_size_in_bytes};
 
     try {
-        while (!delay_server_terminated) {
+        while (!g_terminate) {
             try {
-                irods::server_properties::instance().capture();
+                if (g_reload_config) {
+                    // TODO This MUST NOT assume /etc/irods/server_config.json.
+                    irods::server_properties::instance().capture();
+                    g_reload_config = 0;
+                }
+
                 if (!is_local_server_defined_as_delay_server_leader()) {
                     logger::delay_server::warn("This server is not the leader. Terminating...");
                     break;
