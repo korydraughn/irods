@@ -37,6 +37,7 @@
 #include "irods/ruleExecSubmit.h"
 #include "irods/server_utilities.hpp"
 #include "irods/thread_pool.hpp"
+#include "irods/genquery2.h"
 
 #include <boost/filesystem.hpp>
 #include <fmt/format.h>
@@ -688,6 +689,12 @@ namespace
                 return;
             }
 
+            // TODO This check may be incorrect. Need to think about it more.
+            // Skip any rules which have been tagged.
+            if ("X" == result[1]) {
+                return;
+            }
+
             logger::delay_server::debug("Enqueueing rule ID [{}]", rule_id);
 
             try {
@@ -737,8 +744,8 @@ namespace
         //
         // Alternatively, whenever a delay rule is inserted, we put an empty string
         // in the RULE_EXE_STATUS column.
-        const auto qstr = fmt::format("SELECT RULE_EXEC_ID, ORDER_DESC(RULE_EXEC_PRIORITY) "
-                                      "WHERE RULE_EXEC_TIME <= '{}' AND RULE_EXEC_STATUS != 'X'", std::time(nullptr));
+        const auto qstr = fmt::format("SELECT RULE_EXEC_ID, RULE_EXEC_STATUS, ORDER_DESC(RULE_EXEC_PRIORITY) "
+                                      "WHERE RULE_EXEC_TIME <= '{}'", std::time(nullptr));
 
         return {qstr, job};
     } // make_delay_queue_query_processor
@@ -827,6 +834,7 @@ int main(int argc, char** argv)
     irods::pack_entry_table& pk_tbl = irods::get_pack_table();
     init_api_table(api_tbl, pk_tbl);
 
+    // TODO This MUST react to reloads of the server configuration via SIGHUP.
     const auto sleep_time = [] {
         try {
             return irods::get_advanced_setting<const int>(irods::KW_CFG_DELAY_SERVER_SLEEP_TIME_IN_SECONDS);
@@ -841,6 +849,7 @@ int main(int argc, char** argv)
         return irods::default_delay_server_sleep_time_in_seconds;
     };
 
+    // TODO This MUST react to reloads of the server configuration via SIGHUP.
     const auto go_to_sleep = [&sleep_time] {
         const auto start_time = std::chrono::system_clock::now();
         const auto allowed_sleep_time = std::chrono::seconds{sleep_time()};
@@ -862,6 +871,7 @@ int main(int argc, char** argv)
         }
     };
 
+    // TODO This MUST react to reloads of the server configuration via SIGHUP.
     const auto number_of_concurrent_executors = [] {
         try {
             return irods::get_advanced_setting<const int>(irods::KW_CFG_NUMBER_OF_CONCURRENT_DELAY_RULE_EXECUTORS);
@@ -876,8 +886,10 @@ int main(int argc, char** argv)
         return irods::default_number_of_concurrent_delay_executors;
     }();
 
+    // TODO This MUST react to reloads of the server configuration via SIGHUP.
     irods::thread_pool thread_pool{number_of_concurrent_executors};
 
+    // TODO This MUST react to reloads of the server configuration via SIGHUP.
     const auto queue_size_in_bytes = []() -> int {
         try {
             const auto bytes = irods::get_advanced_setting<int>(irods::KW_CFG_MAX_SIZE_OF_DELAY_QUEUE_IN_BYTES);
@@ -895,12 +907,14 @@ int main(int argc, char** argv)
         return 0;
     }();
 
+    // TODO This MUST react to reloads of the server configuration via SIGHUP.
     irods::delay_queue queue{queue_size_in_bytes};
 
     try {
         while (!g_terminate) {
             try {
                 if (g_reload_config) {
+                    logger::delay_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
                     // TODO This MUST NOT assume /etc/irods/server_config.json.
                     irods::server_properties::instance().capture();
                     g_reload_config = 0;
@@ -910,6 +924,8 @@ int main(int argc, char** argv)
                     logger::delay_server::warn("This server is not the leader. Terminating...");
                     break;
                 }
+
+#if 1
                 auto delay_queue_processor = make_delay_queue_query_processor(thread_pool, queue);
 
                 logger::delay_server::trace("Gathering rules for execution ...");
@@ -925,6 +941,23 @@ int main(int argc, char** argv)
                         logger::delay_server::error("Executing delayed rule failed - [{}]::[{}]", code, msg);
                     }
                 }
+#else
+                irods::experimental::client_connection conn;
+
+                Genquery2Input input{};
+
+                auto query_str = fmt::format("select DELAY_RULE_ID, DELAY_RULE_PRIORITY where DELAY_RULE_EXE_TIME <= '{}' and (DELAY_RULE_STATUS is null or DELAY_RULE_STATUS = '')", std::time(nullptr));
+                input.query_string = query_str.data();
+                
+                char* output{};
+                irods::at_scope_exit free_output{[&output] { std::free(output); }};
+
+                if (const auto ec = rc_genquery2(static_cast<RcComm*>(conn), &input, &output); ec < 0) {
+                }
+
+                const auto rows = json::parse(output);
+
+#endif
             }
             catch (const irods::exception& e) {
                 logger::delay_server::error(e.what());
