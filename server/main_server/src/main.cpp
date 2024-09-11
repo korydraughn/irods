@@ -283,9 +283,11 @@ int main(int _argc, char* _argv[])
         // THE PARENT PROCESS IS THE ONLY PROCESS THAT SHOULD/CAN REACT TO SIGNALS!
         // EVERYTHING IS PROPAGATED THROUGH/FROM THE PARENT PROCESS!
 
+#if 0
         std::array<char, max_msg_size> msg_buf{};
         boost::interprocess::message_queue::size_type recvd_size{};
         unsigned int priority{};
+#endif
 
         while (true) {
             if (g_terminate) {
@@ -315,7 +317,9 @@ int main(int _argc, char* _argv[])
 #endif
             // TODO This proves there is a bug in the delay server migration logic.
             // The following lines will be removed before merging.
-            // The issue with the migration logic is that it leads to an unused forked process when the successor is set to an invalid server. The iRODS server still works, it's just we get an extra child process that serves no purpose.
+            // The issue with the migration logic is that it leads to an unused forked process when
+            // the successor is set to an invalid server. The iRODS server still works, it's just we
+            // get an extra child process that serves no purpose.
             std::this_thread::sleep_for(std::chrono::seconds{1});
             continue;
 

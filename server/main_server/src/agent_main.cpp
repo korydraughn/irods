@@ -292,11 +292,12 @@ int main(int _argc, char* _argv[])
         // Initialize zone information for request processing.
         // initServerMain starts the listening socket and stores it in svrComm.
         // TODO initServerMain can likely be simplified.
-        RsComm svrComm; // RsComm contains a std::string, so never memset this type!
+        RsComm svrComm{}; // TODO RsComm contains a std::string, so never memset this type!
         if (const auto ec = initServerMain(svrComm, false, false); ec < 0) {
             log_af::error("{}: initServerMain error. [error code={}]", __func__, ec);
             return 1;
         }
+
 #if 0
         // This message queue gives child processes a way to notify the parent process.
         // This will only be used by the agent factory because iRODS 5.0 won't have a control plane.
@@ -685,6 +686,7 @@ namespace
         // Consider non-pkg installs and pkg installs.
         setRsCommFromRodsEnv(&_comm);
 
+#if 0
         // Load server API table so that API plugins which are needed to stand up the server are
         // available for use.
         irods::api_entry_table& RsApiTable = irods::get_server_api_table();
@@ -708,6 +710,7 @@ namespace
             log_af::error("{}: initServer error. status = {}", __func__, status);
             return 1;
         }
+#endif
 
         int zone_port;
         try {
@@ -1073,6 +1076,7 @@ namespace
             if (!_comm.auth_scheme) {
                 _comm.auth_scheme = strdup("native");
             }
+
             // The following is an artifact of the legacy authentication plugins. This operation is
             // only useful for certain plugins which are not supported in 4.3.0, so it is being
             // left out of compilation for now. Once we have determined that this is safe to do in

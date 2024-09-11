@@ -129,9 +129,8 @@ int initServerInfo(int processType, rsComm_t* rsComm)
 
         /* queue the local zone */
         status = queueZone(zone_name.c_str(), zone_port, nullptr, nullptr);
-            rodsLog(LOG_NOTICE, "initServerInfo - queueZone failed %d", status);
         if (status < 0) {
-            rodsLog(LOG_NOTICE, "initServerInfo - queueZone failed %d", status);
+            rodsLog(LOG_DEBUG, "initServerInfo - queueZone failed %d", status);
             // do not error out
         }
     }
@@ -184,7 +183,7 @@ int initServerInfo(int processType, rsComm_t* rsComm)
     }
 
     // TODO This function invokes acAclPolicy which guarantees GenQuery1 honors
-    // the permission model.
+    // the permission model. acAclPolicy is invoked the first time _rsGenQuery is invoked.
     status = initZone( rsComm );
     if ( status < 0 ) {
         rodsLog( LOG_SYS_FATAL,
