@@ -590,10 +590,10 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     log_ns::set_error_object(&rsComm.rError);
     irods::at_scope_exit release_error_stack{[] { log_ns::set_error_object(nullptr); }};
 
-    //std::memset(&rsComm, 0, sizeof(RsComm));
     rsComm.thread_ctx = static_cast<thread_context*>(std::malloc(sizeof(thread_context)));
 
-    status = initRsCommWithStartupPack(&rsComm, nullptr);
+    bool require_cs_neg = false;
+    status = initRsCommWithStartupPack(&rsComm, nullptr, require_cs_neg);
 
     // manufacture a network object for comms
     irods::network_object_ptr net_obj;
@@ -670,7 +670,7 @@ int runIrodsAgentFactory(sockaddr_un agent_addr)
     // this scope block makes valgrind happy
     {
         std::string neg_results;
-        ret = irods::client_server_negotiation_for_server(net_obj, neg_results);
+        ret = irods::client_server_negotiation_for_server(net_obj, neg_results, require_cs_neg);
         if (!ret.ok() || neg_results == irods::CS_NEG_FAILURE) {
             // send a 'we failed to negotiate' message here??
             // or use the error stack rule engine thingie

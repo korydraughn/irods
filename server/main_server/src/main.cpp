@@ -313,6 +313,12 @@ int main(int _argc, char* _argv[])
                 }
             }
 #endif
+            // TODO This proves there is a bug in the delay server migration logic.
+            // The following lines will be removed before merging.
+            // The issue with the migration logic is that it leads to an unused forked process when the successor is set to an invalid server. The iRODS server still works, it's just we get an extra child process that serves no purpose.
+            std::this_thread::sleep_for(std::chrono::seconds{1});
+            continue;
+
             //
             // Execute delay server migration algorithm.
             //
@@ -361,7 +367,7 @@ int main(int _argc, char* _argv[])
                                 }
                             }
 
-                            if (launch_delay_server) {
+                            if (launch_delay_server || 0 == g_pid_ds) {
                                 log_server::info("{}: Launching Delay Server.", __func__);
                                 g_pid_ds = fork();
                                 if (0 == g_pid_ds) {
@@ -483,7 +489,7 @@ int main(int _argc, char* _argv[])
                             }
                         }
 
-                        if (launch_delay_server) {
+                        if (launch_delay_server || 0 == g_pid_ds) {
                             log_server::info("{}: Launching Delay Server.", __func__);
                             g_pid_ds = fork();
                             if (0 == g_pid_ds) {

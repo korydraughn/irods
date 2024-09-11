@@ -69,6 +69,7 @@ namespace irods
     error client_server_negotiation_for_server(
         irods::network_object_ptr,  // server connection handle
         std::string&,               // results of negotiation
+        bool,                       // boolean indicating whether client-server negotiation is needed
         RsComm* = nullptr);         // optional RsComm initialized during agent startup (maintains compatibility with rodsAgent.cpp)
 
     /// =-=-=-=-=-=-=-

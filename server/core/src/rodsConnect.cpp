@@ -296,6 +296,7 @@ int queueZone(const char* zoneName,
 
     if (primaryServerHost == NULL) {
         rodsLog(LOG_DEBUG, "queueZone:  primaryServerHost for %s is NULL", zoneName);
+        // TODO This is where iRODS 5 currently fails. This leads to acAclPolicy not running.
         return SYS_INVALID_SERVER_HOST;
     }
     else {

@@ -836,10 +836,10 @@ namespace
         rsComm.thread_ctx = static_cast<thread_context*>(std::malloc(sizeof(thread_context)));
 
         //int status = initRsCommWithStartupPack(&rsComm, nullptr); // TODO This call relies on reading env variables to init rsComm.
-        int status = initRsCommWithStartupPack(&rsComm, startupPack); // This version just uses the startupPack.
+        bool require_cs_neg = false;
+        int status = initRsCommWithStartupPack(&rsComm, startupPack, require_cs_neg); // This version just uses the startupPack.
 
         // manufacture a network object for comms
-        //irods::network_object_ptr net_obj;
         ret = irods::network_factory(&rsComm, net_obj);
         if (!ret.ok()) {
             log_agent::error(PASS(ret).result());
@@ -917,8 +917,8 @@ namespace
         // this scope block makes valgrind happy
         {
             std::string neg_results;
-            ret = irods::client_server_negotiation_for_server(net_obj, neg_results, &rsComm);
-            if (!ret.ok() || neg_results == irods::CS_NEG_FAILURE) {
+            ret = irods::client_server_negotiation_for_server(net_obj, neg_results, require_cs_neg, &rsComm);
+            if (!ret.ok() || irods::CS_NEG_FAILURE == neg_results) {
                 // send a 'we failed to negotiate' message here??
                 // or use the error stack rule engine thingie
                 log_agent::error(PASS(ret).result());

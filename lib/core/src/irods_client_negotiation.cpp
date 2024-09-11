@@ -237,7 +237,7 @@ namespace irods
 #else
         // if it is set then check for our magic token which requests
         // the negotiation, if it is not the magic token, move on
-        return _neg && std::string_view{_neg}.find(REQ_SVR_NEG) != std::string_view::npos;
+        return _neg && std::string_view{_neg} == REQ_SVR_NEG;
 #endif
     } // do_client_server_negotiation_for_server
 
