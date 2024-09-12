@@ -7,6 +7,8 @@
 #include "irods/irods_environment_properties.hpp"
 #include "irods/irods_logger.hpp"
 #include "irods/irods_server_properties.hpp"
+#include "irods/irods_client_api_table.hpp"
+#include "irods/irods_server_api_table.hpp"
 #include "irods/plugins/api/delay_server_migration_types.h"
 #include "irods/plugins/api/grid_configuration_types.h"
 #include "irods/rcConnect.h" // For RcComm
@@ -90,7 +92,7 @@ namespace
                                          std::string_view _successor) -> void;
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>;
     auto get_delay_server_successor(RcComm& _comm) -> std::optional<std::string>;
-    auto is_delay_server_running_in_zone() -> bool;
+    auto launch_delay_server() -> void;
 } // anonymous namespace
 
 int main(int _argc, char* _argv[])
@@ -232,9 +234,29 @@ int main(int _argc, char* _argv[])
         dnsc::init("irods_dns_cache5", irods::get_dns_cache_shared_memory_size());
         //irods::at_scope_exit deinit_dns_cache{[] { dnsc::deinit(); }};
 
+#if 0
         // The main server only relies on client connections, so we load the client-side
         // API plugins. The server-side APIs are not needed.
         load_client_api_plugins();
+#else
+        // Load server API table so that API plugins which are needed to stand up the server are
+        // available for use.
+        auto& server_api_table = irods::get_server_api_table();
+        auto& pack_table = irods::get_pack_table();
+        if (const auto res = irods::init_api_table(server_api_table, pack_table, false); !res.ok()) {
+            log_server::error("{}: {}", __func__, res.result());
+            return 1;
+        }
+
+        // If this is a catalog service consumer, the client API table should be loaded so that
+        // client calls can be made to the catalog service provider as part of the server
+        // initialization process.
+        auto& client_api_table = irods::get_client_api_table();
+        if (const auto res = irods::init_api_table(client_api_table, pack_table, false); !res.ok()) {
+            log_server::error("{}: {}", __func__, res.result());
+            return 1;
+        }
+#endif
 
         // This message queue gives child processes a way to notify the parent process.
         // This will only be used by the agent factory because iRODS 5.0 won't have a control plane.
@@ -289,6 +311,10 @@ int main(int _argc, char* _argv[])
         unsigned int priority{};
 #endif
 
+        // dsm = Short for delay server migration
+        // This is used to control the frequency of the delay server migration logic.
+        auto dsm_time_start = std::chrono::steady_clock::now();
+
         while (true) {
             if (g_terminate) {
                 log_server::info("{}: Received shutdown instruction. Exiting server main loop.", __func__);
@@ -315,214 +341,131 @@ int main(int _argc, char* _argv[])
                 }
             }
 #endif
-            // TODO This proves there is a bug in the delay server migration logic.
-            // The following lines will be removed before merging.
-            // The issue with the migration logic is that it leads to an unused forked process when
-            // the successor is set to an invalid server. The iRODS server still works, it's just we
-            // get an extra child process that serves no purpose.
-            std::this_thread::sleep_for(std::chrono::seconds{1});
-            continue;
 
             //
             // Execute delay server migration algorithm.
             //
 
-            // TODO
-            // Wrap this code in a timer-based conditional. The delay server migration logic
-            // should not run on every iteration of the loop.
+            using namespace std::chrono_literals;
 
-            const auto hostname = boost::asio::ip::host_name();
-            std::optional<std::string> leader;
-            std::optional<std::string> successor;
+            if (auto now = std::chrono::steady_clock::now(); now - dsm_time_start > 10s) {
+                dsm_time_start = now;
 
-            try {
-                irods::experimental::client_connection conn;
-                leader = get_delay_server_leader(conn);
-                successor = get_delay_server_successor(conn);
+                const auto hostname = boost::asio::ip::host_name();
+                std::optional<std::string> leader;
+                std::optional<std::string> successor;
 
-                if (leader && successor) {
-                    log_server::debug("{}: Delay server leader [{}] and successor [{}].", __func__, *leader, *successor);
+                try {
+                    irods::experimental::client_connection conn;
+                    leader = get_delay_server_leader(conn);
+                    successor = get_delay_server_successor(conn);
 
-                    // 4 cases:
-                    // L  S
-                    // ----
-                    // 0  0 (invalid state / no-op)
-                    // 1  0 (migration complete)
-                    // 0  1 (leader has shut down ds, successor launching ds)
-                    // 1  1 (leader running ds, admin requested migration)
+                    if (leader && successor) {
+                        log_server::debug("{}: Delay server leader [{}] and successor [{}].", __func__, *leader, *successor);
 
-                    // This server is the leader and may be running a delay server.
-                    if (hostname == *leader) {
-                        if (hostname == *successor) {
-                            // Clear successor entry in catalog. This isn't necessary, but helps
-                            // keep the admin from becoming confused.
-                            set_delay_server_migration_info(conn, KW_DELAY_SERVER_MIGRATION_IGNORE, "");
+                        // 4 cases:
+                        // L  S
+                        // ----
+                        // 0  0 (invalid state / no-op)
+                        // 1  0 (migration complete)
+                        // 0  1 (leader has shut down ds, successor launching ds)
+                        // 1  1 (leader running ds, admin requested migration)
 
-                            // TODO Put the following logic in a function.
-                            // Launch the delay server if not running already.
-                            bool launch_delay_server = false;
+                        // This server is the leader and may be running a delay server.
+                        if (hostname == *leader) {
+                            if (hostname == *successor) {
+                                launch_delay_server();
 
-                            // Verify the delay server is running. If not, launch it.
-                            if (g_pid_ds > 0) {
-                                if (const auto ec = kill(g_pid_ds, 0); ec == -1) {
-                                    if (EPERM == errno || ESRCH == errno) {
-                                        launch_delay_server = true;
-                                    }
+                                // Clear successor entry in catalog. This isn't necessary, but helps
+                                // keep the admin from becoming confused.
+                                if (g_pid_ds > 0) {
+                                    set_delay_server_migration_info(conn, KW_DELAY_SERVER_MIGRATION_IGNORE, "");
                                 }
                             }
+                            else if (!successor->empty()) {
+                                // Migration requested. Stop local delay server if running and clear the
+                                // leader entry in the catalog.
+                                if (g_pid_ds > 0) {
+                                    kill(g_pid_ds, SIGTERM);
 
-                            if (launch_delay_server || 0 == g_pid_ds) {
-                                log_server::info("{}: Launching Delay Server.", __func__);
-                                g_pid_ds = fork();
-                                if (0 == g_pid_ds) {
-                                    char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                                    char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
-                                    execv(pname, args);
-                                    _exit(1);
+                                    // Wait for delay server to complete current tasks. Depending on the workload, this
+                                    // could take minutes, hours, days to complete.
+                                    int status = 0;
+                                    waitpid(g_pid_ds, &status, 0);
+                                    log_server::info("Delay server has completed shutdown [exit_code={}].", WEXITSTATUS(status));
+                                    g_pid_ds = 0;
                                 }
-                                else if (g_pid_ds > 0) {
-                                    log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
-                                    // This step is unnecessary due to the current state.
-                                    //set_delay_server_migration_info(conn, hostname, "");
-                                }
-                                else {
-                                    log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
-                                }
+
+                                // TODO This isn't necessary if we can get task locking working (i.e. delay servers
+                                // lock tasks just before execution).
+                                //
+                                // TODO However, we can uncomment the following if the server can confirm the host
+                                // doesn't exist in the zone.
+                                //
+                                // Clear the leader entry. This acts as a signal to the successor server
+                                // that it is safe to launch the delay server.
+                                //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
                             }
-                        }
-                        else if (!successor->empty()) {
-                            // Migration requested. Stop local delay server if running and clear the
-                            // leader entry in the catalog.
-                            if (g_pid_ds > 0) {
-                                kill(g_pid_ds, SIGTERM);
-                            }
-
-                            // Wait for delay server to complete current tasks. Depending on the workload, this
-                            // could take minutes, hours, days to complete.
-                            int status = 0;
-                            waitpid(g_pid_ds, &status, 0);
-                            log_server::info("Delay server has completed shutdown [exit_code={}].", WEXITSTATUS(status));
-                            g_pid_ds = 0;
-
-                            // TODO This isn't necessary if we can get task locking working (i.e. delay servers
-                            // lock tasks just before execution).
-                            //
-                            // Clear the leader entry. This acts as a signal to the successor server
-                            // that it is safe to launch the delay server.
-                            //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
-                        }
-                        else {
-                            bool launch_delay_server = false;
-
-                            // Verify the delay server is running. If not, launch it.
-                            if (g_pid_ds > 0) {
-                                if (const auto ec = kill(g_pid_ds, 0); ec == -1) {
-                                    if (EPERM == errno || ESRCH == errno) {
-                                        launch_delay_server = true;
-                                    }
-                                }
-                            }
-
-                            if (launch_delay_server || 0 == g_pid_ds) {
-                                log_server::info("{}: Launching Delay Server.", __func__);
-                                g_pid_ds = fork();
-                                if (0 == g_pid_ds) {
-                                    char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                                    char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
-                                    execv(pname, args);
-                                    _exit(1);
-                                }
-                                else if (g_pid_ds > 0) {
-                                    log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
-                                    // This step is unnecessary due to the current state.
-                                    //set_delay_server_migration_info(conn, hostname, "");
-                                }
-                                else {
-                                    log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
-                                }
+                            else {
+                                launch_delay_server();
                             }
                         }
-                    }
-                    else if (hostname == *successor) {
-                        // leader == successor is covered by first if-branch.
-
+                        else if (hostname == *successor) {
+                            // leader == successor is covered by first if-branch.
 #if 0
-                        if (leader->empty()) {
-                            // The leader's delay server has been shut down. Launch the delay server if
-                            // not running already.
+                            if (leader->empty()) {
+                                // The leader's delay server has been shut down. Launch the delay server if
+                                // not running already.
 
-                            log_server::info("{}: Launching Delay Server.", __func__);
-                            g_pid_ds = fork();
-                            if (0 == g_pid_ds) {
-                                char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                                char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
-                                execv(pname, args);
-                                _exit(1);
-                            }
-                            else if (g_pid_ds > 0) {
-                                log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
-                                set_delay_server_migration_info(conn, hostname, "");
-                            }
-                            else {
-                                log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
-                            }
-                        }
-                        else {
-                            // TODO
-                            // Determine when it's safe to auto-promote the successor to the leader
-                            // (i.e. the leader value is never cleared).
-
-                            // 1. Connect to leader.
-                            // 2. Use API to get the PID of the delay server.
-                            // 3. If we find a PID for the delay server, try again later (because we're waiting for it to shutdown).
-                            // 4. If we fail to reach the leader (due to network, etc), start counting failures.
-                            // 5. If the successor fails to get the PID N times, auto-promote successor to leader.
-                        }
-#else
-                        // Delay servers lock tasks before execution. This allows the successor server
-                        // to launch a delay server without duplicating work.
-
-                        bool launch_delay_server = false;
-
-                        // Verify the delay server is running. If not, launch it.
-                        if (g_pid_ds > 0) {
-                            if (const auto ec = kill(g_pid_ds, 0); ec == -1) {
-                                if (EPERM == errno || ESRCH == errno) {
-                                    launch_delay_server = true;
+                                log_server::info("{}: Launching Delay Server.", __func__);
+                                g_pid_ds = fork();
+                                if (0 == g_pid_ds) {
+                                    char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
+                                    char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
+                                    execv(pname, args);
+                                    _exit(1);
+                                }
+                                else if (g_pid_ds > 0) {
+                                    log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
+                                    set_delay_server_migration_info(conn, hostname, "");
+                                }
+                                else {
+                                    log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
                                 }
                             }
-                        }
+                            else {
+                                // TODO
+                                // Determine when it's safe to auto-promote the successor to the leader
+                                // (i.e. the leader value is never cleared).
 
-                        if (launch_delay_server || 0 == g_pid_ds) {
-                            log_server::info("{}: Launching Delay Server.", __func__);
-                            g_pid_ds = fork();
-                            if (0 == g_pid_ds) {
-                                char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                                char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
-                                execv(pname, args);
-                                _exit(1);
+                                // 1. Connect to leader.
+                                // 2. Use API to get the PID of the delay server.
+                                // 3. If we find a PID for the delay server, try again later (because we're waiting for it to shutdown).
+                                // 4. If we fail to reach the leader (due to network, etc), start counting failures.
+                                // 5. If the successor fails to get the PID N times, auto-promote successor to leader.
                             }
-                            else if (g_pid_ds > 0) {
-                                log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
+#else
+                            // Delay servers lock tasks before execution. This allows the successor server
+                            // to launch a delay server without duplicating work.
+                            launch_delay_server();
+
+                            if (g_pid_ds > 0) {
                                 set_delay_server_migration_info(conn, hostname, "");
                             }
-                            else {
-                                log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
-                            }
-                        }
 #endif
-                    }
-                    else {
-                        // TODO Reap child processes: agent factory, delay server
-                        // TODO Fork agent factory and/or delay server again if necessary.
+                        }
+                        else {
+                            // TODO Reap child processes: agent factory, delay server
+                            // TODO Fork agent factory and/or delay server again if necessary.
+                        }
                     }
                 }
-            }
-            catch (const irods::exception& e) {
-                log_server::error("{}: {}", __func__, e.client_display_what());
-            }
-            catch (const std::exception& e) {
-                log_server::error("{}: {}", __func__, e.what());
+                catch (const irods::exception& e) {
+                    log_server::error("{}: {}", __func__, e.client_display_what());
+                }
+                catch (const std::exception& e) {
+                    log_server::error("{}: {}", __func__, e.what());
+                }
             }
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
@@ -823,4 +766,36 @@ Options:
                 _successor);
         }
     } // set_delay_server_migration_info
+
+    auto launch_delay_server() -> void
+    {
+        auto launch = (0 == g_pid_ds);
+
+        if (g_pid_ds > 0) {
+            if (const auto ec = kill(g_pid_ds, 0); ec == -1) {
+                if (EPERM == errno || ESRCH == errno) {
+                    launch = true;
+                    g_pid_ds = 0;
+                }
+            }
+        }
+
+        if (launch) {
+            log_server::info("{}: Launching Delay Server.", __func__);
+            g_pid_ds = fork();
+            if (0 == g_pid_ds) {
+                char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
+                char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
+                execv(pname, args);
+                _exit(1);
+            }
+            else if (g_pid_ds > 0) {
+                log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
+            }
+            else {
+                log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
+                g_pid_ds = 0;
+            }
+        }
+    } // launch_delay_server
 } // anonymous namespace
