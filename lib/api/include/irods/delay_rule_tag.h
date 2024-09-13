@@ -26,8 +26,8 @@ extern "C" {
 
 /// TODO
 ///
-/// \param[in]  _comm  A pointer to a RcComm.
-/// \param[in]  _input 
+/// \param[in] _comm  A pointer to a RcComm.
+/// \param[in] _input 
 ///
 /// \return An integer.
 /// \retval 0        On success.

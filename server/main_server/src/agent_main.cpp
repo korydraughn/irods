@@ -19,6 +19,7 @@
 //      - shared memory originally initialized by the main server process
 //      - stacktrace watcher
 
+#include "irods/agent_pid_table.hpp"
 #include "irods/client_api_allowlist.hpp"
 #include "irods/dns_cache.hpp"
 #include "irods/hostname_cache.hpp"
@@ -128,7 +129,7 @@ namespace
     auto initServer(RsComm& _comm) -> int;
     auto initServerMain(RsComm& _comm, const bool _enable_test_mode, const bool _write_to_stdout) -> int;
 
-    auto handle_client_request(int _socket_fd) -> int;
+    auto handle_client_request(int _socket_fd, std::time_t _created_at) -> int;
     auto cleanup() -> void;
     auto cleanupAndExit(int status) -> void;
     auto set_rule_engine_globals(RsComm& _comm) -> void;
@@ -243,6 +244,9 @@ int main(int _argc, char* _argv[])
 
         // TODO Initialize shared memory systems.
         log_af::info("{}: Initializing shared memory for agent factory.", __func__);
+
+        irods::experimental::agent_pid_table::init();
+        irods::at_scope_exit deinit_agent_pid_table{[] { irods::experimental::agent_pid_table::deinit(); }};
 
         irods::experimental::net::hostname_cache::init_no_create(hostname_cache_shm_name);
         irods::experimental::net::dns_cache::init_no_create(dns_cache_shm_name);
@@ -389,12 +393,17 @@ int main(int _argc, char* _argv[])
             const auto agent_pid = fork();
             if (agent_pid == 0) {
                 close(svrComm.sock); // Close the listening socket.
-                return handle_client_request(newSock);
+                try {
+                    return handle_client_request(newSock, std::time(nullptr));
+                }
+                catch (const std::exception& e) {
+                    log_agent::critical("{}: Exception caught in outer most scope of request handler: {}", __func__, e.what());
+                    return 1;
+                }
             }
 
             if (agent_pid > 0) {
                 // TODO Add pid to agent pid list for control-plane-like status API.
-                // TODO Setup signal handler to reap agents and remove pids from pid list.
                 close(newSock);
             }
             else {
@@ -752,7 +761,7 @@ namespace
         return 0;
     } // initServerMain
 
-    auto handle_client_request(int _socket_fd) -> int
+    auto handle_client_request(int _socket_fd, std::time_t _created_at) -> int
     {
         // TODO Reset signal dispositions.
 
@@ -944,8 +953,17 @@ namespace
             cleanupAndExit(status);
         }
 
+        // Add agent information to the agent pid table for ips.
         // TODO Remove this
         //logAgentProc(&rsComm);
+        namespace apt = irods::experimental::agent_pid_table;
+        apt::agent_pid_info pid_info{};
+        pid_info.pid = getpid();
+        pid_info.created_at = _created_at;
+        std::strncpy(pid_info.client_addr, rsComm.clientAddr, sizeof(apt::agent_pid_info::client_addr));
+        std::strncpy(pid_info.client_username, rsComm.clientUser.userName, sizeof(apt::agent_pid_info::client_username));
+        std::strncpy(pid_info.client_zone, rsComm.clientUser.rodsZone, sizeof(apt::agent_pid_info::client_zone));
+        apt::insert(pid_info);
 
         // call initialization for network plugin as negotiated
         irods::network_object_ptr new_net_obj;

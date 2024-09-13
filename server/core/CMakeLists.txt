@@ -2,6 +2,7 @@ add_library(
   irods_server_core
   OBJECT
   "${CMAKE_CURRENT_SOURCE_DIR}/src/administration_utilities.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/agent_pid_table.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/atomic_apply_database_operations.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/client_api_allowlist.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/catalog.cpp"
@@ -113,6 +114,7 @@ set_target_properties(irods_server_core PROPERTIES POSITION_INDEPENDENT_CODE TRU
 install(
   FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/administration_utilities.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/agent_pid_table.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/atomic_apply_database_operations.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/catalog.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/irods/catalog_utilities.hpp"
