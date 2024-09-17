@@ -2,6 +2,9 @@
 
 namespace irods
 {
+    const char* const KW_CFG_AGENT_PID_DIRECTORY{"agent_pid_directory"};
+    const char* const KW_CFG_STACKTRACE_DIRECTORY{"stacktrace_directory"};
+
     // server_config.json keywords
     const char* const KW_CFG_KERBEROS_NAME{"kerberos_name"};
     const char* const KW_CFG_KERBEROS_KEYTAB{"kerberos_keytab"};

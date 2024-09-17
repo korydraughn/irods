@@ -3,6 +3,10 @@
 
 namespace irods
 {
+    // config directories
+    extern const char* const KW_CFG_AGENT_PID_DIRECTORY;
+    extern const char* const KW_CFG_STACKTRACE_DIRECTORY;
+
     // server_config.json keywords
     extern const char* const KW_CFG_KERBEROS_NAME;
     extern const char* const KW_CFG_KERBEROS_KEYTAB;

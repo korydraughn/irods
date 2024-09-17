@@ -124,13 +124,14 @@ readProcLog( int pid, procLog_t *procLog ) {
     }
 
     char procPath[MAX_NAME_LEN];
-    snprintf( procPath, MAX_NAME_LEN, "%s/%-d", ProcLogDir, pid );
+    snprintf( procPath, MAX_NAME_LEN, "%s/%-d", "/var/lib/irods/log/proc", pid );
 
     std::fstream procStream( procPath, std::ios::in );
     std::vector<std::string> procTokens;
     while ( !procStream.eof() && procTokens.size() < 7 ) {
         std::string token;
         procStream >> token;
+        rodsLog(LOG_NOTICE, "%s: adding token to agent proc info: [%s]", __func__, token.c_str());
         procTokens.push_back( token );
     }
 

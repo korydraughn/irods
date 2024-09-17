@@ -47,6 +47,7 @@
 #include "irods/rcGlobalExtern.h" // For ProcessType
 #include "irods/replica_access_table.hpp"
 #include "irods/replica_state_table.hpp"
+#include "irods/rodsConnect.h"
 #include "irods/rodsErrorTable.h"
 #include "irods/rsApiHandler.hpp"
 #include "irods/rsGlobalExtern.hpp"
@@ -70,6 +71,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <csignal>
 #include <fstream>
@@ -124,6 +126,7 @@ namespace
     auto init_shared_memory_for_plugins() -> irods::error;
     auto deinit_shared_memory_for_plugin(const nlohmann::json& _plugin_object) -> bool;
     auto deinit_shared_memory_for_plugins() -> irods::error;
+    auto create_agent_pid_directory() -> void;
 
     // TODO Refactor these functions.
     auto initServer(RsComm& _comm) -> int;
@@ -134,6 +137,8 @@ namespace
     auto cleanupAndExit(int status) -> void;
     auto set_rule_engine_globals(RsComm& _comm) -> void;
     auto agentMain(RsComm& _comm) -> int;
+    auto make_agent_pid_file() -> std::string;
+    auto create_agent_pid_file_for_ips(const RsComm& _comm, std::time_t _created_at) -> void;
 } // anonymous namespace
 
 int main(int _argc, char* _argv[])
@@ -253,6 +258,10 @@ int main(int _argc, char* _argv[])
 
         irods::experimental::replica_access_table::init();
         irods::at_scope_exit deinit_replica_access_table{[] { irods::experimental::replica_access_table::deinit(); }};
+
+        log_af::info("{}: Creating directory for tracking agent information for ips.", __func__);
+
+        create_agent_pid_directory(); // TODO Can throw.
 
         log_af::info("{}: Initializing zone information for agent factory.", __func__);
 
@@ -504,8 +513,23 @@ namespace
 
             pid_t pid;
             int status;
+            char agent_pid[16];
+            char agent_pid_file_path[1024]; // TODO _POSIX_PATH_MAX?
             while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-                // TODO Remove agent pid from pid list.
+                auto [p, ec] = std::to_chars(agent_pid, agent_pid + sizeof(agent_pid), pid);
+                if (std::errc{} != ec) {
+                    continue;
+                }
+
+                // Add the null-terminating byte.
+                *p = 0;
+
+                std::memset(agent_pid_file_path, 0, sizeof(agent_pid_file_path));
+                // TODO Derive or load path from config file [location].
+                std::strcpy(agent_pid_file_path, "/var/lib/irods/log/proc/");
+                std::strcat(agent_pid_file_path, agent_pid);
+
+                unlink(agent_pid_file_path);
             }
 
             errno = saved_errno;
@@ -956,6 +980,7 @@ namespace
         // Add agent information to the agent pid table for ips.
         // TODO Remove this
         //logAgentProc(&rsComm);
+#if 0
         namespace apt = irods::experimental::agent_pid_table;
         apt::agent_pid_info pid_info{};
         pid_info.pid = getpid();
@@ -964,6 +989,9 @@ namespace
         std::strncpy(pid_info.client_username, rsComm.clientUser.userName, sizeof(apt::agent_pid_info::client_username));
         std::strncpy(pid_info.client_zone, rsComm.clientUser.rodsZone, sizeof(apt::agent_pid_info::client_zone));
         apt::insert(pid_info);
+#else
+        create_agent_pid_file_for_ips(rsComm, _created_at);
+#endif
 
         // call initialization for network plugin as negotiated
         irods::network_object_ptr new_net_obj;
@@ -1199,4 +1227,53 @@ namespace
 
         return status;
     } // agentMain
+
+    auto create_agent_pid_directory() -> void
+    {
+        // TODO Derive path from the config file location or load it from the config file.
+        fs::remove_all("/var/lib/irods/log/proc");
+        fs::create_directories("/var/lib/irods/log/proc");
+        // TODO Need to consider permissions. They were originally set to 0750.
+    } // create_agent_pid_directory
+
+    auto make_agent_pid_file() -> std::string
+    {
+        // TODO Derive or load path prefix from config file.
+        return fmt::format("/var/lib/irods/log/proc/{}", getpid());
+    } // make_agent_pid_file
+
+    auto create_agent_pid_file_for_ips(const RsComm& _comm, std::time_t _created_at) -> void
+    {
+        std::string_view local_zone = "UNKNOWN";
+        if (const auto* lz = getLocalZoneName(); lz) {
+            local_zone = lz;
+        }
+
+        std::string_view client_zone = _comm.clientUser.rodsZone;
+        if (client_zone.empty()) {
+            client_zone = local_zone;
+        }
+
+        std::string_view proxy_zone = _comm.proxyUser.rodsZone;
+        if (proxy_zone.empty()) {
+            proxy_zone = local_zone;
+        }
+
+        std::string_view client_program_name = _comm.option;
+        if (client_program_name.empty()) {
+            client_program_name = "UNKNOWN";
+        }
+
+        if (std::ofstream out{make_agent_pid_file()}; out) {
+            out << fmt::format("{} {} {} {} {} {} {}\n",
+                // TODO The argument order is weird?
+                _comm.proxyUser.userName,
+                client_zone,
+                _comm.clientUser.userName,
+                proxy_zone,
+                client_program_name,
+                _comm.clientAddr,
+                static_cast<unsigned int>(_created_at));
+        }
+    } // create_agent_pid_file_for_ips
 } // anonymous namespace
