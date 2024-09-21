@@ -139,6 +139,8 @@ namespace
     auto agentMain(RsComm& _comm) -> int;
     auto make_agent_pid_file() -> std::string;
     auto create_agent_pid_file_for_ips(const RsComm& _comm, std::time_t _created_at) -> void;
+
+    auto wait_for_agents_to_terminate(bool _use_wnohang) -> void;
 } // anonymous namespace
 
 int main(int _argc, char* _argv[])
@@ -412,7 +414,6 @@ int main(int _argc, char* _argv[])
             }
 
             if (agent_pid > 0) {
-                // TODO Add pid to agent pid list for control-plane-like status API.
                 close(newSock);
             }
             else {
@@ -422,7 +423,7 @@ int main(int _argc, char* _argv[])
 
         // Start shutting everything down.
 
-        // TODO Wait for agents to complete.
+        wait_for_agents_to_terminate(false);
 
         log_af::info("{}: Shutdown complete.", __func__);
 
@@ -510,28 +511,7 @@ namespace
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access, cppcoreguidelines-pro-type-cstyle-cast)
         sa_sigchld.sa_handler = [](int) {
             const auto saved_errno = errno;
-
-            pid_t pid;
-            int status;
-            char agent_pid[16];
-            char agent_pid_file_path[1024]; // TODO _POSIX_PATH_MAX?
-            while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-                auto [p, ec] = std::to_chars(agent_pid, agent_pid + sizeof(agent_pid), pid);
-                if (std::errc{} != ec) {
-                    continue;
-                }
-
-                // Add the null-terminating byte.
-                *p = 0;
-
-                std::memset(agent_pid_file_path, 0, sizeof(agent_pid_file_path));
-                // TODO Derive or load path from config file [location].
-                std::strcpy(agent_pid_file_path, "/var/lib/irods/log/proc/");
-                std::strcat(agent_pid_file_path, agent_pid);
-
-                unlink(agent_pid_file_path);
-            }
-
+            wait_for_agents_to_terminate(true);
             errno = saved_errno;
         };
         if (sigaction(SIGCHLD, &sa_sigchld, nullptr) == -1) {
@@ -1276,4 +1256,31 @@ namespace
                 static_cast<unsigned int>(_created_at));
         }
     } // create_agent_pid_file_for_ips
+
+    auto wait_for_agents_to_terminate(bool _use_wnohang) -> void
+    {
+        pid_t pid;
+        int status;
+        char agent_pid[16];
+        char agent_pid_file_path[1024]; // TODO _POSIX_PATH_MAX?
+
+        const auto flags = _use_wnohang ? WNOHANG : 0;
+
+        while ((pid = waitpid(-1, &status, flags)) > 0) {
+            auto [p, ec] = std::to_chars(agent_pid, agent_pid + sizeof(agent_pid), pid);
+            if (std::errc{} != ec) {
+                continue;
+            }
+
+            // Add the null-terminating byte.
+            *p = 0;
+
+            std::memset(agent_pid_file_path, 0, sizeof(agent_pid_file_path));
+            // TODO Derive or load path from config file [location].
+            std::strcpy(agent_pid_file_path, "/var/lib/irods/log/proc/");
+            std::strcat(agent_pid_file_path, agent_pid);
+
+            unlink(agent_pid_file_path);
+        }
+    } // wait_for_agents_to_terminate
 } // anonymous namespace
