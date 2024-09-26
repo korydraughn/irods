@@ -246,6 +246,7 @@ NEW_ERROR(TYPE_NOT_SUPPORTED,                          -177000)
 NEW_ERROR(AUTHENTICATION_ERROR,                        -178000)
 NEW_ERROR(SOCKET_ERROR,                                -179000)
 NEW_ERROR(CONFIGURATION_ERROR,                         -180000)
+NEW_ERROR(SHUTDOWN_SEQUENCE_INITIATED,                 -181000)
 
 /** @} */
 

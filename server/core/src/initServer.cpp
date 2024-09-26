@@ -703,11 +703,8 @@ initRsCommWithStartupPack( rsComm_t *rsComm, startupPack_t *startupPack, bool& r
 
     if (startupPack) {
         rsComm->connectCnt = startupPack->connectCnt;
-        log_agent::info("{}: startupPack->connectCnt = [{}]", __func__, startupPack->connectCnt);
         rsComm->irodsProt = startupPack->irodsProt;
-        log_agent::info("{}: startupPack->irodsProt = [{}]", __func__, startupPack->irodsProt);
         rsComm->reconnFlag = startupPack->reconnFlag;
-        log_agent::info("{}: startupPack->reconnFlag = [{}]", __func__, startupPack->reconnFlag);
         rstrcpy( rsComm->proxyUser.userName, startupPack->proxyUser, NAME_LEN );
         if ( strcmp( startupPack->proxyUser, PUBLIC_USER_NAME ) == 0 ) {
             rsComm->proxyUser.authInfo.authFlag = PUBLIC_USER_AUTH;
@@ -731,7 +728,6 @@ initRsCommWithStartupPack( rsComm_t *rsComm, startupPack_t *startupPack, bool& r
         else {
             opt_str.copy(rsComm->option, sizeof(RsComm::option));
         }
-        log_agent::info("{}: rsComm->option = [{}]", __func__, rsComm->option);
     }
     else {      /* have to depend on env variable */
         tmpStr = getenv( SP_NEW_SOCK );

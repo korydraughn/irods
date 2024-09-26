@@ -14,6 +14,7 @@
 #include "irods/rcConnect.h" // For RcComm
 #include "irods/rcGlobalExtern.h" // For ProcessType
 #include "irods/rodsClient.h"
+#include "irods/rodsErrorTable.h"
 #include "irods/set_delay_server_migration_info.h"
 
 #include <boost/asio.hpp>
@@ -92,6 +93,7 @@ namespace
                                          std::string_view _successor) -> void;
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>;
     auto get_delay_server_successor(RcComm& _comm) -> std::optional<std::string>;
+    auto launch_agent_factory(char* _config_dir_path, const char* _src_func) -> bool;
     auto launch_delay_server() -> void;
 } // anonymous namespace
 
@@ -270,32 +272,9 @@ int main(int _argc, char* _argv[])
             boost::interprocess::create_only, mq_name, max_number_of_msg, max_msg_size};
 
         // Launch agent factory.
-        log_server::info("{}: Launching Agent Factory.", __func__);
-        g_pid_af = fork();
-        if (0 == g_pid_af) {
-            std::string hn_shm_name{hnc::shared_memory_name()};
-            std::string dns_shm_name{dnsc::shared_memory_name()};
-
-            char pname[] = "/usr/sbin/irodsAgent5"; // TODO This MUST NOT assume /usr/sbin
-            char parent_mq_name[] = "irodsServer5";
-            char boot_time_str[] = ""; // TODO Forward the boot time.
-            char* args[] = {
-                pname,
-                config_dir_path.data(),
-                hn_shm_name.data(),
-                dns_shm_name.data(),
-                parent_mq_name,
-                boot_time_str,
-                nullptr
-            };
-            execv(pname, args);
-            _exit(1);
-        }
-        else if (-1 == g_pid_af) {
-            log_server::error("{}: Could not launch agent factory.", __func__);
+        if (!launch_agent_factory(config_dir_path.data(), __func__)) {
             return 1;
         }
-        log_server::info("{}: Agent Factory PID = [{}].", __func__, g_pid_af);
 
         // Enter parent process main loop.
         // 
@@ -314,6 +293,7 @@ int main(int _argc, char* _argv[])
         // dsm = Short for delay server migration
         // This is used to control the frequency of the delay server migration logic.
         auto dsm_time_start = std::chrono::steady_clock::now();
+        auto first_boot = true;
 
         while (true) {
             if (g_terminate) {
@@ -323,11 +303,43 @@ int main(int _argc, char* _argv[])
 
             if (g_reload_config) {
                 log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
-                kill(g_pid_af, SIGHUP);
+
+                if (g_pid_ds > 0) {
+                    log_server::info("{}: Sending SIGTERM to the delay server.", __func__);
+                    kill(g_pid_ds, SIGTERM);
+                }
+
+                log_server::info("{}: Sending SIGTERM to the agent factory.", __func__);
+                kill(g_pid_af, SIGTERM);
+
+                // Reset this variable so that the delay server migration logic can handle
+                // the relaunching of the delay server for us.
+                g_pid_ds = 0;
+
+                // TODO These lines can throw, but it's unlikely.
+                log_server::info("{}: Reloading configuration for main server process.", __func__);
                 irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
                 irods::server_properties::instance().reload(); // TODO This MUST NOT assume /etc/irods/server_config.json.
+
+                // Launch a new agent factory to serve client requests.
+                // The previous agent factory is allowed to linger around until its children
+                // terminate.
+                launch_agent_factory(config_dir_path.data(), __func__);
+
+                // We do not need to manually launch the delay server because the delay server
+                // migration logic will handle that for us.
+
                 g_reload_config = 0;
             }
+
+            // Clean up any zombie child processes if they exist. These appear following a configuration
+            // reload. We call waitpid() multiple times because the main server processes may have multiple
+            // child processes.
+            // TODO The number of iterations should always match the number of child processes.
+            for (int i = 0, children = 2; i < children; ++i) {
+                waitpid(-1, nullptr, WNOHANG);
+            }
+
 #if 0
             // TODO Handle messages from agent factory: shutdown
             msg_buf.fill(0);
@@ -348,7 +360,9 @@ int main(int _argc, char* _argv[])
 
             using namespace std::chrono_literals;
 
-            if (auto now = std::chrono::steady_clock::now(); now - dsm_time_start > 10s) {
+            // TODO Replace 10s with the configuration value from server_config.json.
+            if (auto now = std::chrono::steady_clock::now(); first_boot || (now - dsm_time_start > 10s)) {
+                first_boot = false;
                 dsm_time_start = now;
 
                 const auto hostname = boost::asio::ip::host_name();
@@ -461,7 +475,18 @@ int main(int _argc, char* _argv[])
                     }
                 }
                 catch (const irods::exception& e) {
-                    log_server::error("{}: {}", __func__, e.client_display_what());
+                    // It's possible the agent factory may not be ready for client requests.
+                    // This situation is most visible during startup, when the delay server migration
+                    // logic attempts to fetch the leader and successor hostnames from the catalog.
+                    //
+                    // If and when the connection from the main server process fails, log the error
+                    // silently. We want startup (i.e. first boot) to clean.
+                    if (first_boot && e.code() == USER_SOCK_CONNECT_ERR) {
+                        log_server::trace("{}: {}", __func__, e.client_display_what());
+                    }
+                    else {
+                        log_server::error("{}: {}", __func__, e.client_display_what());
+                    }
                 }
                 catch (const std::exception& e) {
                     log_server::error("{}: {}", __func__, e.what());
@@ -479,10 +504,13 @@ int main(int _argc, char* _argv[])
             kill(g_pid_ds, SIGTERM);
         }
 
-        waitpid(g_pid_af, nullptr, 0);
+        int status;
+        waitpid(g_pid_af, &status, 0);
+        log_server::info("{}: Agent Factory exited with status [{}].", __func__, WEXITSTATUS(status));
 
         if (g_pid_ds > 0) {
-            waitpid(g_pid_ds, nullptr, 0);
+            waitpid(g_pid_ds, &status, 0);
+            log_server::info("{}: Delay Server exited with status [{}].", __func__, WEXITSTATUS(status));
         }
 
         log_server::info("{}: Shutdown complete.", __func__);
@@ -667,6 +695,7 @@ Options:
     auto setup_signal_handlers() -> int
     {
         // DO NOT memset sigaction structures!
+        std::signal(SIGUSR1, SIG_IGN);
 
         // SIGINT
         struct sigaction sa_terminate; // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -766,6 +795,41 @@ Options:
                 _successor);
         }
     } // set_delay_server_migration_info
+
+    auto launch_agent_factory(char* _config_dir_path, const char* _src_func) -> bool
+    {
+        log_server::info("{}: Launching Agent Factory.", _src_func);
+
+        g_pid_af = fork();
+
+        if (0 == g_pid_af) {
+            std::string hn_shm_name{irods::experimental::net::hostname_cache::shared_memory_name()};
+            std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
+
+            char pname[] = "/usr/sbin/irodsAgent5"; // TODO This MUST NOT assume /usr/sbin
+            char parent_mq_name[] = "irodsServer5";
+            char boot_time_str[] = ""; // TODO Forward the boot time.
+            char* args[] = {
+                pname,
+                _config_dir_path,
+                hn_shm_name.data(),
+                dns_shm_name.data(),
+                parent_mq_name,
+                boot_time_str,
+                nullptr
+            };
+
+            execv(pname, args);
+            _exit(1);
+        }
+        else if (-1 == g_pid_af) {
+            log_server::error("{}: Could not launch agent factory.", __func__);
+            return false;
+        }
+
+        log_server::info("{}: Agent Factory PID = [{}].", __func__, g_pid_af);
+        return true;
+    } // launch_agent_factory
 
     auto launch_delay_server() -> void
     {
