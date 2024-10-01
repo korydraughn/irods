@@ -25,15 +25,10 @@ irods::error tcp_socket_read(
     // =-=-=-=-=-=-=-
     // Initialize the file descriptor set
     fd_set set;
-    FD_ZERO( &set );
-    FD_SET( _socket, &set );
 
     // =-=-=-=-=-=-=-
     // local copy of time value?
     struct timeval timeout;
-    if ( _time_value != NULL ) {
-        timeout = ( *_time_value );
-    }
 
     // =-=-=-=-=-=-=-
     // local working variables
@@ -46,15 +41,23 @@ irods::error tcp_socket_read(
 
     while ( len_to_read > 0 ) {
         if ( nullptr != _time_value ) {
+            // Must always reset the fd_set and timeout before a call to select().
+            FD_ZERO(&set);
+            FD_SET(_socket, &set);
+            timeout = *_time_value;
+
             const int status = select( _socket + 1, &set, NULL, NULL, &timeout );
+
             if ( status == 0 ) { // the select has timed out
                 return ERROR( SYS_SOCK_READ_TIMEDOUT, boost::format("socket timeout with [%d] bytes read") % _bytes_read);
-            } else if ( status < 0 ) {
+            }
+
+            if ( status < 0 ) {
                 if ( errno == EINTR ) {
                     continue;
-                } else {
-                    return ERROR( SYS_SOCK_READ_ERR - errno, boost::format("error on select after [%d] bytes read") % _bytes_read);
                 }
+
+                return ERROR( SYS_SOCK_READ_ERR - errno, boost::format("error on select after [%d] bytes read") % _bytes_read);
             } // else
         } // if tv
 
