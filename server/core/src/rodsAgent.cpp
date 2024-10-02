@@ -335,7 +335,7 @@ void setup_signal_handlers()
     signal(SIGUSR1, irodsAgentSignalExit);
     signal(SIGPIPE, SIG_IGN);
 
-    irods::set_unrecoverable_signal_handlers();
+    irods::setup_unrecoverable_signal_handlers();
 } // setup_signal_handlers
 
 // NOLINTNEXTLINE(modernize-use-trailing-return-type)

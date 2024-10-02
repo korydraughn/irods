@@ -3,12 +3,13 @@
 #include "irods/get_grid_configuration_value.h"
 #include "irods/hostname_cache.hpp"
 #include "irods/irods_at_scope_exit.hpp"
+#include "irods/irods_client_api_table.hpp"
 #include "irods/irods_configuration_keywords.hpp"
 #include "irods/irods_environment_properties.hpp"
 #include "irods/irods_logger.hpp"
-#include "irods/irods_server_properties.hpp"
-#include "irods/irods_client_api_table.hpp"
 #include "irods/irods_server_api_table.hpp"
+#include "irods/irods_server_properties.hpp"
+#include "irods/irods_signal.hpp"
 #include "irods/plugins/api/delay_server_migration_types.h"
 #include "irods/plugins/api/grid_configuration_types.h"
 #include "irods/rcConnect.h" // For RcComm
@@ -18,12 +19,16 @@
 #include "irods/set_delay_server_migration_info.h"
 
 #include <boost/asio.hpp>
+#include <boost/chrono.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/program_options.hpp>
+#include <boost/stacktrace.hpp>
 
-#include <cstdlib>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
+
+#include <jsoncons/json.hpp>
+#include <jsoncons_ext/jsonschema/jsonschema.hpp>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -33,6 +38,7 @@
 #include <array>
 #include <chrono>
 #include <csignal>
+#include <cstdlib>
 #include <fstream>
 #include <optional>
 #include <string>
@@ -93,8 +99,11 @@ namespace
                                          std::string_view _successor) -> void;
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>;
     auto get_delay_server_successor(RcComm& _comm) -> std::optional<std::string>;
-    auto launch_agent_factory(char* _config_dir_path, const char* _src_func) -> bool;
+    auto launch_agent_factory(char* _config_file_path, const char* _src_func) -> bool;
     auto launch_delay_server() -> void;
+    auto handle_configuration_reload(std::string& _config_file_path) -> void;
+    auto migrate_and_launch_delay_server(bool& _first_boot, std::chrono::steady_clock::time_point& _time_start) -> void;
+    auto log_stacktrace_files() -> void;
 } // anonymous namespace
 
 int main(int _argc, char* _argv[])
@@ -104,7 +113,7 @@ int main(int _argc, char* _argv[])
 
     ProcessType = SERVER_PT; // This process identifies itself as a server.
 
-    std::string config_dir_path;
+    std::string config_file_path;
 
     namespace po = boost::program_options;
 
@@ -112,10 +121,7 @@ int main(int _argc, char* _argv[])
 
     // clang-format off
     opts_desc.add_options()
-        ("config-directory,f", po::value<std::string>(), "")
-        ("jsonschema-file", po::value<std::string>(), "")
-        ("dump-config-template", "")
-        ("dump-default-jsonschema", "")
+        ("config-file,f", po::value<std::string>(), "")
         ("daemonize,d", "")
         ("pid-file,P", po::value<std::string>(), "")
         ("help,h", "")
@@ -123,7 +129,7 @@ int main(int _argc, char* _argv[])
     // clang-format on
 
     po::positional_options_description pod;
-    pod.add("config-directory", 1);
+    pod.add("config-file", 1);
 
     try {
         po::variables_map vm;
@@ -140,18 +146,8 @@ int main(int _argc, char* _argv[])
             return 0;
         }
 
-        if (vm.count("dump-config-template") > 0) {
-            print_configuration_template();
-            return 0;
-        }
-
-        if (vm.count("dump-default-jsonschema") > 0) {
-            //fmt::print(default_jsonschema());
-            return 0;
-        }
-
-        if (auto iter = vm.find("config-directory"); std::end(vm) != iter) {
-            config_dir_path = std::move(iter->second.as<std::string>());
+        if (auto iter = vm.find("config-file"); std::end(vm) != iter) {
+            config_file_path = std::move(iter->second.as<std::string>());
         }
         else {
             fmt::print(stderr, "Error: Missing [CONFIG_FILE_PATH] parameter.");
@@ -187,9 +183,9 @@ int main(int _argc, char* _argv[])
     try {
         // Load configuration.
         // TODO Pick one of the following.
-        config = json::parse(std::ifstream{fs::path{config_dir_path} / "server_config.json"});
+        config = json::parse(std::ifstream{config_file_path});
+        irods::server_properties::instance().init(config_file_path);
         irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
-        irods::server_properties::instance().capture(); // TODO This MUST NOT assume /etc/irods/server_config.json.
 
         // TODO Consider removing the need for these along with all options.
         // All logging should be controlled via the new logging system.
@@ -209,12 +205,9 @@ int main(int _argc, char* _argv[])
         }
 #endif
 
-        // TODO Init base systems for parent process.
-        // - logger
-        // - shared memory for replica access table, dns cache, hostname cache?
-        // - delay server salt
-
         init_logger(config);
+
+        irods::set_stacktrace_directory(config.at("stacktrace_directory").get_ref<const std::string&>());
 
         // Setting up signal handlers here removes the need for reacting to shutdown signals
         // such as SIGINT and SIGTERM during the startup sequence.
@@ -223,24 +216,16 @@ int main(int _argc, char* _argv[])
             return 1;
         }
 
-        // TODO Initialize shared memory systems.
         log_server::info("{}: Initializing shared memory for main server process.", __func__);
 
-        // TODO Shared memory name needs to be configurable via the command line and config file.
         namespace hnc = irods::experimental::net::hostname_cache;
         hnc::init("irods_hostname_cache5", irods::get_hostname_cache_shared_memory_size());
         //irods::at_scope_exit deinit_hostname_cache{[] { hnc::deinit(); }};
 
-        // TODO Shared memory name needs to be configurable via the command line and config file.
         namespace dnsc = irods::experimental::net::dns_cache;
         dnsc::init("irods_dns_cache5", irods::get_dns_cache_shared_memory_size());
         //irods::at_scope_exit deinit_dns_cache{[] { dnsc::deinit(); }};
 
-#if 0
-        // The main server only relies on client connections, so we load the client-side
-        // API plugins. The server-side APIs are not needed.
-        load_client_api_plugins();
-#else
         // Load server API table so that API plugins which are needed to stand up the server are
         // available for use.
         auto& server_api_table = irods::get_server_api_table();
@@ -258,21 +243,8 @@ int main(int _argc, char* _argv[])
             log_server::error("{}: {}", __func__, res.result());
             return 1;
         }
-#endif
 
-        // This message queue gives child processes a way to notify the parent process.
-        // This will only be used by the agent factory because iRODS 5.0 won't have a control plane.
-        // Or at least that's the plan.
-        log_server::info("{}: Creating communication channel between main server process and agent factory.", __func__);
-        constexpr const auto* mq_name = "irodsServer5"; // TODO Make this name unique.
-        constexpr auto max_number_of_msg = 1; // Set to 1 to protect against duplicate/spamming of messages.
-        constexpr auto max_msg_size = 512; 
-        boost::interprocess::message_queue::remove(mq_name);
-        boost::interprocess::message_queue pproc_mq{
-            boost::interprocess::create_only, mq_name, max_number_of_msg, max_msg_size};
-
-        // Launch agent factory.
-        if (!launch_agent_factory(config_dir_path.data(), __func__)) {
+        if (!launch_agent_factory(config_file_path.data(), __func__)) {
             return 1;
         }
 
@@ -283,12 +255,6 @@ int main(int _argc, char* _argv[])
         //
         // THE PARENT PROCESS IS THE ONLY PROCESS THAT SHOULD/CAN REACT TO SIGNALS!
         // EVERYTHING IS PROPAGATED THROUGH/FROM THE PARENT PROCESS!
-
-#if 0
-        std::array<char, max_msg_size> msg_buf{};
-        boost::interprocess::message_queue::size_type recvd_size{};
-        unsigned int priority{};
-#endif
 
         // dsm = Short for delay server migration
         // This is used to control the frequency of the delay server migration logic.
@@ -302,34 +268,7 @@ int main(int _argc, char* _argv[])
             }
 
             if (g_reload_config) {
-                log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
-
-                if (g_pid_ds > 0) {
-                    log_server::info("{}: Sending SIGTERM to the delay server.", __func__);
-                    kill(g_pid_ds, SIGTERM);
-                }
-
-                log_server::info("{}: Sending SIGTERM to the agent factory.", __func__);
-                kill(g_pid_af, SIGTERM);
-
-                // Reset this variable so that the delay server migration logic can handle
-                // the relaunching of the delay server for us.
-                g_pid_ds = 0;
-
-                // TODO These lines can throw, but it's unlikely.
-                log_server::info("{}: Reloading configuration for main server process.", __func__);
-                irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
-                irods::server_properties::instance().reload(); // TODO This MUST NOT assume /etc/irods/server_config.json.
-
-                // Launch a new agent factory to serve client requests.
-                // The previous agent factory is allowed to linger around until its children
-                // terminate.
-                launch_agent_factory(config_dir_path.data(), __func__);
-
-                // We do not need to manually launch the delay server because the delay server
-                // migration logic will handle that for us.
-
-                g_reload_config = 0;
+                handle_configuration_reload(config_file_path);
             }
 
             // Clean up any zombie child processes if they exist. These appear following a configuration
@@ -340,158 +279,8 @@ int main(int _argc, char* _argv[])
                 waitpid(-1, nullptr, WNOHANG);
             }
 
-#if 0
-            // TODO Handle messages from agent factory: shutdown
-            msg_buf.fill(0);
-            if (pproc_mq.try_receive(msg_buf.data(), msg_buf.size(), recvd_size, priority)) {
-                std::string_view msg(msg_buf.data(), recvd_size);
-                fmt::print("irodsd: received message: [{}], recvd_size: [{}]\n", msg, recvd_size);
-
-                if (msg == "shutdown") {
-                    fmt::print("Received shutdown instruction from control plane.\n");
-                    break;
-                }
-            }
-#endif
-
-            //
-            // Execute delay server migration algorithm.
-            //
-
-            using namespace std::chrono_literals;
-
-            // TODO Replace 10s with the configuration value from server_config.json.
-            if (auto now = std::chrono::steady_clock::now(); first_boot || (now - dsm_time_start > 10s)) {
-                first_boot = false;
-                dsm_time_start = now;
-
-                const auto hostname = boost::asio::ip::host_name();
-                std::optional<std::string> leader;
-                std::optional<std::string> successor;
-
-                try {
-                    irods::experimental::client_connection conn;
-                    leader = get_delay_server_leader(conn);
-                    successor = get_delay_server_successor(conn);
-
-                    if (leader && successor) {
-                        log_server::debug("{}: Delay server leader [{}] and successor [{}].", __func__, *leader, *successor);
-
-                        // 4 cases:
-                        // L  S
-                        // ----
-                        // 0  0 (invalid state / no-op)
-                        // 1  0 (migration complete)
-                        // 0  1 (leader has shut down ds, successor launching ds)
-                        // 1  1 (leader running ds, admin requested migration)
-
-                        // This server is the leader and may be running a delay server.
-                        if (hostname == *leader) {
-                            if (hostname == *successor) {
-                                launch_delay_server();
-
-                                // Clear successor entry in catalog. This isn't necessary, but helps
-                                // keep the admin from becoming confused.
-                                if (g_pid_ds > 0) {
-                                    set_delay_server_migration_info(conn, KW_DELAY_SERVER_MIGRATION_IGNORE, "");
-                                }
-                            }
-                            else if (!successor->empty()) {
-                                // Migration requested. Stop local delay server if running and clear the
-                                // leader entry in the catalog.
-                                if (g_pid_ds > 0) {
-                                    kill(g_pid_ds, SIGTERM);
-
-                                    // Wait for delay server to complete current tasks. Depending on the workload, this
-                                    // could take minutes, hours, days to complete.
-                                    int status = 0;
-                                    waitpid(g_pid_ds, &status, 0);
-                                    log_server::info("Delay server has completed shutdown [exit_code={}].", WEXITSTATUS(status));
-                                    g_pid_ds = 0;
-                                }
-
-                                // TODO This isn't necessary if we can get task locking working (i.e. delay servers
-                                // lock tasks just before execution).
-                                //
-                                // TODO However, we can uncomment the following if the server can confirm the host
-                                // doesn't exist in the zone.
-                                //
-                                // Clear the leader entry. This acts as a signal to the successor server
-                                // that it is safe to launch the delay server.
-                                //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
-                            }
-                            else {
-                                launch_delay_server();
-                            }
-                        }
-                        else if (hostname == *successor) {
-                            // leader == successor is covered by first if-branch.
-#if 0
-                            if (leader->empty()) {
-                                // The leader's delay server has been shut down. Launch the delay server if
-                                // not running already.
-
-                                log_server::info("{}: Launching Delay Server.", __func__);
-                                g_pid_ds = fork();
-                                if (0 == g_pid_ds) {
-                                    char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                                    char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
-                                    execv(pname, args);
-                                    _exit(1);
-                                }
-                                else if (g_pid_ds > 0) {
-                                    log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
-                                    set_delay_server_migration_info(conn, hostname, "");
-                                }
-                                else {
-                                    log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
-                                }
-                            }
-                            else {
-                                // TODO
-                                // Determine when it's safe to auto-promote the successor to the leader
-                                // (i.e. the leader value is never cleared).
-
-                                // 1. Connect to leader.
-                                // 2. Use API to get the PID of the delay server.
-                                // 3. If we find a PID for the delay server, try again later (because we're waiting for it to shutdown).
-                                // 4. If we fail to reach the leader (due to network, etc), start counting failures.
-                                // 5. If the successor fails to get the PID N times, auto-promote successor to leader.
-                            }
-#else
-                            // Delay servers lock tasks before execution. This allows the successor server
-                            // to launch a delay server without duplicating work.
-                            launch_delay_server();
-
-                            if (g_pid_ds > 0) {
-                                set_delay_server_migration_info(conn, hostname, "");
-                            }
-#endif
-                        }
-                        else {
-                            // TODO Reap child processes: agent factory, delay server
-                            // TODO Fork agent factory and/or delay server again if necessary.
-                        }
-                    }
-                }
-                catch (const irods::exception& e) {
-                    // It's possible the agent factory may not be ready for client requests.
-                    // This situation is most visible during startup, when the delay server migration
-                    // logic attempts to fetch the leader and successor hostnames from the catalog.
-                    //
-                    // If and when the connection from the main server process fails, log the error
-                    // silently. We want startup (i.e. first boot) to clean.
-                    if (first_boot && e.code() == USER_SOCK_CONNECT_ERR) {
-                        log_server::trace("{}: {}", __func__, e.client_display_what());
-                    }
-                    else {
-                        log_server::error("{}: {}", __func__, e.client_display_what());
-                    }
-                }
-                catch (const std::exception& e) {
-                    log_server::error("{}: {}", __func__, e.what());
-                }
-            }
+            log_stacktrace_files();
+            migrate_and_launch_delay_server(first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
         }
@@ -504,16 +293,15 @@ int main(int _argc, char* _argv[])
             kill(g_pid_ds, SIGTERM);
         }
 
-        int status;
-        waitpid(g_pid_af, &status, 0);
-        log_server::info("{}: Agent Factory exited with status [{}].", __func__, WEXITSTATUS(status));
+        waitpid(g_pid_af, nullptr, 0);
+        log_server::info("{}: Agent Factory shutdown complete.", __func__);
 
         if (g_pid_ds > 0) {
-            waitpid(g_pid_ds, &status, 0);
-            log_server::info("{}: Delay Server exited with status [{}].", __func__, WEXITSTATUS(status));
+            waitpid(g_pid_ds, nullptr, 0);
+            log_server::info("{}: Delay Server shutdown complete.", __func__);
         }
 
-        log_server::info("{}: Shutdown complete.", __func__);
+        log_server::info("{}: Server shutdown complete.", __func__);
 
         return 0;
     }
@@ -541,12 +329,6 @@ Options:
                 TODO
   -P, --pid-file
                 TODO
-      --jsonschema-file
-                TODO
-      --dump-config-template
-                TODO
-      --dump-default-jsonschema
-                TODO
   -h, --help    Display this help message and exit.
   -v, --version Display version information and exit.
 )__");
@@ -556,11 +338,6 @@ Options:
     {
         // TODO
     } // print_version_info
-
-    auto print_configuration_template() -> void
-    {
-        // TODO
-    } // print_configuration_template
 
     auto daemonize() -> void
     {
@@ -695,7 +472,8 @@ Options:
     auto setup_signal_handlers() -> int
     {
         // DO NOT memset sigaction structures!
-        std::signal(SIGUSR1, SIG_IGN);
+
+        std::signal(SIGUSR1, SIG_IGN); // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 
         // SIGINT
         struct sigaction sa_terminate; // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -721,19 +499,8 @@ Options:
         if (sigaction(SIGHUP, &sa_sighup, nullptr) == -1) {
             return -1;
         }
-#if 0
-        // SIGCHLD
-        // This signal is disabled by default.
-        struct sigaction sa_sigchld; // NOLINT(cppcoreguidelines-pro-type-member-init)
-        sigemptyset(&sa_sigchld.sa_mask);
-        sa_sigchld.sa_flags = 0; // Do not trigger handler when child receives SIGSTOP.
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access, cppcoreguidelines-pro-type-cstyle-cast)
-        sa_sigchld.sa_handler = [](int) {};
-        if (sigaction(SIGCHLD, &sa_sigchld, nullptr) == -1) {
-            return -1;
-        }
-#endif
-        // TODO Handle other signals.
+
+        irods::setup_unrecoverable_signal_handlers();
 
         return 0;
     } // setup_signal_handlers
@@ -796,7 +563,7 @@ Options:
         }
     } // set_delay_server_migration_info
 
-    auto launch_agent_factory(char* _config_dir_path, const char* _src_func) -> bool
+    auto launch_agent_factory(char* _config_file_path, const char* _src_func) -> bool
     {
         log_server::info("{}: Launching Agent Factory.", _src_func);
 
@@ -807,14 +574,12 @@ Options:
             std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
 
             char pname[] = "/usr/sbin/irodsAgent5"; // TODO This MUST NOT assume /usr/sbin
-            char parent_mq_name[] = "irodsServer5";
             char boot_time_str[] = ""; // TODO Forward the boot time.
             char* args[] = {
                 pname,
-                _config_dir_path,
+                _config_file_path,
                 hn_shm_name.data(),
                 dns_shm_name.data(),
-                parent_mq_name,
                 boot_time_str,
                 nullptr
             };
@@ -862,4 +627,268 @@ Options:
             }
         }
     } // launch_delay_server
+
+    auto handle_configuration_reload(std::string& _config_file_path) -> void
+    {
+        log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
+
+        if (g_pid_ds > 0) {
+            log_server::info("{}: Sending SIGTERM to the delay server.", __func__);
+            kill(g_pid_ds, SIGTERM);
+        }
+
+        log_server::info("{}: Sending SIGTERM to the agent factory.", __func__);
+        kill(g_pid_af, SIGTERM);
+
+        // Reset this variable so that the delay server migration logic can handle
+        // the relaunching of the delay server for us.
+        g_pid_ds = 0;
+
+        // TODO These lines can throw, but it's unlikely.
+        log_server::info("{}: Reloading configuration for main server process.", __func__);
+        irods::server_properties::instance().reload();
+        irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
+
+        // Launch a new agent factory to serve client requests.
+        // The previous agent factory is allowed to linger around until its children
+        // terminate.
+        launch_agent_factory(_config_file_path.data(), __func__);
+
+        // We do not need to manually launch the delay server because the delay server
+        // migration logic will handle that for us.
+
+        g_reload_config = 0;
+    } // handle_configuration_reload
+
+    auto migrate_and_launch_delay_server(bool& _first_boot, std::chrono::steady_clock::time_point& _time_start) -> void
+    {
+        using namespace std::chrono_literals;
+
+        // By remembering the initial value of _first_boot, we can keep the initial connection
+        // to the agent factory quiet. The reason for this is because the agent factory isn't guaranteed
+        // to be accepting connections by the time the first client connection is made from the main server
+        // process.
+        const auto did_first_boot = _first_boot;
+
+        // TODO Replace 10s with the configuration value from server_config.json.
+        if (auto now = std::chrono::steady_clock::now(); _first_boot || (now - _time_start > 10s)) {
+            _first_boot = false;
+            _time_start = now;
+
+            const auto hostname = boost::asio::ip::host_name();
+            std::optional<std::string> leader;
+            std::optional<std::string> successor;
+
+            try {
+                irods::experimental::client_connection conn;
+                leader = get_delay_server_leader(conn);
+                successor = get_delay_server_successor(conn);
+
+                if (leader && successor) {
+                    log_server::debug("{}: Delay server leader [{}] and successor [{}].", __func__, *leader, *successor);
+
+                    // 4 cases:
+                    // L  S
+                    // ----
+                    // 0  0 (invalid state / no-op)
+                    // 1  0 (migration complete)
+                    // 0  1 (leader has shut down ds, successor launching ds)
+                    // 1  1 (leader running ds, admin requested migration)
+
+                    // This server is the leader and may be running a delay server.
+                    if (hostname == *leader) {
+                        if (hostname == *successor) {
+                            launch_delay_server();
+
+                            // Clear successor entry in catalog. This isn't necessary, but helps
+                            // keep the admin from becoming confused.
+                            if (g_pid_ds > 0) {
+                                set_delay_server_migration_info(conn, KW_DELAY_SERVER_MIGRATION_IGNORE, "");
+                            }
+                        }
+                        else if (!successor->empty()) {
+                            // Migration requested. Stop local delay server if running and clear the
+                            // leader entry in the catalog.
+                            if (g_pid_ds > 0) {
+                                kill(g_pid_ds, SIGTERM);
+
+                                // Wait for delay server to complete current tasks. Depending on the workload, this
+                                // could take minutes, hours, days to complete.
+                                int status = 0;
+                                waitpid(g_pid_ds, &status, 0);
+                                log_server::info("Delay server has completed shutdown [exit_code={}].", WEXITSTATUS(status));
+                                g_pid_ds = 0;
+                            }
+
+                            // TODO This isn't necessary if we can get task locking working (i.e. delay servers
+                            // lock tasks just before execution).
+                            //
+                            // TODO However, we can uncomment the following if the server can confirm the host
+                            // doesn't exist in the zone.
+                            //
+                            // Clear the leader entry. This acts as a signal to the successor server
+                            // that it is safe to launch the delay server.
+                            //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
+                        }
+                        else {
+                            launch_delay_server();
+                        }
+                    }
+                    else if (hostname == *successor) {
+                        // leader == successor is covered by first if-branch.
+#if 0
+                        if (leader->empty()) {
+                            // The leader's delay server has been shut down. Launch the delay server if
+                            // not running already.
+
+                            log_server::info("{}: Launching Delay Server.", __func__);
+                            g_pid_ds = fork();
+                            if (0 == g_pid_ds) {
+                                char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
+                                char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
+                                execv(pname, args);
+                                _exit(1);
+                            }
+                            else if (g_pid_ds > 0) {
+                                log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
+                                set_delay_server_migration_info(conn, hostname, "");
+                            }
+                            else {
+                                log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
+                            }
+                        }
+                        else {
+                            // TODO
+                            // Determine when it's safe to auto-promote the successor to the leader
+                            // (i.e. the leader value is never cleared).
+
+                            // 1. Connect to leader.
+                            // 2. Use API to get the PID of the delay server.
+                            // 3. If we find a PID for the delay server, try again later (because we're waiting for it to shutdown).
+                            // 4. If we fail to reach the leader (due to network, etc), start counting failures.
+                            // 5. If the successor fails to get the PID N times, auto-promote successor to leader.
+                        }
+#else
+                        // Delay servers lock tasks before execution. This allows the successor server
+                        // to launch a delay server without duplicating work.
+                        launch_delay_server();
+
+                        if (g_pid_ds > 0) {
+                            set_delay_server_migration_info(conn, hostname, "");
+                        }
+#endif
+                    }
+                    else {
+                        // TODO Reap child processes: agent factory, delay server
+                        // TODO Fork agent factory and/or delay server again if necessary.
+                    }
+                }
+            }
+            catch (const irods::exception& e) {
+                // It's possible the agent factory may not be ready for client requests.
+                // This situation is most visible during startup, when the delay server migration
+                // logic attempts to fetch the leader and successor hostnames from the catalog.
+                //
+                // If and when the connection from the main server process fails, log the error
+                // silently. We want startup (i.e. first boot) to clean.
+                if (did_first_boot && e.code() == USER_SOCK_CONNECT_ERR) {
+                    log_server::trace("{}: {}", __func__, e.client_display_what());
+                }
+                else {
+                    log_server::error("{}: {}", __func__, e.client_display_what());
+                }
+            }
+            catch (const std::exception& e) {
+                log_server::error("{}: {}", __func__, e.what());
+            }
+        }
+    } // migrate_and_launch_delay_server
+
+    auto log_stacktrace_files() -> void
+    {
+        const auto stacktrace_directory = irods::get_stacktrace_directory_path();
+
+        for (auto&& entry : fs::directory_iterator{stacktrace_directory}) {
+            // Expected filename format:
+            //
+            //     <epoch_seconds>.<epoch_milliseconds>.<agent_pid>
+            //
+            // 1. Extract the timestamp from the filename and convert it to ISO8601 format.
+            // 2. Extract the agent pid from the filename.
+            const auto p = entry.path().generic_string();
+
+            if (p.ends_with(irods::STACKTRACE_NOT_READY_FOR_LOGGING_SUFFIX)) {
+                log_server::trace("Skipping [{}] ...", p);
+                continue;
+            }
+
+            auto slash_pos = p.rfind("/");
+
+            if (slash_pos == std::string::npos) {
+                log_server::trace("Skipping [{}]. No forward slash separator found.", p);
+                continue;
+            }
+
+            ++slash_pos;
+            const auto first_dot_pos = p.find(".", slash_pos);
+
+            if (first_dot_pos == std::string::npos) {
+                log_server::trace("Skipping [{}]. No dot separator found.", p);
+                continue;
+            }
+
+            const auto last_dot_pos = p.rfind(".");
+
+            if (last_dot_pos == std::string::npos || last_dot_pos == first_dot_pos) {
+                log_server::trace("Skipping [{}]. No dot separator found.", p);
+                continue;
+            }
+
+            const auto epoch_seconds = p.substr(slash_pos, first_dot_pos - slash_pos);
+            const auto remaining_millis = p.substr(first_dot_pos + 1, last_dot_pos - (first_dot_pos + 1));
+            const auto pid = p.substr(last_dot_pos + 1);
+            log_server::trace(
+                "epoch seconds = [{}], remaining millis = [{}], agent pid = [{}]",
+                epoch_seconds,
+                remaining_millis,
+                pid);
+
+            try {
+                // Convert the epoch value to ISO8601 format.
+                log_server::trace("Converting epoch seconds to UTC timestamp.");
+                using boost::chrono::system_clock;
+                using boost::chrono::time_fmt;
+                const auto tp = system_clock::from_time_t(std::stoll(epoch_seconds));
+                std::ostringstream utc_ss;
+                utc_ss << time_fmt(boost::chrono::timezone::utc, "%FT%T") << tp;
+
+                // Read the contents of the file.
+                std::ifstream file{p};
+                const auto stacktrace = boost::stacktrace::stacktrace::from_dump(file);
+                file.close();
+
+                // 3. Write the contents of the stacktrace file to syslog.
+                irods::experimental::log::server::critical({
+                    {"log_message", boost::stacktrace::to_string(stacktrace)},
+                    {"stacktrace_agent_pid", pid},
+                    {"stacktrace_timestamp_utc", fmt::format("{}.{}Z", utc_ss.str(), remaining_millis)},
+                    {"stacktrace_timestamp_epoch_seconds", epoch_seconds},
+                    {"stacktrace_timestamp_epoch_milliseconds", remaining_millis}
+                });
+
+                // 4. Delete the stacktrace file.
+                //
+                // We don't want the stacktrace files to go away without making it into the log.
+                // We can't rely on the log invocation above because of syslog.
+                // We don't want these files to accumulate for long running servers.
+                log_server::trace("Removing stacktrace file from disk.");
+                fs::remove(entry);
+            }
+            catch (...) {
+                // Something happened while logging the stacktrace file.
+                // Leaving the stacktrace file in-place for processing later.
+                log_server::trace("Caught exception while processing stacktrace file.");
+            }
+        }
+    } // log_stacktrace_files
 } // anonymous namespace

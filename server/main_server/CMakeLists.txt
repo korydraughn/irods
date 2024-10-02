@@ -69,7 +69,7 @@ target_link_libraries(
   irods_common
   irods_plugin_dependencies
   irods_server
-  #"${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_chrono.so"
+  "${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_chrono.so"
   "${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_filesystem.so"
   #"${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_regex.so"
   "${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_program_options.so"
@@ -85,6 +85,7 @@ target_include_directories(
   PRIVATE
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party>"
   #"${IRODS_EXTERNALS_FULLPATH_AVRO}/include"
   "${IRODS_EXTERNALS_FULLPATH_BOOST}/include"
   #"${IRODS_EXTERNALS_FULLPATH_CPPZMQ}/include"

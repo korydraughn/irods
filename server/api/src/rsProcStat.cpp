@@ -1,3 +1,4 @@
+#include "irods/irods_server_properties.hpp"
 #include "irods/rcMisc.h"
 #include "irods/procStat.h"
 #include "irods/objMetaOpr.hpp"
@@ -181,8 +182,8 @@ localProcStat( procStatInp_t *procStatInp,
     char childPath[MAX_NAME_LEN];
     int count = 0;
 
-    // TODO Derive or log path from config file.
-    numProc = getNumFilesInDir( "/var/lib/irods/log/proc" ) + 2; /* add 2 to give some room */
+    const auto ips_data_dir = irods::get_server_property<std::string>("ips_data_directory");
+    numProc = getNumFilesInDir(ips_data_dir.c_str()) + 2; /* add 2 to give some room */
 
     std::memset(&procLog, 0, sizeof(procLog));
     /* init serverAddr */
@@ -203,13 +204,12 @@ localProcStat( procStatInp_t *procStatInp,
     }
 
     /* loop through the directory */
-    // TODO Derive or log path from config file.
-    path srcDirPath( "/var/lib/irods/log/proc" );
+    path srcDirPath(ips_data_dir);
     if ( !exists( srcDirPath ) || !is_directory( srcDirPath ) ) {
         status = USER_INPUT_PATH_ERR - errno;
         // TODO Derive or log path from config file.
         rodsLogError( LOG_ERROR, status,
-                      "localProcStat: opendir local dir error for %s", "/var/lib/irods/log/proc");
+                      "localProcStat: opendir local dir error for %s", ips_data_dir.c_str());
         return status;
     }
     directory_iterator end_itr; // default construction yields past-the-end

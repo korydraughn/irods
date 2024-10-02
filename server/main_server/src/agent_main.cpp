@@ -39,6 +39,7 @@
 #include "irods/irods_re_plugin.hpp"
 #include "irods/irods_server_api_table.hpp"
 #include "irods/irods_server_properties.hpp"
+#include "irods/irods_signal.hpp"
 #include "irods/irods_threads.hpp"
 #include "irods/locks.hpp" // For removeMutex TODO remove eventually
 #include "irods/miscServerFunct.hpp" // For get_catalog_service_role
@@ -116,7 +117,6 @@ namespace
     using log_agent = irods::experimental::log::agent;
 
     volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-    volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     auto init_logger(const nlohmann::json& _config) -> void;
     auto load_log_levels_for_loggers() -> void;
@@ -126,7 +126,6 @@ namespace
     auto init_shared_memory_for_plugins() -> irods::error;
     auto deinit_shared_memory_for_plugin(const nlohmann::json& _plugin_object) -> bool;
     auto deinit_shared_memory_for_plugins() -> irods::error;
-    auto create_agent_pid_directory() -> void;
 
     // TODO Refactor these functions.
     auto initServer(RsComm& _comm) -> int;
@@ -137,7 +136,6 @@ namespace
     auto cleanupAndExit(int status) -> void;
     auto set_rule_engine_globals(RsComm& _comm) -> void;
     auto agentMain(RsComm& _comm) -> int;
-    auto make_agent_pid_file() -> std::string;
     auto create_agent_pid_file_for_ips(const RsComm& _comm, std::time_t _created_at) -> void;
 
     auto reap_agent_processes(bool _shutting_down) -> void;
@@ -147,7 +145,7 @@ int main(int _argc, char* _argv[])
 {
     ProcessType = AGENT_PT; // This process identifies itself as the agent factory or an agent.
 
-    std::string config_dir_path;
+    std::string config_file_path;
     std::string hostname_cache_shm_name;
     std::string dns_cache_shm_name;
 
@@ -159,18 +157,16 @@ int main(int _argc, char* _argv[])
 
     // clang-format off
     opts_desc.add_options()
-        ("config-directory,f", po::value<std::string>(), "")
+        ("config-file,f", po::value<std::string>(), "")
         ("hostname-cache-shm-name,x", po::value<std::string>(), "")
         ("dns-cache-shm-name,y", po::value<std::string>(), "")
-        ("message-queue,q", po::value<std::string>(), "")
         ("boot-time,b", po::value<std::string>(), "");
     // clang-format on
 
     po::positional_options_description pod;
-    pod.add("config-directory", 1);
+    pod.add("config-file", 1);
     pod.add("hostname-cache-shm-name", 1);
     pod.add("dns-cache-shm-name", 1);
-    pod.add("message-queue", 1);
     pod.add("boot-time", 1);
 
     try {
@@ -178,8 +174,8 @@ int main(int _argc, char* _argv[])
         po::store(po::command_line_parser(_argc, _argv).options(opts_desc).positional(pod).run(), vm);
         po::notify(vm);
 
-        if (auto iter = vm.find("config-directory"); std::end(vm) != iter) {
-            config_dir_path = std::move(iter->second.as<std::string>());
+        if (auto iter = vm.find("config-file"); std::end(vm) != iter) {
+            config_file_path = std::move(iter->second.as<std::string>());
         }
         else {
             fmt::print(stderr, "Error: Missing [CONFIG_FILE_PATH] parameter.");
@@ -213,19 +209,14 @@ int main(int _argc, char* _argv[])
     try {
         // Load configuration.
         // TODO Pick one of the following.
-        config = json::parse(std::ifstream{fs::path{config_dir_path} / "server_config.json"});
+        config = json::parse(std::ifstream{config_file_path});
+        irods::server_properties::instance().init(config_file_path.c_str());
         irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
-        irods::server_properties::instance().capture(); // TODO This MUST NOT assume /etc/irods/server_config.json.
 
         // TODO Consider removing the need for these along with all options.
         // All logging should be controlled via the new logging system.
         rodsLogLevel(LOG_NOTICE);
     	rodsLogSqlReq(0);
-
-        // TODO Init base systems for parent process.
-        // - logger
-        // - shared memory for replica access table, dns cache, hostname cache?
-        // - delay server salt
 
         // To see log messages from rsyslog, you must add irodsAgent5 to /etc/rsyslog.d/00-irods.conf.
         init_logger(config);
@@ -233,6 +224,10 @@ int main(int _argc, char* _argv[])
         log_af::info("{}: Initializing loggers for agent factory.", __func__);
         // TODO These MUST NOT assume /etc/irods/server_config.json.
         load_log_levels_for_loggers();
+
+        // We only need to inform the agent factory of where to write stacktrace files. The main
+        // server process is responsible for reading and writing them to the log file.
+        irods::set_stacktrace_directory(config.at("stacktrace_directory").get_ref<const std::string&>());
 
         log_af::info("{}: Initializing signal handlers for agent factory.", __func__);
         if (setup_signal_handlers() == -1) {
@@ -246,9 +241,6 @@ int main(int _argc, char* _argv[])
         // TODO
         //remove_leftover_rulebase_pid_files(*server_config);
 
-        // TODO
-        //create_stacktrace_directory();
-
         // TODO Initialize shared memory systems.
         log_af::info("{}: Initializing shared memory for agent factory.", __func__);
 
@@ -260,10 +252,6 @@ int main(int _argc, char* _argv[])
 
         irods::experimental::replica_access_table::init();
         irods::at_scope_exit deinit_replica_access_table{[] { irods::experimental::replica_access_table::deinit(); }};
-
-        log_af::info("{}: Creating directory for tracking agent information for ips.", __func__);
-
-        create_agent_pid_directory(); // TODO Can throw.
 
         log_af::info("{}: Initializing zone information for agent factory.", __func__);
 
@@ -313,18 +301,6 @@ int main(int _argc, char* _argv[])
             return 1;
         }
 
-#if 0
-        // This message queue gives child processes a way to notify the parent process.
-        // This will only be used by the agent factory because iRODS 5.0 won't have a control plane.
-        // Or at least that's the plan.
-        constexpr const auto* mq_name = "irodsd_mq"; // TODO Make this name unique.
-        constexpr auto max_number_of_msg = 1; // Set to 1 to protect against duplicate/spamming of messages.
-        constexpr auto max_msg_size = 512; 
-        boost::interprocess::message_queue::remove(mq_name);
-        boost::interprocess::message_queue pproc_mq{
-            boost::interprocess::create_only, mq_name, max_number_of_msg, max_msg_size};
-#endif
-
         // Enter parent process main loop.
         // 
         // This process should never introduce threads. Everything it cares about must be handled
@@ -333,11 +309,6 @@ int main(int _argc, char* _argv[])
         // THE PARENT PROCESS IS THE ONLY PROCESS THAT SHOULD/CAN REACT TO SIGNALS!
         // EVERYTHING IS PROPAGATED THROUGH/FROM THE PARENT PROCESS!
 
-#if 0
-        std::array<char, max_msg_size> msg_buf{};
-        boost::interprocess::message_queue::size_type recvd_size{};
-        unsigned int priority{};
-#endif
         fd_set sockMask;
         FD_ZERO(&sockMask); // NOLINT(readability-isolate-declaration)
 
@@ -456,7 +427,6 @@ namespace
     {
         namespace logger = irods::experimental::log;
 
-        // TODO These MUST NOT assume /etc/irods/server_config.json.
         logger::agent::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT));
         logger::agent_factory::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT_FACTORY));
         logger::api::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_API));
@@ -510,7 +480,7 @@ namespace
             return -1;
         }
 
-        // TODO Handle other signals.
+        irods::setup_unrecoverable_signal_handlers();
 
         return 0;
     } // setup_signal_handlers
@@ -654,7 +624,7 @@ namespace
         std::string svc_role;
         if (const auto res = get_catalog_service_role(svc_role); !res.ok()) {
             log_af::error("{}: Could not get server role. [error code={}]", __func__, res.code());
-            return res.code(); // TODO Handle narrowing.
+            return res.code();
         }
 
         if (LOCAL_HOST == rodsServerHost->localFlag) {
@@ -863,7 +833,6 @@ namespace
 
         rsComm.thread_ctx = static_cast<thread_context*>(std::malloc(sizeof(thread_context)));
 
-        //int status = initRsCommWithStartupPack(&rsComm, nullptr); // TODO This call relies on reading env variables to init rsComm.
         bool require_cs_neg = false;
         int status = initRsCommWithStartupPack(&rsComm, startupPack, require_cs_neg); // This version just uses the startupPack.
 
@@ -1023,20 +992,6 @@ namespace
         __lsan_do_leak_check();
 #endif
 
-        // _exit() must be called here due to a design limitation involving forked processes and mutexes.
-        //
-        // It has been observed that if the agent factory is respawned by the main server process, global
-        // mutexes will be locked 99% of the time. These global mutexes can never be unlocked following the
-        // call to fork().
-        //
-        // iRODS makes use of C++ libraries that make assertions around the handling of mutexes (e.g. boost::mutex).
-        // If these assertions are violated, SIGABRT is triggered. For that reason, we cannot allow agents to
-        // execute std::exit() or return up the call chain. Doing so would result in SIGABRT. For the most part,
-        // using _exit() is perfectly fine here because this is the final step in shutting down the agent process.
-        //
-        // The key word here is process. Following this call, the OS will reclaim all memory associated with
-        // the terminated agent process.
-        //_exit((0 == status) ? 0 : 1); // TODO Remove since the process model is different.
         return (0 == status) ? 0 : 1;
     } // handle_client_request
 
@@ -1211,20 +1166,6 @@ namespace
         return status;
     } // agentMain
 
-    auto create_agent_pid_directory() -> void
-    {
-        // TODO Derive path from the config file location or load it from the config file.
-        fs::remove_all("/var/lib/irods/log/proc");
-        fs::create_directories("/var/lib/irods/log/proc");
-        // TODO Need to consider permissions. They were originally set to 0750.
-    } // create_agent_pid_directory
-
-    auto make_agent_pid_file() -> std::string
-    {
-        // TODO Derive or load path prefix from config file.
-        return fmt::format("/var/lib/irods/log/proc/{}", getpid());
-    } // make_agent_pid_file
-
     auto create_agent_pid_file_for_ips(const RsComm& _comm, std::time_t _created_at) -> void
     {
         std::string_view local_zone = "UNKNOWN";
@@ -1247,7 +1188,10 @@ namespace
             client_program_name = "UNKNOWN";
         }
 
-        if (std::ofstream out{make_agent_pid_file()}; out) {
+        const auto ips_data_dir = irods::get_server_property<std::string>("ips_data_directory");
+        const auto pid_file = fmt::format("{}/{}", ips_data_dir, getpid());
+
+        if (std::ofstream out{pid_file}; out) {
             out << fmt::format("{} {} {} {} {} {} {}\n",
                 // TODO The argument order is weird?
                 _comm.proxyUser.userName,
@@ -1257,6 +1201,9 @@ namespace
                 client_program_name,
                 _comm.clientAddr,
                 static_cast<unsigned int>(_created_at));
+        }
+        else {
+            log_agent::error("{}: Could not open file [{}] for agent/ips data.", __func__, pid_file);
         }
     } // create_agent_pid_file_for_ips
 

@@ -2,6 +2,7 @@
 #define IRODS_SIGNAL_HPP
 
 #include <string>
+#include <string_view>
 
 namespace irods
 {
@@ -11,16 +12,29 @@ namespace irods
     /// \since 4.3.0
     extern const char* const STACKTRACE_NOT_READY_FOR_LOGGING_SUFFIX;
 
-    /// std::string containing the path of the directory where stacktraces are
-    /// stored.
+    /// TODO
     ///
-    /// \since 4.3.0
-    extern const std::string STACKTRACE_DIR;
+    /// The logging system MUST be initialized before calling this function.
+    ///
+    /// \since 5.0.0
+    auto set_stacktrace_directory(std::string_view _path) -> void;
 
-    /// Sets signal handlers for SIGSEGV, SIGABRT, and SIGINT.
+    /// TODO
+    ///
+    /// \since 5.0.0
+    auto get_stacktrace_directory_path() -> std::string_view;
+
+    /// Sets signal handlers for the following signals:
+    /// - SIGSEGV
+    /// - SIGABRT
+    /// - SIGILL
+    /// - SIGFPE
+    /// - SIGBUG
+    ///
+    /// The logging system MUST be initialized before calling this function.
     ///
     /// \since 4.3.0
-    void set_unrecoverable_signal_handlers();
+    auto setup_unrecoverable_signal_handlers() -> void;
 } // namespace irods
 
 #endif // IRODS_SIGNAL_HPP
