@@ -100,9 +100,11 @@ namespace
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>;
     auto get_delay_server_successor(RcComm& _comm) -> std::optional<std::string>;
     auto launch_agent_factory(char* _config_file_path, const char* _src_func) -> bool;
-    auto launch_delay_server() -> void;
     auto handle_configuration_reload(std::string& _config_file_path) -> void;
-    auto migrate_and_launch_delay_server(bool& _first_boot, std::chrono::steady_clock::time_point& _time_start) -> void;
+    auto launch_delay_server(char* _config_file_path) -> void;
+    auto migrate_and_launch_delay_server(char* _config_file_path,
+                                         bool& _first_boot,
+                                         std::chrono::steady_clock::time_point& _time_start) -> void;
     auto log_stacktrace_files() -> void;
 } // anonymous namespace
 
@@ -280,7 +282,7 @@ int main(int _argc, char* _argv[])
             }
 
             log_stacktrace_files();
-            migrate_and_launch_delay_server(first_boot, dsm_time_start);
+            migrate_and_launch_delay_server(config_file_path.data(), first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
         }
@@ -512,6 +514,7 @@ Options:
         std::strcpy(input.option_name, "leader");
 
         GridConfigurationOutput* output{};
+        // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,cppcoreguidelines-no-malloc)
         irods::at_scope_exit free_output{[&output] { std::free(output); }};
 
         if (const auto ec = rc_get_grid_configuration_value(&_comm, &input, &output); ec < 0) {
@@ -532,6 +535,7 @@ Options:
         std::strcpy(input.option_name, "successor");
 
         GridConfigurationOutput* output{};
+        // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,cppcoreguidelines-no-malloc)
         irods::at_scope_exit free_output{[&output] { std::free(output); }};
 
         if (const auto ec = rc_get_grid_configuration_value(&_comm, &input, &output); ec < 0) {
@@ -596,38 +600,6 @@ Options:
         return true;
     } // launch_agent_factory
 
-    auto launch_delay_server() -> void
-    {
-        auto launch = (0 == g_pid_ds);
-
-        if (g_pid_ds > 0) {
-            if (const auto ec = kill(g_pid_ds, 0); ec == -1) {
-                if (EPERM == errno || ESRCH == errno) {
-                    launch = true;
-                    g_pid_ds = 0;
-                }
-            }
-        }
-
-        if (launch) {
-            log_server::info("{}: Launching Delay Server.", __func__);
-            g_pid_ds = fork();
-            if (0 == g_pid_ds) {
-                char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
-                execv(pname, args);
-                _exit(1);
-            }
-            else if (g_pid_ds > 0) {
-                log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
-            }
-            else {
-                log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
-                g_pid_ds = 0;
-            }
-        }
-    } // launch_delay_server
-
     auto handle_configuration_reload(std::string& _config_file_path) -> void
     {
         log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
@@ -660,7 +632,46 @@ Options:
         g_reload_config = 0;
     } // handle_configuration_reload
 
-    auto migrate_and_launch_delay_server(bool& _first_boot, std::chrono::steady_clock::time_point& _time_start) -> void
+    auto launch_delay_server(char* _config_file_path) -> void
+    {
+        auto launch = (0 == g_pid_ds);
+
+        if (g_pid_ds > 0) {
+            if (const auto ec = kill(g_pid_ds, 0); ec == -1) {
+                if (EPERM == errno || ESRCH == errno) {
+                    launch = true;
+                    g_pid_ds = 0;
+                }
+            }
+        }
+
+        if (launch) {
+            log_server::info("{}: Launching Delay Server.", __func__);
+            g_pid_ds = fork();
+            if (0 == g_pid_ds) {
+                char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
+                char* args[] = {
+                    pname,
+                    _config_file_path,
+                    // TODO Restore test mode.
+                    nullptr
+                }; // TODO Needs to take the config file path.
+                execv(pname, args);
+                _exit(1);
+            }
+            else if (g_pid_ds > 0) {
+                log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
+            }
+            else {
+                log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
+                g_pid_ds = 0;
+            }
+        }
+    } // launch_delay_server
+
+    auto migrate_and_launch_delay_server(char* _config_file_path,
+                                         bool& _first_boot,
+                                         std::chrono::steady_clock::time_point& _time_start) -> void
     {
         using namespace std::chrono_literals;
 
@@ -698,7 +709,7 @@ Options:
                     // This server is the leader and may be running a delay server.
                     if (hostname == *leader) {
                         if (hostname == *successor) {
-                            launch_delay_server();
+                            launch_delay_server(_config_file_path);
 
                             // Clear successor entry in catalog. This isn't necessary, but helps
                             // keep the admin from becoming confused.
@@ -731,7 +742,7 @@ Options:
                             //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
                         }
                         else {
-                            launch_delay_server();
+                            launch_delay_server(_config_file_path);
                         }
                     }
                     else if (hostname == *successor) {
@@ -771,7 +782,7 @@ Options:
 #else
                         // Delay servers lock tasks before execution. This allows the successor server
                         // to launch a delay server without duplicating work.
-                        launch_delay_server();
+                        launch_delay_server(_config_file_path);
 
                         if (g_pid_ds > 0) {
                             set_delay_server_migration_info(conn, hostname, "");
