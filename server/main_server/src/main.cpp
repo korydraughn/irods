@@ -187,7 +187,7 @@ int main(int _argc, char* _argv[])
         // TODO Pick one of the following.
         config = json::parse(std::ifstream{config_file_path});
         irods::server_properties::instance().init(config_file_path);
-        irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
+        irods::environment_properties::instance().capture();
 
         // TODO Consider removing the need for these along with all options.
         // All logging should be controlled via the new logging system.
@@ -464,7 +464,7 @@ Options:
     {
         namespace logger = irods::experimental::log;
 
-        logger::init(false, false);
+        logger::init(false, false); // TODO Restore test mode. stdout requires synchronization so it may be dropped.
         log_server::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
         logger::set_server_type("server");
         logger::set_server_zone(_config.at(irods::KW_CFG_ZONE_NAME).get<std::string>());
@@ -616,18 +616,26 @@ Options:
         // the relaunching of the delay server for us.
         g_pid_ds = 0;
 
-        // TODO These lines can throw, but it's unlikely.
-        log_server::info("{}: Reloading configuration for main server process.", __func__);
-        irods::server_properties::instance().reload();
-        irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
+        try {
+            log_server::info("{}: Reloading configuration for main server process.", __func__);
+            irods::server_properties::instance().reload();
+            irods::environment_properties::instance().capture();
+
+            // Update the logger for the main server process.
+            log_server::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
+            logger::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
+            logger::set_server_hostname(boost::asio::ip::host_name());
+        }
+        catch (const std::exception& e) {
+            log_server::error("{}: Error reloading configuration for main server process: {}", __func__, e.what());
+        }
 
         // Launch a new agent factory to serve client requests.
-        // The previous agent factory is allowed to linger around until its children
-        // terminate.
+        // The previous agent factory is allowed to linger around until its children terminate.
         launch_agent_factory(_config_file_path.data(), __func__);
 
-        // We do not need to manually launch the delay server because the delay server
-        // migration logic will handle that for us.
+        // We do not need to manually launch the delay server because the delay server migration
+        // logic will handle that for us.
 
         g_reload_config = 0;
     } // handle_configuration_reload
