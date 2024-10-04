@@ -41,6 +41,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -89,6 +90,8 @@ namespace
     auto print_usage() -> void;
     auto print_version_info() -> void;
     auto print_configuration_template() -> void;
+
+    auto validate_configuration(const std::string& _config_file_path) -> bool;
 
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
@@ -184,6 +187,11 @@ int main(int _argc, char* _argv[])
 
     try {
         // Load configuration.
+
+        if (!validate_configuration(config_file_path)) {
+            return 1;
+        }
+
         // TODO Pick one of the following.
         config = json::parse(std::ifstream{config_file_path});
         irods::server_properties::instance().init(config_file_path);
@@ -193,19 +201,6 @@ int main(int _argc, char* _argv[])
         // All logging should be controlled via the new logging system.
         rodsLogLevel(LOG_NOTICE);
     	rodsLogSqlReq(0);
-
-        // TODO Validate configuration.
-#if 0
-        const auto config = json::parse(std::ifstream{vm["config-directory"].as<std::string>()});
-        irods::http::globals::set_configuration(config);
-
-        {
-            const auto schema_file = (vm.count("jsonschema-file") > 0) ? vm["jsonschema-file"].as<std::string>() : "";
-            if (!is_valid_configuration(schema_file, vm["config-directory"].as<std::string>())) {
-                return 1;
-            }
-        }
-#endif
 
         init_logger(config);
 
@@ -340,6 +335,39 @@ Options:
     {
         // TODO
     } // print_version_info
+
+    auto validate_configuration(const std::string& _config_file_path) -> bool
+    {
+        try {
+            namespace jsonschema = jsoncons::jsonschema;
+
+            std::ifstream config_file{_config_file_path};
+            const auto config = jsoncons::json::parse(config_file);
+
+            const auto schema_file = config.at("json_schema_file").as<std::string>();
+            fmt::print("{}: JSON schema file = [{}].\n", __func__, schema_file);
+            std::ifstream in{schema_file};
+            const auto schema = jsoncons::json::parse(in); // The stream object cannot be instantiated inline.
+            const auto compiled = jsonschema::make_json_schema(schema);
+
+            jsoncons::json_decoder<jsoncons::ojson> decoder;
+            compiled.validate(config, decoder);
+            const auto json_result = decoder.get_result();
+
+            if (!json_result.empty()) {
+                std::ostringstream out;
+                out << pretty_print(json_result);
+                fmt::print("{}: {}\n", __func__, out.str());
+                return false;
+            }
+
+            return true;
+        }
+        catch (const std::exception& e) {
+            fmt::print("{}: {}\n", __func__, e.what());
+            return false;
+        }
+    } // validate_configuration
 
     auto daemonize() -> void
     {
@@ -603,6 +631,11 @@ Options:
     auto handle_configuration_reload(std::string& _config_file_path) -> void
     {
         log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
+
+        if (!validate_configuration(_config_file_path)) {
+            log_server::error("{}: Invalid configuration. Continuing to run with previous configuration.", __func__);
+            return;
+        }
 
         if (g_pid_ds > 0) {
             log_server::info("{}: Sending SIGTERM to the delay server.", __func__);
