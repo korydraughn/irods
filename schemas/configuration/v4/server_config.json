@@ -6,6 +6,11 @@
         "ips_data_directory": {"type": "string"},
         "stacktrace_directory": {"type": "string"},
         "json_schema_file": {"type": "string"},
+        "graceful_shutdown_timeout_in_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+        },
 
         "advanced_settings": {
             "type": "object",
@@ -263,6 +268,7 @@
         "ips_data_directory",
         "stacktrace_directory",
         "json_schema_file",
+        "graceful_shutdown_timeout_in_seconds",
         "advanced_settings",
         "catalog_provider_hosts",
         "catalog_service_role",
