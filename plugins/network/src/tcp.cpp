@@ -12,6 +12,8 @@
 #include "irods/rcMisc.h"
 #include "irods/irods_logger.hpp"
 
+#include <fmt/format.h>
+
 #include <cstdio>
 #include <sstream>
 #include <string>
@@ -33,10 +35,11 @@ irods::error tcp_socket_read(
 {
     log_net::debug("{}: BEGIN", __func__);
 
+    // NOLINTNEXTLINE(bugprone-lambda-function-name)
     irods::at_scope_exit log_exit{[fn = __func__] { log_net::debug("{}: END", fn); }};
 
     fd_set set;
-    struct timeval timeout;
+    struct timeval timeout{};
     int len_to_read = _length;
     char* read_ptr = static_cast<char*>( _buffer );
     _bytes_read = 0;
@@ -44,16 +47,16 @@ irods::error tcp_socket_read(
     while ( len_to_read > 0 ) {
         if ( nullptr != _time_value ) {
             // Must always reset the fd_set and timeout before a call to select().
-            FD_ZERO(&set);
-            FD_SET(_socket, &set);
+            FD_ZERO(&set); // NOLINT
+            FD_SET(_socket, &set); // NOLINT
             timeout = *_time_value;
 
             log_net::debug("{}: Calling select() with timeout [{}.{}].", __func__, timeout.tv_sec, timeout.tv_usec);
-            const int status = select( _socket + 1, &set, NULL, NULL, &timeout );
+            const int status = select( _socket + 1, &set, nullptr, nullptr, &timeout );
 
             if ( status == 0 ) { // the select has timed out
                 log_net::debug("{}: select() timed out. timeout object now holds [{}.{}].", __func__, timeout.tv_sec, timeout.tv_usec);
-                return ERROR( SYS_SOCK_READ_TIMEDOUT, boost::format("socket timeout with [%d] bytes read") % _bytes_read);
+                return ERROR( SYS_SOCK_READ_TIMEDOUT, fmt::format("socket timeout with [{}] bytes read", _bytes_read));
             }
 
             if ( status < 0 ) {
@@ -63,23 +66,22 @@ irods::error tcp_socket_read(
                     // TODO Need a way to detect that SIGUSR1 signal was received.
                     // Perhaps we read the value of g_terminate or simply return and handle
                     // termination at an earlier place in the callstack.
-                    //continue;
                     return ERROR(INTERRUPT_DETECTED, fmt::format("{} interrupted by signal", __func__));
                 }
 
-                return ERROR( SYS_SOCK_READ_ERR - errno, boost::format("error on select after [%d] bytes read") % _bytes_read);
+                return ERROR( SYS_SOCK_READ_ERR - errno, fmt::format("error on select after [{}] bytes read", _bytes_read));
             } // else
         } // if tv
 
         log_net::debug("{}: Reading [{}] bytes from socket [{}].", __func__, len_to_read, _socket);
-        int num_bytes = read( _socket, ( void * ) read_ptr, len_to_read );
+        int num_bytes = read(_socket, static_cast<void*>(read_ptr), len_to_read);
         if ( num_bytes < 0 ) {
             log_net::debug("{}: read() encountered an error [{}], errno = [{}].", __func__, num_bytes, errno);
             if ( EINTR == errno ) {
                 errno = 0;
                 num_bytes = 0;
             } else {
-                return ERROR(SYS_SOCK_READ_ERR - errno, boost::format("error reading from socket after [%d] bytes read") % _bytes_read);
+                return ERROR(SYS_SOCK_READ_ERR - errno, fmt::format("error reading from socket after [{}] bytes read", _bytes_read));
             }
         } else if ( num_bytes == 0 ) {
             log_net::debug("{}: read() returned 0. Peer must have disconnected.", __func__);
@@ -87,7 +89,7 @@ irods::error tcp_socket_read(
         }
 
         len_to_read -= num_bytes;
-        read_ptr    += num_bytes;
+        read_ptr    += num_bytes; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         _bytes_read += num_bytes;
     } // while
 
