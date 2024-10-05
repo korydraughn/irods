@@ -19,6 +19,7 @@
 //      - shared memory originally initialized by the main server process
 //      - stacktrace watcher
 
+#include "irods/agent_globals.hpp"
 #include "irods/agent_pid_table.hpp"
 #include "irods/client_api_allowlist.hpp"
 #include "irods/dns_cache.hpp"
@@ -116,7 +117,8 @@ namespace
     using log_af = irods::experimental::log::agent_factory;
     using log_agent = irods::experimental::log::agent;
 
-    volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    // TODO Remove
+    //volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     auto init_logger(const nlohmann::json& _config) -> void;
     auto load_log_levels_for_loggers() -> void;

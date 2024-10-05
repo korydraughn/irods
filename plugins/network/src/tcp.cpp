@@ -1,6 +1,8 @@
+#include "irods/irods_at_scope_exit.hpp"
 #include "irods/rodsDef.h"
 #include "irods/msParam.h"
 #include "irods/rcConnect.h"
+#include "irods/rodsErrorTable.h"
 #include "irods/sockComm.h"
 #include "irods/irods_network_plugin.hpp"
 #include "irods/irods_network_constants.hpp"
@@ -8,11 +10,17 @@
 #include "irods/irods_stacktrace.hpp"
 #include "irods/sockCommNetworkInterface.hpp"
 #include "irods/rcMisc.h"
+#include "irods/irods_logger.hpp"
 
 #include <cstdio>
 #include <sstream>
 #include <string>
 #include <iostream>
+
+namespace
+{
+    using log_net = irods::experimental::log::network;
+} // anonymous namespace
 
 // =-=-=-=-=-=-=-
 // local function to read a buffer from a socket
@@ -21,22 +29,16 @@ irods::error tcp_socket_read(
     void*           _buffer,
     int             _length,
     int&            _bytes_read,
-    struct timeval* _time_value ) {
-    // =-=-=-=-=-=-=-
-    // Initialize the file descriptor set
+    struct timeval* _time_value )
+{
+    log_net::debug("{}: BEGIN", __func__);
+
+    irods::at_scope_exit log_exit{[fn = __func__] { log_net::debug("{}: END", fn); }};
+
     fd_set set;
-
-    // =-=-=-=-=-=-=-
-    // local copy of time value?
     struct timeval timeout;
-
-    // =-=-=-=-=-=-=-
-    // local working variables
-    int   len_to_read = _length;
-    char* read_ptr    = static_cast<char*>( _buffer );
-
-    // =-=-=-=-=-=-=-
-    // reset bytes read
+    int len_to_read = _length;
+    char* read_ptr = static_cast<char*>( _buffer );
     _bytes_read = 0;
 
     while ( len_to_read > 0 ) {
@@ -46,23 +48,33 @@ irods::error tcp_socket_read(
             FD_SET(_socket, &set);
             timeout = *_time_value;
 
+            log_net::debug("{}: Calling select() with timeout [{}.{}].", __func__, timeout.tv_sec, timeout.tv_usec);
             const int status = select( _socket + 1, &set, NULL, NULL, &timeout );
 
             if ( status == 0 ) { // the select has timed out
+                log_net::debug("{}: select() timed out. timeout object now holds [{}.{}].", __func__, timeout.tv_sec, timeout.tv_usec);
                 return ERROR( SYS_SOCK_READ_TIMEDOUT, boost::format("socket timeout with [%d] bytes read") % _bytes_read);
             }
 
             if ( status < 0 ) {
+                log_net::debug("{}: select() encountered an error [{}], errno = [{}].", __func__, status, errno);
+
                 if ( errno == EINTR ) {
-                    continue;
+                    // TODO Need a way to detect that SIGUSR1 signal was received.
+                    // Perhaps we read the value of g_terminate or simply return and handle
+                    // termination at an earlier place in the callstack.
+                    //continue;
+                    return ERROR(INTERRUPT_DETECTED, fmt::format("{} interrupted by signal", __func__));
                 }
 
                 return ERROR( SYS_SOCK_READ_ERR - errno, boost::format("error on select after [%d] bytes read") % _bytes_read);
             } // else
         } // if tv
 
+        log_net::debug("{}: Reading [{}] bytes from socket [{}].", __func__, len_to_read, _socket);
         int num_bytes = read( _socket, ( void * ) read_ptr, len_to_read );
         if ( num_bytes < 0 ) {
+            log_net::debug("{}: read() encountered an error [{}], errno = [{}].", __func__, num_bytes, errno);
             if ( EINTR == errno ) {
                 errno = 0;
                 num_bytes = 0;
@@ -70,6 +82,7 @@ irods::error tcp_socket_read(
                 return ERROR(SYS_SOCK_READ_ERR - errno, boost::format("error reading from socket after [%d] bytes read") % _bytes_read);
             }
         } else if ( num_bytes == 0 ) {
+            log_net::debug("{}: read() returned 0. Peer must have disconnected.", __func__);
             break;
         }
 
@@ -163,6 +176,7 @@ irods::error tcp_read_msg_header(
     irods::plugin_context& _ctx,
     void*                  _buffer,
     struct timeval*        _time_val ) {
+    log_net::debug("{}: BEGIN", __func__);
     // =-=-=-=-=-=-=-
     // check the context
     irods::error ret = _ctx.valid< irods::tcp_object >();
@@ -433,6 +447,7 @@ irods::error read_bytes_buf(
     bytesBuf_t*     _buffer,
     irodsProt_t     _protocol,
     struct timeval* _time_val ) {
+    log_net::debug("{}: BEGIN", __func__);
     // =-=-=-=-=-=-=-
     // trap input buffer ptr
     if ( !_buffer || !_buffer->buf ) {
