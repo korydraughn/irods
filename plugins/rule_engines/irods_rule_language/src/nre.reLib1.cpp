@@ -823,7 +823,7 @@ readDVarStructFromFile( char *dvarBaseName, rulevardef_t *inRuleVarDef ) {
     else {
         std::string cfg_file, fn( dvarBaseName );
         fn += ".dvm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
+        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file ); // TODO
         if ( !ret.ok() ) {
             irods::log( PASS( ret ) );
             return ret.code();
@@ -886,7 +886,7 @@ readFuncMapStructFromFile( char *fmapBaseName, rulefmapdef_t* inRuleFuncMapDef )
     else {
         std::string cfg_file, fn( fmapBaseName );
         fn += ".fnm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
+        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file ); // TODO
         if ( !ret.ok() ) {
             irods::log( PASS( ret ) );
             return ret.code();
@@ -1400,7 +1400,7 @@ writeDVMapsIntoFile( char * inFileName, dvmStruct_t *myDVMapStruct,
     else {
         std::string cfg_file, fn( inFileName );
         fn += ".dvm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
+        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file ); // TODO
         if ( !ret.ok() ) {
             irods::log( PASS( ret ) );
             return ret.code();
@@ -1440,7 +1440,7 @@ writeFNMapsIntoFile( char * inFileName, fnmapStruct_t *myFNMapStruct,
     else {
         std::string cfg_file, fn( inFileName );
         fn += ".fnm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
+        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file ); // TODO
         if ( !ret.ok() ) {
             irods::log( PASS( ret ) );
             return ret.code();
