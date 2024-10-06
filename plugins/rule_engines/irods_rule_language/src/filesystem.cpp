@@ -12,8 +12,12 @@
 #include "irods/rodsConnect.h"
 
 char *getRuleBasePath(const char *ruleBaseName, char rulesFileName[MAX_NAME_LEN] ) {
-    std::string cfg_file, fn( ruleBaseName );
+    std::string cfg_file;
+    std::string fn( ruleBaseName );
     fn += ".re";
+    // This is how the NREP locates core.re and other ".re" files.
+    // TODO This isn't necessary anymore because the NREP will take absolute paths.
+    // On an upgrade to v5, we cannot assume /etc/irods because of non-pkg installs.
     irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
     if ( !ret.ok() ) {
         irods::log( PASS( ret ) );

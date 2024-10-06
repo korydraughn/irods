@@ -3557,7 +3557,8 @@ char *generateErrMsg( char *msg, long errloc, char *ruleBaseName, char errmsg[ER
         generateErrMsgFromSource( msg, errloc, ruleBaseName + 1, errmsg );
         return errmsg;
     case 'f': // file
-        getRuleBasePath( ruleBaseName + 1, ruleBasePath );
+        // TODO Remove if all tests pass?
+        //getRuleBasePath( ruleBaseName + 1, ruleBasePath );
         generateErrMsgFromFile( msg, errloc, ruleBaseName + 1, ruleBasePath, errmsg );
         return errmsg;
     default:

@@ -816,23 +816,9 @@ readDVarStructFromFile( char *dvarBaseName, rulevardef_t *inRuleVarDef ) {
 
     i = inRuleVarDef->MaxNumOfDVars;
 
-    if ( dvarBaseName[0] == '/' || dvarBaseName[0] == '\\' ||
-            dvarBaseName[1] == ':' ) {
-        snprintf( dvarsFileName, MAX_NAME_LEN, "%s", dvarBaseName );
-    }
-    else {
-        std::string cfg_file, fn( dvarBaseName );
-        fn += ".dvm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
-        if ( !ret.ok() ) {
-            irods::log( PASS( ret ) );
-            return ret.code();
-        }
-        snprintf( dvarsFileName, sizeof( dvarsFileName ), "%s", cfg_file.c_str() );
-
-    }
+    snprintf( dvarsFileName, MAX_NAME_LEN, "%s", dvarBaseName );
     file = fopen( dvarsFileName, "r" );
-    if ( file == NULL ) {
+    if ( file == nullptr ) {
         rodsLog( LOG_NOTICE,
                  "readDvarStructFromFile() could not open dvm file %s\n",
                  dvarsFileName );
@@ -879,22 +865,9 @@ readFuncMapStructFromFile( char *fmapBaseName, rulefmapdef_t* inRuleFuncMapDef )
 
     i = inRuleFuncMapDef->MaxNumOfFMaps;
 
-    if ( fmapBaseName[0] == '/' || fmapBaseName[0] == '\\' ||
-            fmapBaseName[1] == ':' ) {
-        snprintf( fmapsFileName, MAX_NAME_LEN, "%s", fmapBaseName );
-    }
-    else {
-        std::string cfg_file, fn( fmapBaseName );
-        fn += ".fnm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
-        if ( !ret.ok() ) {
-            irods::log( PASS( ret ) );
-            return ret.code();
-        }
-        snprintf( fmapsFileName, sizeof( fmapsFileName ), "%s", cfg_file.c_str() );
-    }
+    snprintf( fmapsFileName, MAX_NAME_LEN, "%s", fmapBaseName );
     file = fopen( fmapsFileName, "r" );
-    if ( file == NULL ) {
+    if ( file == nullptr ) {
         rodsLog( LOG_NOTICE,
                  "readFmapStructFromFile() could not open fnm file %s\n",
                  fmapsFileName );
@@ -1393,23 +1366,9 @@ writeDVMapsIntoFile( char * inFileName, dvmStruct_t *myDVMapStruct,
     FILE *file;
     char fileName[MAX_NAME_LEN];
 
-    if ( inFileName[0] == '/' || inFileName[0] == '\\' ||
-            inFileName[1] == ':' ) {
-        snprintf( fileName, MAX_NAME_LEN, "%s", inFileName );
-    }
-    else {
-        std::string cfg_file, fn( inFileName );
-        fn += ".dvm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
-        if ( !ret.ok() ) {
-            irods::log( PASS( ret ) );
-            return ret.code();
-        }
-        snprintf( fileName, sizeof( fileName ), "%s", cfg_file.c_str() );
-    }
-
+    snprintf( fileName, MAX_NAME_LEN, "%s", inFileName );
     file = fopen( fileName, "w" );
-    if ( file == NULL ) {
+    if ( file == nullptr ) {
         rodsLog( LOG_NOTICE,
                  "writeDVMapsIntoFile() could not open rules file %s for writing\n",
                  fileName );
@@ -1433,23 +1392,9 @@ writeFNMapsIntoFile( char * inFileName, fnmapStruct_t *myFNMapStruct,
     FILE *file;
     char fileName[MAX_NAME_LEN];
 
-    if ( inFileName[0] == '/' || inFileName[0] == '\\' ||
-            inFileName[1] == ':' ) {
-        snprintf( fileName, MAX_NAME_LEN, "%s", inFileName );
-    }
-    else {
-        std::string cfg_file, fn( inFileName );
-        fn += ".fnm";
-        irods::error ret = irods::get_full_path_for_config_file( fn, cfg_file );
-        if ( !ret.ok() ) {
-            irods::log( PASS( ret ) );
-            return ret.code();
-        }
-        snprintf( fileName, sizeof( fileName ), "%s", cfg_file.c_str() );
-    }
-
+    snprintf( fileName, MAX_NAME_LEN, "%s", inFileName );
     file = fopen( fileName, "w" );
-    if ( file == NULL ) {
+    if ( file == nullptr ) {
         rodsLog( LOG_NOTICE,
                  "writeFNMapsIntoFile() could not open rules file %s for writing\n",
                  fileName );

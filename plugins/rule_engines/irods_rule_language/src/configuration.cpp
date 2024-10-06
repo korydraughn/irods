@@ -335,7 +335,8 @@ int createAppRuleIndex( ) {
 
 int clearCoreRule();
 
-
+// TODO Remove this if it compiles.
+#if 0
 std::string get_rule_base_path( const std::string &irb) {
     char fn[NAME_LEN];
     if (getRuleBasePath( irb.c_str(), fn )==nullptr) {
@@ -343,9 +344,10 @@ std::string get_rule_base_path( const std::string &irb) {
     }
     return std::string(fn);
 }
+#endif
 
 std::string get_rule_base_path_copy( const std::string &irb, const int pid) {
-    return get_rule_base_path(irb) + "." + std::to_string(pid);
+    return irb + "." + std::to_string(pid);
 }
 
 std::vector<std::string> parse_irbSet(const std::string &irbSet) {
@@ -431,9 +433,9 @@ class in_memory_rulebases
     explicit in_memory_rulebases(const std::vector<std::string>& _irods_rule_bases)
     {
         for (auto const& irb : _irods_rule_bases) {
-            std::ifstream ifs(get_rule_base_path(irb));
+            std::ifstream ifs(irb);
             if (!ifs) {
-                log_re::error("in_memory_rulebases: input file stream [{}] failed", get_rule_base_path(irb));
+                log_re::error("in_memory_rulebases: input file stream [{}] failed", irb);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
                 THROW(RULES_FILE_READ_ERROR, fmt::format("Failed to load rulebase [{}] into memory", irb));
             }
@@ -542,8 +544,7 @@ int loadRuleFromCacheOrFile( const char* inst_name, const char *irbSet ) {
     time_type timestamp = time_type_initializer;
     for (auto const& irb : irbs) {
         time_type mtim;
-        auto fn = get_rule_base_path( irb );
-        if ( ( res = getModifiedTime( fn.c_str(), &mtim ) ) != 0 ) {
+        if ( ( res = getModifiedTime( irb.c_str(), &mtim ) ) != 0 ) {
             return res;
         }
 
