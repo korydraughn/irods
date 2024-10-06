@@ -20,4 +20,7 @@
 // this file and check this flag.
 inline volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
+// TODO
+inline volatile std::sig_atomic_t g_terminate_graceful = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
 #endif // IRODS_AGENT_GLOBALS_HPP

@@ -119,6 +119,8 @@ namespace
 
     // TODO Remove
     //volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    const char* g_ips_data_directory{}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    std::time_t g_graceful_shutdown_timeout{}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     auto init_logger(const nlohmann::json& _config) -> void;
     auto load_log_levels_for_loggers() -> void;
@@ -214,6 +216,16 @@ int main(int _argc, char* _argv[])
         config = json::parse(std::ifstream{config_file_path});
         irods::server_properties::instance().init(config_file_path.c_str());
         irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
+
+        // Initialize global pointer to ips data directory for agent cleanup.
+        // This is required so that the signal handler for reaping agents remains async-signal-safe.
+        // TODO Need a better way to get this.
+        g_ips_data_directory = config.at("ips_data_directory").get_ref<const std::string&>().c_str();
+
+        // Capture the gracefule shutdown timeout value for agent cleanup.
+        // This is required so that the signal handler for reaping agents remains async-signal-safe.
+        // TODO Need a better way to get this.
+        g_graceful_shutdown_timeout = config.at("graceful_shutdown_timeout_in_seconds").get<int>();
 
         // TODO Consider removing the need for these along with all options.
         // All logging should be controlled via the new logging system.
@@ -321,6 +333,11 @@ int main(int _argc, char* _argv[])
                 break;
             }
 
+            if (g_terminate_graceful) {
+                log_af::info("{}: Received graceful shutdown instruction. Exiting agent factory main loop.", __func__);
+                break;
+            }
+
             // NOLINTNEXTLINE(hicpp-signed-bitwise, cppcoreguidelines-pro-bounds-constant-array-index)
             FD_SET(svrComm.sock, &sockMask);
 
@@ -333,6 +350,11 @@ int main(int _argc, char* _argv[])
             while ((numSock = select(svrComm.sock + 1, &sockMask, nullptr, nullptr, &time_out)) == -1) {
                 if (g_terminate) {
                     log_af::info("{}: Received shutdown instruction. Exiting agent factory select() loop.", __func__);
+                    break;
+                }
+
+                if (g_terminate_graceful) {
+                    log_af::info("{}: Received graceful shutdown instruction. Exiting agent factory select() loop.", __func__);
                     break;
                 }
 
@@ -352,6 +374,11 @@ int main(int _argc, char* _argv[])
             }
 
             if (g_terminate) {
+                log_af::info("{}: Received shutdown instruction. Exiting agent factory main loop.", __func__);
+                break;
+            }
+
+            if (g_terminate_graceful) {
                 log_af::info("{}: Received shutdown instruction. Exiting agent factory main loop.", __func__);
                 break;
             }
@@ -396,9 +423,12 @@ int main(int _argc, char* _argv[])
         // Do not accept new client requests (i.e. close the listening socket).
         close(svrComm.sock);
 
-        // Instruct all agents to shutdown gracefully.
-        // To avoid unnecessary complexity, we use SIGUSR1 as the termination signal for agents.
-        kill(0, SIGUSR1);
+        if (0 == g_terminate_graceful) {
+            // Instruct all agents to shutdown gracefully.
+            // To avoid unnecessary complexity, we use SIGUSR1 as the termination signal for agents.
+            // Attempting to use SIGTERM would also notify the main server process, agent factory, and delay server.
+            kill(0, SIGUSR1);
+        }
 
         reap_agent_processes(true);
 
@@ -458,13 +488,32 @@ namespace
             const auto saved_errno = errno;
 
             // Only respond to SIGTERM if the main server process sent it.
-            if (getppid() == _siginfo->si_pid) {
+            if (getppid() == _siginfo->si_pid && 0 == g_terminate_graceful) {
                 g_terminate = 1;
             }
 
             errno = saved_errno;
         };
         if (sigaction(SIGTERM, &sa_terminate, nullptr) == -1) {
+            return -1;
+        }
+
+        // SIGQUIT (graceful shutdown)
+        struct sigaction sa_terminate_graceful; // NOLINT(cppcoreguidelines-pro-type-member-init)
+        sigemptyset(&sa_terminate_graceful.sa_mask);
+        sa_terminate_graceful.sa_flags = SA_SIGINFO;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+        sa_terminate_graceful.sa_sigaction = [](int, siginfo_t* _siginfo, void*) {
+            const auto saved_errno = errno;
+
+            // Only respond to SIGQUIT if the main server process sent it.
+            if (getppid() == _siginfo->si_pid && 0 == g_terminate) {
+                g_terminate_graceful = 1;
+            }
+
+            errno = saved_errno;
+        };
+        if (sigaction(SIGQUIT, &sa_terminate_graceful, nullptr) == -1) {
             return -1;
         }
 
@@ -1216,6 +1265,56 @@ namespace
         char agent_pid[16];
         char agent_pid_file_path[1024]; // TODO _POSIX_PATH_MAX?
 
+        const auto unlink_agent_pid_file = [&](const pid_t _pid) {
+            auto [p, ec] = std::to_chars(agent_pid, agent_pid + sizeof(agent_pid), _pid);
+            if (std::errc{} != ec) {
+                return;
+            }
+
+            // Add the null-terminating byte.
+            *p = 0;
+
+            std::memset(agent_pid_file_path, 0, sizeof(agent_pid_file_path));
+            std::strcpy(agent_pid_file_path, g_ips_data_directory);
+            std::strcat(agent_pid_file_path, agent_pid);
+
+            unlink(agent_pid_file_path);
+        };
+
+        if (g_terminate_graceful && _shutting_down) {
+            const auto start_time = std::time(nullptr);
+
+            // Poll termination of agents until one of the following conditions is true.
+            // - waitpid() returns -1 and errno is ECHILD
+            // - The graceful timeout limit has been exceeded
+            //
+            // If all agents have exited, break out the loop (i.e. we're done).
+            // If the graceful timeout limit has been exceeded, send SIGUSR1 signal to all agents
+            // so they terminate immediately.
+            while (true) {
+                pid = waitpid(-1, &status, WNOHANG);
+
+                // This branch is for when we're shutting down (i.e. not in a signal handler).
+                // That is - continue to loop until all agents have terminated.
+                if (-1 == pid && ECHILD == errno) {
+                    // All agents have terminated.
+                    return;
+                }
+
+                if (pid > 0) {
+                    unlink_agent_pid_file(pid);
+                }
+
+                if ((std::time(nullptr) - start_time) >= g_graceful_shutdown_timeout) {
+                    // Instruct agents to terminate. Breaking out the loop and going into the
+                    // normal reaping of agents is necessary because the files generated for ips
+                    // must be cleaned up.
+                    kill(0, SIGUSR1);
+                    break;
+                }
+            }
+        }
+
         const auto flags = _shutting_down ? 0: WNOHANG;
 
         while (true) {
@@ -1225,7 +1324,6 @@ namespace
             // That is - continue to loop until all agents have terminated.
             if (_shutting_down) {
                 if (-1 == pid && ECHILD == errno) {
-                    //log_af::info("{}: NO MORE AGENTS TO REAP!", __func__); // TODO Remove
                     // All agents have terminated.
                     break;
                 }
@@ -1236,21 +1334,7 @@ namespace
                 break;
             }
 
-            //log_af::info("{}: REAPING AGENT [{}]", __func__, pid); // TODO Remove
-            auto [p, ec] = std::to_chars(agent_pid, agent_pid + sizeof(agent_pid), pid);
-            if (std::errc{} != ec) {
-                continue;
-            }
-
-            // Add the null-terminating byte.
-            *p = 0;
-
-            std::memset(agent_pid_file_path, 0, sizeof(agent_pid_file_path));
-            // TODO Derive or load path from config file [location].
-            std::strcpy(agent_pid_file_path, "/var/lib/irods/log/proc/");
-            std::strcat(agent_pid_file_path, agent_pid);
-
-            unlink(agent_pid_file_path);
+            unlink_agent_pid_file(pid);
         }
     } // reap_agent_processes
 } // anonymous namespace

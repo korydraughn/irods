@@ -82,6 +82,7 @@ namespace
     using log_server = irods::experimental::log::server;
 
     volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    volatile std::sig_atomic_t g_terminate_graceful = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     pid_t g_pid_af = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -92,11 +93,14 @@ namespace
     auto print_configuration_template() -> void;
 
     auto validate_configuration(const std::string& _config_file_path) -> bool;
-
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
     auto init_logger(const nlohmann::json& _config) -> void;
     auto setup_signal_handlers() -> int;
+
+    auto handle_shutdown() -> void;
+    auto handle_shutdown_graceful() -> void;
+
     auto set_delay_server_migration_info(RcComm& _comm,
                                          std::string_view _leader,
                                          std::string_view _successor) -> void;
@@ -261,6 +265,13 @@ int main(int _argc, char* _argv[])
         while (true) {
             if (g_terminate) {
                 log_server::info("{}: Received shutdown instruction. Exiting server main loop.", __func__);
+                handle_shutdown();
+                break;
+            }
+
+            if (g_terminate_graceful) {
+                log_server::info("{}: Received graceful shutdown instruction. Exiting server main loop.", __func__);
+                handle_shutdown_graceful();
                 break;
             }
 
@@ -280,22 +291,6 @@ int main(int _argc, char* _argv[])
             migrate_and_launch_delay_server(config_file_path.data(), first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
-        }
-
-        // Start shutting everything down.
-
-        kill(g_pid_af, SIGTERM);
-
-        if (g_pid_ds > 0) {
-            kill(g_pid_ds, SIGTERM);
-        }
-
-        waitpid(g_pid_af, nullptr, 0);
-        log_server::info("{}: Agent Factory shutdown complete.", __func__);
-
-        if (g_pid_ds > 0) {
-            waitpid(g_pid_ds, nullptr, 0);
-            log_server::info("{}: Delay Server shutdown complete.", __func__);
         }
 
         log_server::info("{}: Server shutdown complete.", __func__);
@@ -510,13 +505,33 @@ Options:
         sigemptyset(&sa_terminate.sa_mask);
         sa_terminate.sa_flags = 0;
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-        sa_terminate.sa_handler = [](int) { g_terminate = 1; };
+        sa_terminate.sa_handler = [](int) {
+            // Only respond if the server hasn't been instructed to terminate already.
+            if (0 == g_terminate_graceful) {
+                g_terminate = 1;
+            }
+        };
         if (sigaction(SIGINT, &sa_terminate, nullptr) == -1) {
             return -1;
         }
 
         // SIGTERM
         if (sigaction(SIGTERM, &sa_terminate, nullptr) == -1) {
+            return -1;
+        }
+
+        // SIGQUIT (graceful shutdown)
+        struct sigaction sa_terminate_graceful; // NOLINT(cppcoreguidelines-pro-type-member-init)
+        sigemptyset(&sa_terminate_graceful.sa_mask);
+        sa_terminate_graceful.sa_flags = 0;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+        sa_terminate_graceful.sa_handler = [](int) {
+            // Only respond if the server hasn't been instructed to terminate already.
+            if (0 == g_terminate) {
+                g_terminate_graceful = 1;
+            }
+        };
+        if (sigaction(SIGQUIT, &sa_terminate_graceful, nullptr) == -1) {
             return -1;
         }
 
@@ -534,6 +549,40 @@ Options:
 
         return 0;
     } // setup_signal_handlers
+
+    auto handle_shutdown() -> void
+    {
+        kill(g_pid_af, SIGTERM);
+
+        if (g_pid_ds > 0) {
+            kill(g_pid_ds, SIGTERM);
+        }
+
+        waitpid(g_pid_af, nullptr, 0);
+        log_server::info("{}: Agent Factory shutdown complete.", __func__);
+
+        if (g_pid_ds > 0) {
+            waitpid(g_pid_ds, nullptr, 0);
+            log_server::info("{}: Delay Server shutdown complete.", __func__);
+        }
+    } // handle_shutdown
+
+    auto handle_shutdown_graceful() -> void
+    {
+        kill(g_pid_af, SIGQUIT);
+
+        if (g_pid_ds > 0) {
+            kill(g_pid_ds, SIGTERM);
+        }
+
+        waitpid(g_pid_af, nullptr, 0);
+        log_server::info("{}: Agent Factory shutdown complete.", __func__);
+
+        if (g_pid_ds > 0) {
+            waitpid(g_pid_ds, nullptr, 0);
+            log_server::info("{}: Delay Server shutdown complete.", __func__);
+        }
+    } // handle_shutdown_graceful
 
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>
     {
