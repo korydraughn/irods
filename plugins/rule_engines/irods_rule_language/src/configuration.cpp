@@ -345,7 +345,8 @@ std::string get_rule_base_path( const std::string &irb) {
 }
 
 std::string get_rule_base_path_copy( const std::string &irb, const int pid) {
-    return get_rule_base_path(irb) + "." + std::to_string(pid);
+    //return get_rule_base_path(irb) + "." + std::to_string(pid);
+    return irb + "." + std::to_string(pid);
 }
 
 std::vector<std::string> parse_irbSet(const std::string &irbSet) {
@@ -431,9 +432,11 @@ class in_memory_rulebases
     explicit in_memory_rulebases(const std::vector<std::string>& _irods_rule_bases)
     {
         for (auto const& irb : _irods_rule_bases) {
-            std::ifstream ifs(get_rule_base_path(irb));
+            //std::ifstream ifs(get_rule_base_path(irb));
+            std::ifstream ifs(irb);
             if (!ifs) {
-                log_re::error("in_memory_rulebases: input file stream [{}] failed", get_rule_base_path(irb));
+                //log_re::error("in_memory_rulebases: input file stream [{}] failed", get_rule_base_path(irb));
+                log_re::error("in_memory_rulebases: input file stream [{}] failed", irb);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
                 THROW(RULES_FILE_READ_ERROR, fmt::format("Failed to load rulebase [{}] into memory", irb));
             }
@@ -542,8 +545,15 @@ int loadRuleFromCacheOrFile( const char* inst_name, const char *irbSet ) {
     time_type timestamp = time_type_initializer;
     for (auto const& irb : irbs) {
         time_type mtim;
+        // TODO This is where the short name for core.re and friends is converted to a absolute path.
+        // Soooo, this just goes away because the config will already have the absolute paths.
+        // The time_type_gt will be the only thing left in this loop.
+#if 0
         auto fn = get_rule_base_path( irb );
         if ( ( res = getModifiedTime( fn.c_str(), &mtim ) ) != 0 ) {
+#else
+        if ( ( res = getModifiedTime( irb.c_str(), &mtim ) ) != 0 ) {
+#endif
             return res;
         }
 
