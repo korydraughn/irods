@@ -6,10 +6,33 @@
         "ips_data_directory": {"type": "string"},
         "stacktrace_directory": {"type": "string"},
         "json_schema_file": {"type": "string"},
+        "environment_json_schema_file": {"type": "string"},
         "graceful_shutdown_timeout_in_seconds": {
             "type": "integer",
             "minimum": 0,
-            "default": 0
+            "default": 30
+        },
+        "msiExecCmd_bin_directory": {"type": "string"},
+        "plugin_directory": {"type": "string"},
+        "home_directory": {"type": "string"},
+        "environment_file": {"type": "string"},
+
+        "directories": {
+            "type": "object",
+            "properties": {
+                "agent_info": {"type": "string"},
+                "home": {"type": "string"},
+                "msiExecCmd_bin": {"type": "string"},
+                "plugins": {"type": "string"},
+                "stacktraces": {"type": "string"}
+            },
+            "required": [
+                "agent_info",
+                "home",
+                "msiExecCmd_bin",
+                "plugins",
+                "stacktraces"
+            ]
         },
 
         "advanced_settings": {
