@@ -19,7 +19,7 @@ namespace irods
     fs::path
     get_irods_lib_directory() {
         Dl_info dl_info;
-        const int dladdr_ret = dladdr(__FUNCTION__, &dl_info);
+        const int dladdr_ret = dladdr(__func__, &dl_info);
         if (dladdr_ret == 0) {
             THROW(-1, "dladdr returned 0");
         }
