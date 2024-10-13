@@ -1274,6 +1274,7 @@ namespace
 
             std::memset(agent_pid_file_path, 0, sizeof(agent_pid_file_path));
             std::strcpy(agent_pid_file_path, g_ips_data_directory);
+            std::strcat(agent_pid_file_path, "/");
             std::strcat(agent_pid_file_path, agent_pid);
 
             unlink(agent_pid_file_path);
