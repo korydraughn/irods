@@ -123,6 +123,7 @@ int rodsMonPerfLog( char *serverName, char *resc, char *output, ruleExecInfo_t *
         pthread_mutex_lock( &my_mutex );
 #endif
         /* append to the output log file */
+        // TODO Figure out where this should live. I'm thinking we replace serverMonPerf tools.
         const auto log_fname = irods::get_irods_home_directory() / "log" / fname;
         FILE *foutput = fopen(log_fname.c_str(), "a");
         if ( foutput != NULL ) {
@@ -576,6 +577,7 @@ int msiServerMonPerf( msParam_t *verb, msParam_t *ptime, ruleExecInfo_t *rei ) {
     /* read the config file or the iCAT to know the servers list to monitor */
     nresc = 0;
 
+    // TODO Update or replace
     const auto mon_cfg_file = irods::get_irods_home_directory() / MON_CFG_FILE;
     nservers = -1;  /* nservers = -1, no config file available, consider all resources for the monitoring */
     if ((filein = fopen(mon_cfg_file.c_str(), "r")) != NULL) {

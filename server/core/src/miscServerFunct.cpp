@@ -3002,6 +3002,17 @@ irods::error get_script_output_single_line(
             return ERROR(RESOLUTION_ERROR, fmt::format("Could not resolve {} to an executable", script_language));
         }
 
+        // TODO Consider removing entirely. Currently, only the following things invoke this function:
+        // - server/api/src/rsServerReport.cpp:257:    ret = get_script_output_single_line( "python3", "system_identification.py", args, os_distribution_name );
+        // - server/api/src/rsServerReport.cpp:268:    ret = get_script_output_single_line( "python3", "system_identification.py", args, os_distribution_version );
+        // - server/main_server/src/main_server_control_plane.cpp:328:        irods::error ret = get_script_output_single_line("python3", "pid_age.py", args, pid_age);
+        //
+        // Have to support zone reports.
+        // The use of system_identification.py can be replaced with parsing of /etc/os-release
+        // and/or the POSIX uname() function. uname() will not return the same information, but
+        // maybe that's okay? Parsing /etc/os-release would give us more detailed OS information.
+        //
+        // The control plane is going away, so there's no need for pid_age.py to exist.
         auto script_path = fmt::format("{}/scripts/{}", irods::get_irods_home_directory().c_str(), script_name);
         if (!std::filesystem::exists(script_path)) {
             return ERROR(RESOLUTION_ERROR, fmt::format("Script file not found! {}", script_path));

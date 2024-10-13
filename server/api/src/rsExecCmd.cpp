@@ -3,6 +3,7 @@
 /* This is script-generated code (for the most part).  */
 /* See dataObjRead.h for a description of this API call.*/
 
+#include "irods/irods_server_properties.hpp"
 #include <sys/types.h>
 #ifndef windows_platform
 #include <sys/wait.h>
@@ -26,6 +27,9 @@
 #include "irods/irods_default_paths.hpp"
 
 #include <boost/thread/mutex.hpp>
+
+#include <filesystem>
+
 boost::mutex ExecCmdMutex;
 int initExecCmdMutex() {
     return 0;
@@ -369,7 +373,8 @@ execCmd( execCmd_t *execCmdInp, int stdOutFd, int stdErrFd ) {
     char *av[LONG_NAME_LEN];
     int status;
 
-    const auto cmd_path = irods::get_irods_home_directory().append("msiExecCmd_bin").append(execCmdInp->cmd);
+    const std::filesystem::path msiExecCmd_bin_dir = irods::get_server_property<std::string>("msiExecCmd_bin_directory");
+    const auto cmd_path = msiExecCmd_bin_dir / execCmdInp->cmd;
     std::strncpy(cmdPath, cmd_path.c_str(), LONG_NAME_LEN);
     rodsLog( LOG_NOTICE, "execCmd:%s argv:%s", cmdPath, execCmdInp->cmdArgv );
     initCmdArg( av, execCmdInp->cmdArgv, cmdPath );

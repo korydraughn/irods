@@ -356,6 +356,8 @@ namespace
 
                 const std::regex pattern{pattern_string};
 
+                // TODO Will iRODS 5 need to do this at all once the plugins are loaded by the agent factory?
+                // Hopefully all of this code will disappear in the march to iRODS 5.
                 for (const auto& p : fs::directory_iterator{irods::get_irods_config_directory()}) {
                     if (std::regex_match(p.path().c_str(), pattern)) {
                         try {

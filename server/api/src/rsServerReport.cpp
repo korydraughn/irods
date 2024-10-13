@@ -251,6 +251,7 @@ irods::error get_host_system_information(json& _host_system_information)
         _host_system_information["uname"] = nullptr;
     }
 
+#if 0
     std::vector<std::string> args;
     args.push_back( "os_distribution_name" );
     std::string os_distribution_name;
@@ -272,6 +273,12 @@ irods::error get_host_system_information(json& _host_system_information)
         irods::log( PASS( ret ) );
         _host_system_information["os_distribution_version"] = nullptr;
     }
+#else
+    // Remove the dependency on Python. The uname property contains this information.
+    // It requires parsing to extract it, but the information is already available.
+    _host_system_information["os_distribution_name"] = nullptr;
+    _host_system_information["os_distribution_version"] = nullptr;
+#endif
 
     return SUCCESS();
 } // get_host_system_information
@@ -432,19 +439,11 @@ irods::error get_config_dir( json& _cfg_dir )
 
 irods::error load_version_file( json& _version )
 {
-    // =-=-=-=-=-=-=-
     // if json file exists, simply load that
-    fs::path version_file;
-    try {
-        version_file = irods::get_irods_home_directory();
-    } catch (const irods::exception& e) {
-        irods::log(e);
-        return ERROR(-1, "failed to get irods home directory");
-    }
-    version_file.append("version.json");
+    const auto version_file = irods::get_server_property<std::string>("version_file");
 
-    if ( fs::exists( version_file ) ) {
-        return load_json_file(version_file.generic_string(), _version);
+    if (fs::exists(version_file)) {
+        return load_json_file(version_file, _version);
     }
 
     return SUCCESS();

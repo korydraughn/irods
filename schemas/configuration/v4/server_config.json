@@ -15,7 +15,7 @@
         "msiExecCmd_bin_directory": {"type": "string"},
         "plugin_directory": {"type": "string"},
         "home_directory": {"type": "string"},
-        "environment_file": {"type": "string"},
+        "version_file": {"type": "string"},
 
         "directories": {
             "type": "object",
@@ -26,7 +26,7 @@
                 "plugins": {"type": "string"},
                 "stacktraces": {"type": "string"}
             },
-            "required": [
+            "_required": [
                 "agent_info",
                 "home",
                 "msiExecCmd_bin",
@@ -291,6 +291,11 @@
         "ips_data_directory",
         "stacktrace_directory",
         "json_schema_file",
+        "environment_json_schema_file",
+        "msiExecCmd_bin_directory",
+        "plugin_directory",
+        "home_directory",
+        "version_file",
         "graceful_shutdown_timeout_in_seconds",
         "advanced_settings",
         "catalog_provider_hosts",

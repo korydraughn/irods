@@ -30,6 +30,8 @@ namespace irods {
         // that
         std::string json_file;
         try {
+            // TODO What does the server need that lives under the home directory?
+            // What does the client need that lives under the home directory?
             json_file = get_irods_home_directory().string();
         } catch (const irods::exception& e) {
             irods::log(e);

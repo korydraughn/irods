@@ -315,6 +315,21 @@ int main(int _argc, char* _argv[])
             return 1;
         }
 
+        // Load server side pluggable api entries.
+        irods::api_entry_table&  RsApiTable   = irods::get_server_api_table();
+        irods::pack_entry_table& ApiPackTable = irods::get_pack_table();
+        if (const auto ret = irods::init_api_table(RsApiTable, ApiPackTable, false); !ret.ok()) {
+            log_af::error("{}: init_api_table error for server: {}", __func__, ret.user_result());
+            return 1;
+        }
+
+        // Load client side pluggable api entries.
+        irods::api_entry_table& RcApiTable = irods::get_client_api_table();
+        if (const auto ret = irods::init_api_table(RcApiTable, ApiPackTable, false); !ret.ok()) {
+            log_af::error("{}: init_api_table error for server: {}", __func__, ret.user_result());
+            return 1;
+        }
+
         // Enter parent process main loop.
         // 
         // This process should never introduce threads. Everything it cares about must be handled
@@ -426,7 +441,7 @@ int main(int _argc, char* _argv[])
         if (0 == g_terminate_graceful) {
             // Instruct all agents to shutdown gracefully.
             // To avoid unnecessary complexity, we use SIGUSR1 as the termination signal for agents.
-            // Attempting to use SIGTERM would also notify the main server process, agent factory, and delay server.
+            // Attempting to use SIGTERM would also notify the main server process and delay server.
             kill(0, SIGUSR1);
         }
 
@@ -909,23 +924,6 @@ namespace
             log_agent::error("agentMain :: getRodsEnv failed");
             sendVersion(net_obj, SYS_AGENT_INIT_ERR, 0, nullptr, 0);
             cleanupAndExit(status);
-        }
-
-        // load server side pluggable api entries
-        irods::api_entry_table&  RsApiTable   = irods::get_server_api_table();
-        irods::pack_entry_table& ApiPackTable = irods::get_pack_table();
-        ret = irods::init_api_table(RsApiTable, ApiPackTable, false);
-        if (!ret.ok()) {
-            log_agent::error(PASS(ret).result());
-            return 1;
-        }
-
-        // load client side pluggable api entries
-        irods::api_entry_table& RcApiTable = irods::get_client_api_table();
-        ret = irods::init_api_table(RcApiTable, ApiPackTable, false);
-        if (!ret.ok()) {
-            log_agent::error(PASS(ret).result());
-            return 1;
         }
 
         std::string svc_role;

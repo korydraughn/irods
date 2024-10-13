@@ -310,7 +310,7 @@ namespace
         fmt::print(
 R"__(irodsServer - Launch an iRODS server
 
-Usage: irodsServer [OPTION]... CONFIG_DIRECTORY_PATH
+Usage: irodsServer [OPTION]... CONFIG_FILE_PATH
 
 TODO More words ...
 
@@ -337,31 +337,56 @@ Options:
             namespace jsonschema = jsoncons::jsonschema;
 
             std::ifstream config_file{_config_file_path};
-            const auto config = jsoncons::json::parse(config_file);
-
-            const auto schema_file = config.at("json_schema_file").as<std::string>();
-            fmt::print("{}: JSON schema file = [{}].\n", __func__, schema_file);
-            std::ifstream in{schema_file};
-            const auto schema = jsoncons::json::parse(in); // The stream object cannot be instantiated inline.
-            const auto compiled = jsonschema::make_json_schema(schema);
-
-            jsoncons::json_decoder<jsoncons::ojson> decoder;
-            compiled.validate(config, decoder);
-            const auto json_result = decoder.get_result();
-
-            if (!json_result.empty()) {
-                std::ostringstream out;
-                out << pretty_print(json_result);
-                fmt::print("{}: {}\n", __func__, out.str());
+            if (!config_file) {
                 return false;
             }
+            const auto config = jsoncons::json::parse(config_file);
 
-            return true;
+            // NOLINTNEXTLINE(bugprone-lambda-function-name)
+            const auto do_validate = [fn = __func__](const auto& _config, const std::string& _schema_file) {
+                fmt::print("{}: JSON schema file = [{}].\n", fn, _schema_file);
+                std::ifstream in{_schema_file};
+                const auto schema = jsoncons::json::parse(in); // The stream object cannot be instantiated inline.
+                const auto compiled = jsonschema::make_json_schema(schema);
+
+                jsoncons::json_decoder<jsoncons::ojson> decoder;
+                compiled.validate(_config, decoder);
+                const auto json_result = decoder.get_result();
+
+                if (!json_result.empty()) {
+                    std::ostringstream out;
+                    out << pretty_print(json_result);
+                    fmt::print("{}: {}\n", fn, out.str());
+                    return false;
+                }
+
+                return true;
+            };
+
+            // Validate the server configuration. If that succeeds, move on to validating the
+            // irods_environment.json file.
+            if (do_validate(config, config.at("json_schema_file").as<std::string>())) {
+                std::string env_file;
+                std::string session_file;
+                if (const auto err = irods::get_json_environment_file(env_file, session_file); !err.ok()) {
+                    fmt::print("{}: {}\n", __func__, err.status());
+                    return false;
+                }
+
+                // Validate the irods_environment.json file referenced by the server configuration.
+                std::ifstream in{env_file};
+                if (!in) {
+                    return false;
+                }
+                const auto env_file_config = jsoncons::json::parse(in);
+                return do_validate(env_file_config, config.at("environment_json_schema_file").as<std::string>());
+            }
         }
         catch (const std::exception& e) {
             fmt::print("{}: {}\n", __func__, e.what());
-            return false;
         }
+
+        return false;
     } // validate_configuration
 
     auto daemonize() -> void
@@ -687,12 +712,12 @@ Options:
         }
 
         if (g_pid_ds > 0) {
-            log_server::info("{}: Sending SIGTERM to the delay server.", __func__);
+            log_server::info("{}: Sending SIGTERM to delay server.", __func__);
             kill(g_pid_ds, SIGTERM);
         }
 
-        log_server::info("{}: Sending SIGTERM to the agent factory.", __func__);
-        kill(g_pid_af, SIGTERM);
+        log_server::info("{}: Sending SIGQUIT to agent factory.", __func__);
+        kill(g_pid_af, SIGQUIT);
 
         // Reset this variable so that the delay server migration logic can handle
         // the relaunching of the delay server for us.

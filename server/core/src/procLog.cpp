@@ -27,6 +27,7 @@ initAndClearProcLog() {
 
 int
 initProcLog() {
+    // TODO No longer used. Remove this function
     const auto proc_log_dir = irods::get_irods_home_directory() / "log" / "proc";
     std::strncpy(ProcLogDir, proc_log_dir.c_str(), MAX_NAME_LEN);
     return 0;
