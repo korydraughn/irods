@@ -341,7 +341,6 @@ int main(int _argc, char* _argv[])
         fd_set sockMask;
         FD_ZERO(&sockMask); // NOLINT(readability-isolate-declaration)
 
-        log_af::info("{}: Waiting for client request.", __func__);
         while (true) {
             if (g_terminate) {
                 log_af::info("{}: Received shutdown instruction. Exiting agent factory main loop.", __func__);
@@ -361,7 +360,7 @@ int main(int _argc, char* _argv[])
             time_out.tv_sec  = 0;
             time_out.tv_usec = 500 * 1000;
 
-            // FIXME Replace use of select() with epoll() or Boost.Asio.
+            // FIXME Replace use of select() with pselect() or epoll().
             while ((numSock = select(svrComm.sock + 1, &sockMask, nullptr, nullptr, &time_out)) == -1) {
                 if (g_terminate) {
                     log_af::info("{}: Received shutdown instruction. Exiting agent factory select() loop.", __func__);
@@ -914,7 +913,17 @@ namespace
             cleanupAndExit(status);
         }
 
-        irods::re_plugin_globals.reset(new irods::global_re_plugin_mgr);
+        // TODO This is initialized during agent factory startup. Why do we create a new one after forking the agent?
+        //irods::re_plugin_globals.reset(new irods::global_re_plugin_mgr);
+        // TODO This line invokes the start operation of all rule engine plugins. If a plugin opens a resource
+        // that cannot be shared (e.g. a database connection), then we have to come up with another way of
+        // achieving our goal of no config changes taking effect until a config reload/restart.
+        //
+        // All we want to do is make it so that configuration is static on server startup. Can a pre-startup
+        // entry point help with that? It would be run by the agent factory and only setup state for later use.
+        // Things that are considered a limited resource would NOT be handled here. This would make reloading of
+        // plugin configuration easier because the pre-startup logic is independent and well-defined. However, that's
+        // not something we need to worry about since the reload logic for the server simply forks new processes.
         irods::re_plugin_globals->global_re_mgr.call_start_operations();
 
         // TODO Cannot assume /var/lib/irods.
