@@ -276,8 +276,8 @@ irods::error get_host_system_information(json& _host_system_information)
 #else
     // Remove the dependency on Python. The uname property contains this information.
     // It requires parsing to extract it, but the information is already available.
-    _host_system_information["os_distribution_name"] = nullptr;
-    _host_system_information["os_distribution_version"] = nullptr;
+    _host_system_information["os_distribution_name"] = "";
+    _host_system_information["os_distribution_version"] = "";
 #endif
 
     return SUCCESS();
