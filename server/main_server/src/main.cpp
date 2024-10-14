@@ -14,6 +14,7 @@
 #include "irods/plugins/api/grid_configuration_types.h"
 #include "irods/rcConnect.h" // For RcComm
 #include "irods/rcGlobalExtern.h" // For ProcessType
+#include "irods/rcMisc.h"
 #include "irods/rodsClient.h"
 #include "irods/rodsErrorTable.h"
 #include "irods/set_delay_server_migration_info.h"
@@ -113,6 +114,7 @@ namespace
                                          bool& _first_boot,
                                          std::chrono::steady_clock::time_point& _time_start) -> void;
     auto log_stacktrace_files() -> void;
+    auto remove_leftover_agent_info_files_for_ips() -> void;
 } // anonymous namespace
 
 int main(int _argc, char* _argv[])
@@ -121,6 +123,8 @@ int main(int _argc, char* _argv[])
     [[maybe_unused]] const auto boot_time = std::chrono::system_clock::now();
 
     ProcessType = SERVER_PT; // This process identifies itself as a server.
+
+    set_ips_display_name("irodsServer5"); // TODO Update once irods5 work is closer to completion.
 
     std::string config_file_path;
 
@@ -132,7 +136,7 @@ int main(int _argc, char* _argv[])
     opts_desc.add_options()
         ("config-file,f", po::value<std::string>(), "")
         ("daemonize,d", "")
-        ("pid-file,P", po::value<std::string>(), "")
+        ("pid-file,p", po::value<std::string>(), "")
         ("help,h", "")
         ("version,v", "");
     // clang-format on
@@ -191,7 +195,6 @@ int main(int _argc, char* _argv[])
 
     try {
         // Load configuration.
-
         if (!validate_configuration(config_file_path)) {
             return 1;
         }
@@ -288,6 +291,7 @@ int main(int _argc, char* _argv[])
             }
 
             log_stacktrace_files();
+            remove_leftover_agent_info_files_for_ips();
             migrate_and_launch_delay_server(config_file_path.data(), first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
@@ -318,9 +322,10 @@ Mandatory arguments to long options are mandatory for short options too.
 
 Options:
   -d, --daemonize
-                TODO
-  -P, --pid-file
-                TODO
+                Run server instance in the background as a service.
+  -p, --pid-file FILE
+                The absolute path to FILE, which will be used as the
+                PID file for the server instance.
   -h, --help    Display this help message and exit.
   -v, --version Display version information and exit.
 )__");
@@ -1017,4 +1022,25 @@ Options:
             }
         }
     } // log_stacktrace_files
+
+    auto remove_leftover_agent_info_files_for_ips() -> void
+    {
+        const auto ips_data_dir = irods::get_server_property<std::string>("ips_data_directory");
+
+        for (const auto& entry : fs::directory_iterator{ips_data_dir}) {
+            try {
+                const auto agent_pid = std::stoi(entry.path().stem().string());
+
+                // If the agent process does not exist or the main server process doesn't
+                // have permission to send signals to the agent process, then remove the
+                // agent file so that ips doesn't report it as an active agent.
+                if (kill(agent_pid, 0) == -1 && (ESRCH == errno || EPERM == errno)) {
+                    fs::remove(entry);
+                }
+            }
+            catch (const std::exception& e) {
+                log_server::error("{}: {}: {}", __func__, entry.path().c_str(), e.what());
+            }
+        };
+    } // remove_leftover_agent_info_files_for_ips
 } // anonymous namespace
