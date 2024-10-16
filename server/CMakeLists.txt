@@ -253,7 +253,6 @@ install(
 
 install(
   FILES
-  "${CMAKE_IRODS_SOURCE_DIR}/msiExecCmd_bin/irodsServerMonPerf.template"
   "${CMAKE_IRODS_SOURCE_DIR}/msiExecCmd_bin/univMSSInterface.sh.template"
   DESTINATION "${IRODS_HOME_DIRECTORY}/msiExecCmd_bin"
   COMPONENT ${IRODS_PACKAGE_COMPONENT_SERVER_NAME}
