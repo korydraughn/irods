@@ -1251,10 +1251,9 @@ namespace
 
         if (std::ofstream out{pid_file}; out) {
             out << fmt::format("{} {} {} {} {} {} {}\n",
-                // TODO The argument order is weird?
-                _comm.proxyUser.userName,
-                client_zone,
                 _comm.clientUser.userName,
+                client_zone,
+                _comm.proxyUser.userName,
                 proxy_zone,
                 client_program_name,
                 _comm.clientAddr,
