@@ -251,34 +251,11 @@ irods::error get_host_system_information(json& _host_system_information)
         _host_system_information["uname"] = nullptr;
     }
 
-#if 0
-    std::vector<std::string> args;
-    args.push_back( "os_distribution_name" );
-    std::string os_distribution_name;
-    ret = get_script_output_single_line( "python3", "system_identification.py", args, os_distribution_name );
-    if ( ret.ok() ) {
-        _host_system_information["os_distribution_name"] = os_distribution_name;
-    } else {
-        irods::log( PASS( ret ) );
-        _host_system_information["os_distribution_name"] = nullptr;
-    }
-
-    args.clear();
-    args.push_back( "os_distribution_version" );
-    std::string os_distribution_version;
-    ret = get_script_output_single_line( "python3", "system_identification.py", args, os_distribution_version );
-    if (ret.ok()) {
-        _host_system_information["os_distribution_version"] = os_distribution_version;
-    } else {
-        irods::log( PASS( ret ) );
-        _host_system_information["os_distribution_version"] = nullptr;
-    }
-#else
-    // Remove the dependency on Python. The uname property contains this information.
-    // It requires parsing to extract it, but the information is already available.
+    // These properties are included for backwards compatibility. They are set to
+    // empty strings to avoid issues with systems which expect a valid string. Systems
+    // which rely on this information should parse the content of the uname property.
     _host_system_information["os_distribution_name"] = "";
     _host_system_information["os_distribution_version"] = "";
-#endif
 
     return SUCCESS();
 } // get_host_system_information
