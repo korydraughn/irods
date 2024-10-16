@@ -142,11 +142,13 @@ irods::error readStartupPack(
 
 irods::error setRECacheSaltFromEnv();
 
+#if 0
 irods::error get_script_output_single_line(
     const std::string&              script_language,
     const std::string&              script_name,
     const std::vector<std::string>& args,
     std::string&                    output );
+#endif
 
 irods::error add_global_re_params_to_kvp_for_dynpep(
     keyValPair_t& _kvp );

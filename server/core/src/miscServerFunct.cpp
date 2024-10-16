@@ -51,10 +51,12 @@
 #include <boost/thread/scoped_thread.hpp>
 #include <boost/lexical_cast.hpp>
 
+#if 0
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc++11-narrowing"
 #include <boost/process.hpp>
 #pragma GCC diagnostic pop
+#endif
 
 #include <fmt/format.h>
 
@@ -2989,6 +2991,7 @@ irods::error setRECacheSaltFromEnv()
     return SUCCESS();
 } // setRECacheSaltFromEnv
 
+#if 0
 irods::error get_script_output_single_line(
     const std::string&              script_language,
     const std::string&              script_name,
@@ -3063,6 +3066,7 @@ irods::error get_script_output_single_line(
         return ERROR(SYS_INTERNAL_ERR, e.what());
     }
 }  // get_script_output_single_line
+#endif
 
 irods::error add_global_re_params_to_kvp_for_dynpep(
     keyValPair_t& _kvp ) {
