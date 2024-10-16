@@ -1,3 +1,5 @@
+# TODO Remove this file
+
 add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/include/irods/"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/include/irods/"

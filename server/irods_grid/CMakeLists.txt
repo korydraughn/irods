@@ -1,3 +1,5 @@
+# TODO Remove this file and all source files for it.
+
 # irods-grid was previously part of the iCommands repo
 
 add_executable(
