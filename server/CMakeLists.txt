@@ -85,6 +85,7 @@ install(
   NAMELINK_COMPONENT ${IRODS_PACKAGE_COMPONENT_DEVELOPMENT_NAME}
 )
 
+# TODO Remove this once iRODS 5 work is closer to completion.
 # Initialize IRODS_CONFIGURATION_SCHEMA_PREFIX for configuration schemas.
 # This variable helps to produce the correct URI for the "$id" JSON property.
 if (IS_ABSOLUTE "${IRODS_HOME_DIRECTORY}")
@@ -111,6 +112,7 @@ else()
   endif()
 endif()
 
+# TODO Adjust this once the iRODS 5 work is closer to completion.
 # Install configuration schemas with updated id field
 set(IRODS_CONFIGURATION_SCHEMA_VERSION 4)
 set(
@@ -161,6 +163,7 @@ install(
   COMPONENT ${IRODS_PACKAGE_COMPONENT_SERVER_NAME}
 )
 
+# TODO What is this for?
 install(
   DIRECTORY
   DESTINATION "${IRODS_HOME_DIRECTORY}/config/packedRei"
@@ -245,7 +248,7 @@ install(
 install(
   FILES
   "${CMAKE_IRODS_SOURCE_DIR}/msiExecCmd_bin/test_execstream.py"
-  "${CMAKE_IRODS_SOURCE_DIR}/msiExecCmd_bin/hello"
+  "${CMAKE_IRODS_SOURCE_DIR}/msiExecCmd_bin/hello" # TODO Is this needed?
   DESTINATION "${IRODS_HOME_DIRECTORY}/msiExecCmd_bin"
   COMPONENT ${IRODS_PACKAGE_COMPONENT_SERVER_NAME}
   PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ WORLD_READ
