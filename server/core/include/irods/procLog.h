@@ -3,15 +3,6 @@
 
 #include "irods/rodsConnect.h"
 
-int
-initAndClearProcLog();
-int
-initProcLog();
-int
-logAgentProc( rsComm_t* );
-int
-readProcLog( int pid, procLog_t *procLog );
-int
-rmProcLog( int pid );
+int readProcLog(int pid, procLog_t* procLog);
 
 #endif //PROC_LOG_H

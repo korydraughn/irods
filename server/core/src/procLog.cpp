@@ -1,163 +1,64 @@
 #include "irods/procLog.h"
 
-#include "irods/miscUtil.h"
-#include "irods/rsGlobalExtern.hpp"
-#include "irods/rodsConnect.h"
-#include "irods/irods_default_paths.hpp"
-
-#include <arpa/inet.h>
+#include "irods/irods_server_properties.hpp"
+#include "irods/irods_logger.hpp"
 
 #include <boost/lexical_cast.hpp>
 
-#include <charconv>
+#include <cstring>
+#include <filesystem>
 #include <fstream>
+#include <string>
+#include <vector>
 
-int
-initAndClearProcLog() {
-    initProcLog();
-    int error_code = mkdir( ProcLogDir, DEFAULT_DIR_MODE );
-    int errsv = errno;
-    if ( error_code != 0 && errsv != EEXIST ) {
-        rodsLog( LOG_ERROR, "mkdir failed in initAndClearProcLog with error code %d", error_code );
-    }
-    rmFilesInDir( ProcLogDir );
-
-    return 0;
-}
-
-int
-initProcLog() {
-    // TODO No longer used. Remove this function
-    const auto proc_log_dir = irods::get_irods_home_directory() / "log" / "proc";
-    std::strncpy(ProcLogDir, proc_log_dir.c_str(), MAX_NAME_LEN);
-    return 0;
-}
-
-int
-logAgentProc( rsComm_t *rsComm ) {
-    FILE *fptr;
-    char procPath[MAX_NAME_LEN];
-    char *remoteAddr;
-    char *progName;
-    char *clientZone, *proxyZone;
-
-    if ( rsComm->procLogFlag == PROC_LOG_DONE ) {
-        return 0;
-    }
-
-    if ( *rsComm->clientUser.userName == '\0' ||
-            *rsComm->proxyUser.userName == '\0' ) {
-        return 0;
-    }
-
-    if ( *rsComm->clientUser.rodsZone == '\0' ) {
-        if ( ( clientZone = getLocalZoneName() ) == NULL ) {
-            clientZone = "UNKNOWN";
-        }
-    }
-    else {
-        clientZone = rsComm->clientUser.rodsZone;
-    }
-
-    if ( *rsComm->proxyUser.rodsZone == '\0' ) {
-        if ( ( proxyZone = getLocalZoneName() ) == NULL ) {
-            proxyZone = "UNKNOWN";
-        }
-    }
-    else {
-        proxyZone = rsComm->proxyUser.rodsZone;
-    }
-
-    remoteAddr = inet_ntoa( rsComm->remoteAddr.sin_addr );
-    if ( remoteAddr == NULL || *remoteAddr == '\0' ) {
-        remoteAddr = "UNKNOWN";
-    }
-    if ( *rsComm->option == '\0' ) {
-        progName = "UNKNOWN";
-    }
-    else {
-        progName = rsComm->option;
-    }
-
-    snprintf( procPath, MAX_NAME_LEN, "%s/%-d", ProcLogDir, getpid() );
-
-    fptr = fopen( procPath, "w" );
-
-    if ( fptr == NULL ) {
-        rodsLog( LOG_ERROR,
-                 "logAgentProc: Cannot open input file %s. errno = %d",
-                 procPath, errno );
-        return UNIX_FILE_OPEN_ERR - errno;
-    }
-
-    fprintf( fptr, "%s %s %s %s %s %s %u\n",
-             rsComm->proxyUser.userName, clientZone,
-             rsComm->clientUser.userName, proxyZone,
-             progName, remoteAddr, ( unsigned int ) time( 0 ) );
-
-    rsComm->procLogFlag = PROC_LOG_DONE;
-    fclose( fptr );
-    return 0;
-}
-
-int rmProcLog(int pid)
+int readProcLog(int pid, procLog_t* procLog)
 {
-    char procPath[MAX_NAME_LEN]{};
+    using log_api = irods::experimental::log::api;
 
-    std::strcpy(procPath, ProcLogDir);
-    std::strcat(procPath, "/");
-
-    auto* buf_start = procPath + std::strlen(procPath);
-    auto* buf_end = procPath + sizeof(procPath);
-
-    if (auto [ptr, ec] = std::to_chars(buf_start, buf_end, pid); std::errc{} == ec) {
-        unlink(procPath);
-    }
-
-    return 0;
-}
-
-int
-readProcLog( int pid, procLog_t *procLog ) {
-
-    if ( procLog == NULL ) {
+    if (nullptr == procLog) {
+        log_api::error("{}: Invalid input argument: nullptr", __func__);
         return USER__NULL_INPUT_ERR;
     }
 
-    char procPath[MAX_NAME_LEN];
-    snprintf( procPath, MAX_NAME_LEN, "%s/%-d", "/var/lib/irods/log/proc", pid );
+    const std::filesystem::path ips_data_dir = irods::get_server_property<std::string>("ips_data_directory");
+    const auto agent_info_path = ips_data_dir / std::to_string(pid);
 
-    std::fstream procStream( procPath, std::ios::in );
+    std::ifstream procStream{agent_info_path};
     std::vector<std::string> procTokens;
-    while ( !procStream.eof() && procTokens.size() < 7 ) {
+    while (!procStream.eof() && procTokens.size() < 7) {
         std::string token;
         procStream >> token;
-        rodsLog(LOG_NOTICE, "%s: adding token to agent proc info: [%s]", __func__, token.c_str());
-        procTokens.push_back( token );
+        log_api::debug("{}: Adding token to agent proc info: [{}]", __func__, token);
+        procTokens.push_back(std::move(token));
     }
 
-    if ( procTokens.size() != 7 ) {
-        rodsLog( LOG_ERROR,
-                 "readProcLog: error fscanf file %s. Number of param read = %d",
-                 procPath, procTokens.size() );
+    if (procTokens.size() != 7) {
+        log_api::error("{}: Agent process info: [{}], number of parameters: [{}]", __func__, agent_info_path.c_str(), procTokens.size());
         return UNIX_FILE_READ_ERR;
     }
 
     procLog->pid = pid;
 
-    snprintf( procLog->clientName, sizeof( procLog->clientName ), "%s", procTokens[0].c_str() );
-    snprintf( procLog->clientZone, sizeof( procLog->clientZone ), "%s", procTokens[1].c_str() );
-    snprintf( procLog->proxyName, sizeof( procLog->proxyName ), "%s", procTokens[2].c_str() );
-    snprintf( procLog->proxyZone, sizeof( procLog->proxyZone ), "%s", procTokens[3].c_str() );
-    snprintf( procLog->progName, sizeof( procLog->progName ), "%s", procTokens[4].c_str() );
-    snprintf( procLog->remoteAddr, sizeof( procLog->remoteAddr ), "%s", procTokens[5].c_str() );
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    std::snprintf(procLog->clientName, sizeof(procLog->clientName), "%s", procTokens[0].c_str());
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    std::snprintf(procLog->clientZone, sizeof(procLog->clientZone), "%s", procTokens[1].c_str());
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    std::snprintf(procLog->proxyName, sizeof(procLog->proxyName), "%s", procTokens[2].c_str());
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    std::snprintf(procLog->proxyZone, sizeof(procLog->proxyZone), "%s", procTokens[3].c_str());
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    std::snprintf(procLog->progName, sizeof(procLog->progName), "%s", procTokens[4].c_str());
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    std::snprintf(procLog->remoteAddr, sizeof(procLog->remoteAddr), "%s", procTokens[5].c_str());
+
     try {
-        procLog->startTime = boost::lexical_cast<unsigned int>( procTokens[6].c_str() );
+        procLog->startTime = boost::lexical_cast<unsigned int>(procTokens[6].c_str());
     }
-    catch ( ... ) {
-        rodsLog( LOG_ERROR, "Could not convert %s to unsigned int.", procTokens[6].c_str() );
+    catch (const std::exception& e) {
+        log_api::error("{}: Could not convert [{}] to unsigned int.", __func__, procTokens[6]);
         return INVALID_LEXICAL_CAST;
     }
 
     return 0;
-}
+} // readProcLog
