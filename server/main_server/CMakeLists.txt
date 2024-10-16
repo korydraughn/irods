@@ -1,9 +1,9 @@
 add_executable(
-  irodsServer5
+  irodsServer
   "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
 )
 target_link_libraries(
-  irodsServer5
+  irodsServer
   PRIVATE
   fmt::fmt
   irods_common
@@ -21,7 +21,7 @@ target_link_libraries(
   m
 )
 target_include_directories(
-  irodsServer5
+  irodsServer
   PRIVATE
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -32,28 +32,28 @@ target_include_directories(
   #"${IRODS_EXTERNALS_FULLPATH_ZMQ}/include"
 )
 target_compile_definitions(
-  irodsServer5
+  irodsServer
   PRIVATE
   ${IRODS_COMPILE_DEFINITIONS_PRIVATE}
   ENABLE_RE
   IRODS_ENABLE_SYSLOG
 )
 
-add_dependencies(all-server irodsServer5)
+add_dependencies(all-server irodsServer)
 install(
   TARGETS
-  irodsServer5
+  irodsServer
   RUNTIME
   DESTINATION "${CMAKE_INSTALL_SBINDIR}"
   COMPONENT ${IRODS_PACKAGE_COMPONENT_SERVER_NAME}
 )
 
 add_executable(
-  irodsAgent5
+  irodsAgent
   "${CMAKE_CURRENT_SOURCE_DIR}/src/agent_main.cpp"
 )
 target_link_libraries(
-  irodsAgent5
+  irodsAgent
   PRIVATE
   fmt::fmt
   irods_common
@@ -71,7 +71,7 @@ target_link_libraries(
   m
 )
 target_include_directories(
-  irodsAgent5
+  irodsAgent
   PRIVATE
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -81,17 +81,17 @@ target_include_directories(
   #"${IRODS_EXTERNALS_FULLPATH_ZMQ}/include"
 )
 target_compile_definitions(
-  irodsAgent5
+  irodsAgent
   PRIVATE
   ${IRODS_COMPILE_DEFINITIONS_PRIVATE}
   ENABLE_RE
   IRODS_ENABLE_SYSLOG
 )
 
-add_dependencies(all-server irodsAgent5)
+add_dependencies(all-server irodsAgent)
 install(
   TARGETS
-  irodsAgent5
+  irodsAgent
   RUNTIME
   DESTINATION "${CMAKE_INSTALL_SBINDIR}"
   COMPONENT ${IRODS_PACKAGE_COMPONENT_SERVER_NAME}

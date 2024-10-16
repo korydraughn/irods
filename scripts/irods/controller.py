@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -40,8 +41,24 @@ class IrodsController(object):
             self.config.rule_engine_executable
         ]
 
+    def get_server_pid(self):
+        try:
+            # Use of this python script assumes the PID file is located in <prefix>/var/run.
+            pid_file = os.path.join(paths.localstate_directory(), 'run', 'irods.pid')
+            if os.path.exists(pid_file):
+                with open(pid_file, 'r') as f:
+                    pid = int(f.readline().strip())
+                    # If the user executing this python script does not have permission to send
+                    # signals to the PID, an OSError exception will be raised indicating why.
+                    os.kill(pid, 0)
+                    return pid
+
+        except OSError as e:
+            if e.errno in [errno.ESRCH, errno.EPERM]:
+                raise IrodsError('Could not get PID of server from pid file')
+
     def get_server_proc(self):
-        server_pid = lib.get_server_pid()
+        server_pid = self.get_server_pid()
 
         # lib.get_server_pid() does not have access to self.config, so cannot
         # check the pid from the pidfile against self.config.server_executable,
@@ -61,19 +78,30 @@ class IrodsController(object):
         l = logging.getLogger(__name__)
         l.debug('Calling start on IrodsController')
 
-        if upgrade_configuration.requires_upgrade(self.config):
-            upgrade_configuration.upgrade(self.config)
+        # TODO Starting the server no longer executes upgrade logic. The server assumes the
+        # administrator has run the upgrade logic. The server MUST verify the schemas and things
+        # are correct before proceeding though.
+        #if upgrade_configuration.requires_upgrade(self.config):
+            #upgrade_configuration.upgrade(self.config)
 
-        try:
-            self.config.validate_configuration()
-        except IrodsWarning:
-            l.warn('Warning encountered in validation:', exc_info=True)
-
-        if self.get_server_proc():
-            raise IrodsError('iRODS already running')
-
+        # TODO Figure out how to move handling of this into the server.
         delete_s3_shmem()
 
+        l.info('Starting iRODS server ...')
+
+        # TODO Consider implementing later.
+        #env_var_name = 'IRODS_ENABLE_TEST_MODE'
+        #if test_mode or (env_var_name in os.environ and os.environ[env_var_name] == '1'):
+        #    cmd.append('-t')
+
+        cmd = [self.config.server_executable]
+        lib.execute_command(cmd,
+                            cwd=self.config.server_bin_directory,
+                            env=self.config.execution_environment)
+
+        return
+
+        '''
         self.config.clear_cache()
         if not os.path.exists(self.config.server_executable):
             raise IrodsError(
@@ -149,7 +177,7 @@ class IrodsController(object):
                             socket.AF_INET, socket.SOCK_STREAM)) as s:
                         if s.connect_ex(('127.0.0.1', irods_port)) == 0:
                             l.debug('Successfully connected to port %s.', irods_port)
-                            if self.get_server_proc is None:
+                            if self.get_server_proc() is None:
                                 raise IrodsError('iRODS port is bound, but server is not started.')
                             s.send(b'\x00\x00\x00\x33<MsgHeader_PI><type>HEARTBEAT</type></MsgHeader_PI>')
                             message = s.recv(256)
@@ -162,59 +190,20 @@ class IrodsController(object):
                     time.sleep(1)
 
                 l.info('Success')
+        '''
 
         except IrodsError as e:
             l.info('Failure')
             raise e
 
-    def irods_graceful_shutdown(self, server_proc, server_descendants, timeout=20):
-        start_time = time.time()
-        server_proc.terminate()
-        while time.time() < start_time + timeout:
-            if capture_process_tree(server_proc, server_descendants, self.server_binaries):
-                time.sleep(0.3)
-            else:
-                break
-        else:
-            capture_process_tree(server_proc, server_descendants, self.server_binaries)
-            if server_proc.is_running():
-                raise IrodsError('The iRODS server did not stop within {0} seconds of '
-                                 'receiving SIGTERM.'.format(timeout))
-            elif server_descendants:
-                raise IrodsError('iRODS server shut down but left behind child processes')
-
-    def stop(self, timeout=20):
+    def stop(self, timeout=20, graceful=False):
         l = logging.getLogger(__name__)
         self.config.clear_cache()
         l.debug('Calling stop on IrodsController')
         l.info('Stopping iRODS server...')
         try:
-            server_proc = self.get_server_proc()
-            server_descendants = set()
-            if server_proc is None:
-                l.warning('Server pidfile missing or stale. No iRODS server running?')
-            else:
-                try:
-                    self.irods_graceful_shutdown(server_proc, server_descendants, timeout=timeout)
-                except Exception as e:
-                    l.error('Error encountered in graceful shutdown.')
-                    l.debug('Exception:', exc_info=True)
-
-            # deal with lingering processes
-            binary_to_procs_dict = self.get_binary_to_procs_dict(server_proc, server_descendants)
-            if binary_to_procs_dict:
-                l.warning('iRODS server processes remain after attempted graceful shutdown.')
-                l.warning(format_binary_to_procs_dict(binary_to_procs_dict))
-                l.warning('Killing forcefully...')
-                for binary, procs in binary_to_procs_dict.items():
-                    for proc in procs:
-                        l.warning('Killing %s, pid %s', binary, proc.pid)
-                        try:
-                            proc.kill()
-                        except psutil.NoSuchProcess:
-                            pass
-                        delete_cache_files_by_pid(proc.pid)
-
+            os.kill(self.get_server_pid(), signal.SIGTERM if not graceful else signal.SIGQUIT)
+            # TODO Figure out how to move handling of this into the server.
             delete_s3_shmem()
 
         except IrodsError as e:
@@ -227,14 +216,14 @@ class IrodsController(object):
         l = logging.getLogger(__name__)
         l.debug('Calling restart on IrodsController')
         self.stop()
+        # TODO Insert function that waits for server to shut down.
         self.start(write_to_stdout, test_mode)
 
     def reload_configuration(self):
         """Send the SIGHUP signal to the server, causing it to reload the configuration."""
-        import signal
-        server_process = self.get_server_proc()
-        os.kill(server_process.pid, signal.SIGHUP)
+        os.kill(self.get_server_pid(), signal.SIGHUP)
 
+    # TODO This function can go away. Administrators should just use "ps".
     def status(self):
         l = logging.getLogger(__name__)
         l.debug('Calling status on IrodsController')
@@ -264,6 +253,30 @@ class IrodsController(object):
             if procs:
                 d[b] = procs
         return d
+
+    # TODO Need one of these for shutdown.
+    def wait_for_server_startup_to_complete(self, max_retries=100):
+        try_count = 1
+
+        while True:
+            l.debug('Attempting to connect to iRODS server on port %s. Attempt #%s', irods_port, try_count)
+
+            with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+                if s.connect_ex(('127.0.0.1', irods_port)) == 0:
+                    l.debug('Successfully connected to port %s.', irods_port)
+                    #if self.get_server_pid() is None:
+                    #    raise IrodsError('iRODS port is bound, but server is not started.')
+                    s.send(b'\x00\x00\x00\x33<MsgHeader_PI><type>HEARTBEAT</type></MsgHeader_PI>')
+                    message = s.recv(256)
+                    if message != b'HEARTBEAT':
+                        raise IrodsError(f'iRODS port returned non-heartbeat message:\n{message}')
+                    break
+
+            if try_count >= max_retries:
+                raise IrodsError('iRODS server failed to start.')
+
+            try_count += 1
+            time.sleep(1)
 
 def binary_matches(binary_path, proc):
     if proc.is_running():
