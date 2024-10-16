@@ -176,6 +176,7 @@ extern "C" {
             return USER__NULL_INPUT_ERR;
         }
 
+        // TODO Is osauth.cpp needed/used by anything?
         boost::filesystem::path default_os_auth_keyfile_path = irods::get_irods_config_directory();
         default_os_auth_keyfile_path.append(OS_AUTH_KEYFILE);
         std::string default_os_auth_keyfile_path_string = default_os_auth_keyfile_path.string();

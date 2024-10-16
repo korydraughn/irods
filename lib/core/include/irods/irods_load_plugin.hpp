@@ -42,6 +42,11 @@ namespace irods
 
         fs::path plugin_home;
 
+        // TODO The directory used to resolve plugins is already configurable via
+        // the irods_environment.json file. This is very weird for server-side code
+        // because this override is comes from a client-side config file.
+        //
+        // TODO Lean on ::ProcessType for determining which location to load plugins from?
         rodsEnv env;
         int status = getRodsEnv( &env );
         if ( !status ) {

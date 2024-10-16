@@ -1,22 +1,17 @@
-// =-=-=-=-=-=-=-
-// boost includes
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
-// =-=-=-=-=-=-=-
-// stl includes
-#include <vector>
-
-// =-=-=-=-=-=-=-
-// irods includes
 #include "irods/rodsErrorTable.h"
 #include "irods/irods_log.hpp"
 #include "irods/irods_get_full_path_for_config_file.hpp"
 #include "irods/irods_default_paths.hpp"
 #include "irods/irods_exception.hpp"
 
-namespace irods {
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
+#include <vector>
+
+namespace irods
+{
     error get_full_path_for_config_file(
         const std::string& _cfg_file,
         std::string&       _full_path ) {
@@ -27,6 +22,7 @@ namespace irods {
             path.append(_cfg_file);
             if ( fs::exists(path) ) {
                 _full_path = path.string();
+                // TODO What should the log category be for this?
                 rodsLog( LOG_DEBUG, "config file found [%s]", _full_path.c_str() );
                 return SUCCESS();
             }
@@ -38,7 +34,7 @@ namespace irods {
         std::string msg( "config file not found [" );
         msg += _cfg_file + "]";
         return ERROR(SYS_INVALID_INPUT_PARAM, msg);
-    }
+    } // get_full_path_for_config_file
 
     error get_full_path_for_unmoved_configs(
         const std::string& _cfg_file,
@@ -50,6 +46,7 @@ namespace irods {
             path.append("config").append(_cfg_file);
             if ( fs::exists(path) ) {
                 _full_path = path.string();
+                // TODO What should the log category be for this?
                 rodsLog( LOG_DEBUG, "config file found [%s]", _full_path.c_str() );
                 return SUCCESS();
             }
@@ -61,5 +58,5 @@ namespace irods {
         std::string msg( "config file not found [" );
         msg += _cfg_file + "]";
         return ERROR(SYS_INVALID_INPUT_PARAM, msg);
-    }
-}
+    } // get_full_path_for_unmoved_configs
+} // namespace irods
