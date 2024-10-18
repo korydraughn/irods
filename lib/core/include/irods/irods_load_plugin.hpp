@@ -516,4 +516,4 @@ namespace irods
     } // load_plugin
 } // namespace irods
 
-#endif // __IRODS_LOAD_PLUGIN_HPP__
+#endif // IRODS_LOAD_PLUGIN_HPP
