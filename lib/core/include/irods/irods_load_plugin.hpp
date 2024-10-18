@@ -1,20 +1,18 @@
-#ifndef __IRODS_LOAD_PLUGIN_HPP__
-#define __IRODS_LOAD_PLUGIN_HPP__
+#ifndef IRODS_LOAD_PLUGIN_HPP
+#define IRODS_LOAD_PLUGIN_HPP
 
-// =-=-=-=-=-=-=-
-// My Includes
-#include "irods/irods_log.hpp"
 #include "irods/irods_logger.hpp"
 #include "irods/irods_plugin_name_generator.hpp"
 #include "irods/irods_configuration_keywords.hpp"
 #include "irods/getRodsEnv.h"
+#include "irods/irods_server_properties.hpp"
+#include "irods/rcGlobalExtern.h"
 #include "irods/rodsErrorTable.h"
 #include "irods/irods_default_paths.hpp"
 #include "irods/irods_exception.hpp"
 
-// =-=-=-=-=-=-=-
-// STL Includes
 #include <array>
+#include <cstring>
 #include <cstdint>
 #include <fstream>
 #include <string>
@@ -24,13 +22,9 @@
 #include <algorithm>
 #include <vector>
 
-// =-=-=-=-=-=-=-
-// Boost Includes
 #include <boost/static_assert.hpp>
 #include <boost/filesystem.hpp>
 
-// =-=-=-=-=-=-=-
-// dlopen, etc
 #include <dlfcn.h>
 #include <elf.h>
 
@@ -39,28 +33,33 @@ namespace irods
     inline error resolve_plugin_path(const std::string& _type, std::string& _path)
     {
         namespace fs = boost::filesystem;
+        using log_server = irods::experimental::log::server;
 
         fs::path plugin_home;
 
-        // TODO The directory used to resolve plugins is already configurable via
-        // the irods_environment.json file. This is very weird for server-side code
-        // because this override is comes from a client-side config file.
-        //
-        // TODO Lean on ::ProcessType for determining which location to load plugins from?
-        rodsEnv env;
-        int status = getRodsEnv( &env );
-        if ( !status ) {
-            if ( strlen( env.irodsPluginHome ) > 0 ) {
-                plugin_home = env.irodsPluginHome;
+        // If we're the server, use the plugin directory property from server_config.json when defined.
+        // TODO Document this in docs.irods.org.
+        if (SERVER_PT == ::ProcessType || AGENT_PT == ::ProcessType) {
+            if (irods::server_property_exists("plugin_directory")) {
+                plugin_home = irods::get_server_property<std::string>("plugin_directory");
             }
-
+        }
+        else {
+            rodsEnv env;
+            int status = getRodsEnv( &env );
+            if ( !status ) {
+                if ( strlen( env.irodsPluginHome ) > 0 ) {
+                    plugin_home = env.irodsPluginHome;
+                }
+            }
         }
 
         if (plugin_home.empty()) {
             try {
                 plugin_home = get_irods_default_plugin_directory();
-            } catch (const irods::exception& e) {
-                irods::log(e);
+            }
+            catch (const irods::exception& e) {
+                log_server::error("{}: Could not load plugin [type={}, path={}]: {}", __func__, _type, _path, e.client_display_what());
                 return ERROR(SYS_INVALID_INPUT_PARAM, "failed to get default plugin directory");
             }
         }
@@ -82,14 +81,12 @@ namespace irods
 
             _path = plugin_home.string();
 
+            // Append a trailing path separator if missing.
             if ( fs::path::preferred_separator != *_path.rbegin() ) {
                 _path += fs::path::preferred_separator;
             }
 
-            rodsLog(
-                LOG_DEBUG,
-                "resolved plugin home [%s]",
-                _path.c_str() );
+            log_server::debug("{}: Resolved plugin directory [{}]", __func__, p.c_str());
 
             return SUCCESS();
 
