@@ -254,7 +254,6 @@ class IrodsController(object):
                 d[b] = procs
         return d
 
-    # TODO Need one of these for shutdown.
     def wait_for_server_startup_to_complete(self, max_retries=100):
         try_count = 1
 
@@ -277,6 +276,18 @@ class IrodsController(object):
 
             try_count += 1
             time.sleep(1)
+
+    def wait_for_server_shutdown_to_complete(self, max_retries=100):
+        for _ in range(max_retries):
+            l.debug('Waiting for iRODS server to shut down. Attempt #%s', try_count)
+            try:
+                os.kill(self.get_server_pid(), 0)
+                continue
+            except:
+                pass
+            time.sleep(1)
+
+        raise IrodsError('iRODS server failed to start.')
 
 def binary_matches(binary_path, proc):
     if proc.is_running():

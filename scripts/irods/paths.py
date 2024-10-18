@@ -350,6 +350,7 @@ def _icommands_test_directory():
         _icommands_test_directory_cache = _irods_directory() / 'clients' / 'icommands' / 'test'
     return _icommands_test_directory_cache
 
+# TODO Nothing appears to use this or the functions which this is built upon.
 def icommands_test_directory():
     return str(_icommands_test_directory())
 
@@ -360,6 +361,7 @@ def _server_test_directory():
         _server_test_directory_cache = _irods_directory() / 'test' / 'bin'
     return _server_test_directory_cache
 
+# TODO Nothing appears to use this or the functions which this is built upon.
 def server_test_directory():
     return str(_server_test_directory())
 
