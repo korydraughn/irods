@@ -175,7 +175,7 @@ int main(int _argc, char* _argv[])
         // Perhaps daemonization means there's only one instance running on the machine?
         // What if the pidfile name was derived from the config file path? Only one instance can work.
         // But, what if server redirection is disabled by the admin?
-        std::string pid_file = "/var/run/irods.pid";
+        std::string pid_file = "/var/run/irods.pid"; // TODO Derive from default root path.
         if (const auto iter = vm.find("pid-file"); std::end(vm) != iter) {
             pid_file = std::move(iter->second.as<std::string>());
         }

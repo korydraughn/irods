@@ -3,19 +3,22 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
-        "ips_data_directory": {"type": "string"},
-        "stacktrace_directory": {"type": "string"},
         "json_schema_file": {"type": "string"},
         "environment_json_schema_file": {"type": "string"},
+
+        "ips_data_directory": {"type": "string"},
+        "stacktrace_directory": {"type": "string"},
+
+        "msiExecCmd_bin_directory": {"type": "string"},
+        "plugin_directory": {"type": "string"},
+        "home_directory": {"type": "string"},
+        "version_file": {"type": "string"},
+
         "graceful_shutdown_timeout_in_seconds": {
             "type": "integer",
             "minimum": 0,
             "default": 30
         },
-        "msiExecCmd_bin_directory": {"type": "string"},
-        "plugin_directory": {"type": "string"},
-        "home_directory": {"type": "string"},
-        "version_file": {"type": "string"},
 
         "directories": {
             "type": "object",
