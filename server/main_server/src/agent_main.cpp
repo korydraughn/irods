@@ -31,6 +31,7 @@
 #include "irods/irods_client_server_negotiation.hpp"
 #include "irods/irods_configuration_keywords.hpp"
 #include "irods/irods_configuration_parser.hpp" // For key_path_t
+#include "irods/irods_default_paths.hpp"
 #include "irods/irods_dynamic_cast.hpp"
 #include "irods/irods_environment_properties.hpp"
 #include "irods/irods_exception.hpp"
@@ -64,6 +65,7 @@
 #include <boost/program_options.hpp>
 
 #include <fmt/format.h>
+#include <iterator>
 #include <nlohmann/json.hpp>
 
 #include <sys/select.h>
@@ -117,12 +119,10 @@ namespace
     using log_af = irods::experimental::log::agent_factory;
     using log_agent = irods::experimental::log::agent;
 
-    // TODO Remove
-    //volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-    const char* g_ips_data_directory{}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    std::array<char, _POSIX_PATH_MAX> g_proc_directory; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     std::time_t g_graceful_shutdown_timeout{}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-    auto init_logger(const nlohmann::json& _config) -> void;
+    auto init_logger() -> void;
     auto load_log_levels_for_loggers() -> void;
     auto setup_signal_handlers() -> int;
     auto createAndSetRECacheSalt() -> irods::error;
@@ -149,7 +149,6 @@ int main(int _argc, char* _argv[])
 {
     ProcessType = AGENT_PT; // This process identifies itself as the agent factory or an agent.
 
-    std::string config_file_path;
     std::string hostname_cache_shm_name;
     std::string dns_cache_shm_name;
 
@@ -161,14 +160,12 @@ int main(int _argc, char* _argv[])
 
     // clang-format off
     opts_desc.add_options()
-        ("config-file,f", po::value<std::string>(), "")
         ("hostname-cache-shm-name,x", po::value<std::string>(), "")
         ("dns-cache-shm-name,y", po::value<std::string>(), "")
         ("boot-time,b", po::value<std::string>(), "");
     // clang-format on
 
     po::positional_options_description pod;
-    pod.add("config-file", 1);
     pod.add("hostname-cache-shm-name", 1);
     pod.add("dns-cache-shm-name", 1);
     pod.add("boot-time", 1);
@@ -177,14 +174,6 @@ int main(int _argc, char* _argv[])
         po::variables_map vm;
         po::store(po::command_line_parser(_argc, _argv).options(opts_desc).positional(pod).run(), vm);
         po::notify(vm);
-
-        if (auto iter = vm.find("config-file"); std::end(vm) != iter) {
-            config_file_path = std::move(iter->second.as<std::string>());
-        }
-        else {
-            fmt::print(stderr, "Error: Missing [CONFIG_FILE_PATH] parameter.");
-            return 1;
-        }
 
         if (auto iter = vm.find("hostname-cache-shm-name"); std::end(vm) != iter) {
             hostname_cache_shm_name = std::move(iter->second.as<std::string>());
@@ -212,20 +201,29 @@ int main(int _argc, char* _argv[])
 
     try {
         // Load configuration.
-        // TODO Pick one of the following.
-        config = json::parse(std::ifstream{config_file_path});
+        const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
         irods::server_properties::instance().init(config_file_path.c_str());
         irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
 
         // Initialize global pointer to ips data directory for agent cleanup.
         // This is required so that the signal handler for reaping agents remains async-signal-safe.
-        // TODO Need a better way to get this.
-        g_ips_data_directory = config.at("ips_data_directory").get_ref<const std::string&>().c_str();
+        {
+            const auto path = irods::get_irods_proc_directory().string();
+            std::fill(std::begin(g_proc_directory), std::end(g_proc_directory), 0);
+            if (path.size() >= g_proc_directory.size()) {
+                log_af::error("{}: Proc directory size exceeds buffer size [{}].", __func__, g_proc_directory.size());
+                return 1;
+            }
+            path.copy(g_proc_directory.data(), g_proc_directory.size());
+        }
 
         // Capture the gracefule shutdown timeout value for agent cleanup.
         // This is required so that the signal handler for reaping agents remains async-signal-safe.
-        // TODO Need a better way to get this.
-        g_graceful_shutdown_timeout = config.at("graceful_shutdown_timeout_in_seconds").get<int>();
+        {
+            const auto config_handle{irods::server_properties::instance().map()};
+            const auto& config{config_handle.get_json()};
+            g_graceful_shutdown_timeout = config.at("graceful_shutdown_timeout_in_seconds").get<int>();
+        }
 
         // TODO Consider removing the need for these along with all options.
         // All logging should be controlled via the new logging system.
@@ -233,15 +231,10 @@ int main(int _argc, char* _argv[])
     	rodsLogSqlReq(0);
 
         // To see log messages from rsyslog, you must add irodsAgent5 to /etc/rsyslog.d/00-irods.conf.
-        init_logger(config);
+        init_logger();
 
         log_af::info("{}: Initializing loggers for agent factory.", __func__);
-        // TODO These MUST NOT assume /etc/irods/server_config.json.
         load_log_levels_for_loggers();
-
-        // We only need to inform the agent factory of where to write stacktrace files. The main
-        // server process is responsible for reading and writing them to the log file.
-        irods::set_stacktrace_directory(config.at("stacktrace_directory").get_ref<const std::string&>());
 
         log_af::info("{}: Initializing signal handlers for agent factory.", __func__);
         if (setup_signal_handlers() == -1) {
@@ -252,10 +245,7 @@ int main(int _argc, char* _argv[])
         log_af::info("{}: Initializing client allowlist for agent factory.", __func__);
         irods::client_api_allowlist::init();
 
-        // TODO
-        //remove_leftover_rulebase_pid_files(*server_config);
-
-        // TODO Initialize shared memory systems.
+        // Initialize shared memory systems.
         log_af::info("{}: Initializing shared memory for agent factory.", __func__);
 
         irods::experimental::agent_pid_table::init();
@@ -360,7 +350,6 @@ int main(int _argc, char* _argv[])
             time_out.tv_sec  = 0;
             time_out.tv_usec = 500 * 1000;
 
-            // FIXME Replace use of select() with pselect() or epoll().
             while ((numSock = select(svrComm.sock + 1, &sockMask, nullptr, nullptr, &time_out)) == -1) {
                 if (g_terminate) {
                     log_af::info("{}: Received shutdown instruction. Exiting agent factory select() loop.", __func__);
@@ -458,14 +447,14 @@ int main(int _argc, char* _argv[])
 
 namespace
 {
-    auto init_logger(const nlohmann::json& _config) -> void
+    auto init_logger() -> void
     {
         namespace logger = irods::experimental::log;
 
         logger::init(false, false);
         log_af::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT_FACTORY));
         logger::set_server_type("agent_factory");
-        logger::set_server_zone(_config.at(irods::KW_CFG_ZONE_NAME).get<std::string>());
+        logger::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
         logger::set_server_hostname(boost::asio::ip::host_name());
     } // init_logger
 
@@ -702,11 +691,6 @@ namespace
             rodsServerHost->conn = nullptr;
         }
 
-        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role) {
-            // TODO Why?
-            //purgeLockFileDir(0);
-        }
-
         return 0;
     } // initServer
 
@@ -725,6 +709,8 @@ namespace
         // Consider non-pkg installs and pkg installs.
         setRsCommFromRodsEnv(&_comm);
 
+        // TODO Verify this is okay to do in the agent factory before forking any agents.
+        // Need a script that stress tests the server.
 #if 0
         // Load server API table so that API plugins which are needed to stand up the server are
         // available for use.
@@ -942,7 +928,7 @@ namespace
             return 1;
         }
 
-        // TODO Huh?
+        // TODO Do we want to keep this?
 #if 0
         if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role) {
             if (std::strstr(rsComm.myEnv.rodsDebug, "CAT") != nullptr) {
@@ -1246,8 +1232,8 @@ namespace
             client_program_name = "UNKNOWN";
         }
 
-        const auto ips_data_dir = irods::get_server_property<std::string>("ips_data_directory");
-        const auto pid_file = fmt::format("{}/{}", ips_data_dir, getpid());
+        const auto proc_dir = irods::get_irods_proc_directory();
+        const auto pid_file = fmt::format("{}/{}", proc_dir.c_str(), getpid());
 
         if (std::ofstream out{pid_file}; out) {
             out << fmt::format("{} {} {} {} {} {} {}\n",
@@ -1281,7 +1267,7 @@ namespace
             *p = 0;
 
             std::memset(agent_pid_file_path, 0, sizeof(agent_pid_file_path));
-            std::strcpy(agent_pid_file_path, g_ips_data_directory);
+            std::strcpy(agent_pid_file_path, g_proc_directory.data());
             std::strcat(agent_pid_file_path, "/");
             std::strcat(agent_pid_file_path, agent_pid);
 

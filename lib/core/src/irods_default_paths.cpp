@@ -91,11 +91,25 @@ namespace irods
     }
 
     fs::path
+    get_irods_sbin_directory() {
+        fs::path install_sbindir{IRODS_DEFAULT_PATH_SBINDIR};
+        install_sbindir = install_sbindir.lexically_normal();
+        return get_irods_directory_impl(install_sbindir);
+    }
+
+    fs::path
     get_irods_config_directory() {
         fs::path install_confdir{IRODS_DEFAULT_PATH_SYSCONFDIR};
         install_confdir = install_confdir.lexically_normal();
         install_confdir.append("irods");
         return get_irods_directory_impl(install_confdir);
+    }
+
+    fs::path
+    get_irods_runstate_directory() {
+        fs::path install_runstatedir{IRODS_DEFAULT_PATH_RUNSTATEDIR};
+        install_runstatedir = install_runstatedir.lexically_normal();
+        return get_irods_directory_impl(install_runstatedir);
     }
 
     fs::path
@@ -110,5 +124,20 @@ namespace irods
         fs::path install_plugdir{IRODS_DEFAULT_PATH_PLUGINDIR};
         install_plugdir = install_plugdir.lexically_normal();
         return get_irods_directory_impl(install_plugdir);
+    }
+
+    fs::path
+    get_irods_stacktrace_directory() {
+        return get_irods_home_directory() / "stacktraces";
+    }
+
+    fs::path
+    get_irods_proc_directory() {
+        return get_irods_home_directory() / "log/proc";
+    }
+
+    fs::path
+    get_irods_msiExecCmd_bin_directory() {
+        return get_irods_home_directory() / "msiExecCmd_bin";
     }
 } // namespace irods

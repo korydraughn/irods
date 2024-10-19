@@ -7,25 +7,25 @@
 #include "irods/irods_re_structs.hpp"
 #include "irods/irods_state_table.h"
 
+#include <functional>
+#include <initializer_list>
 #include <iostream>
 #include <list>
-#include <vector>
-#include <utility>
-#include <functional>
 #include <map>
 #include <memory>
-#include <initializer_list>
 #include <optional>
+#include <utility>
+#include <vector>
 
 #include <boost/any.hpp>
 #include <boost/algorithm/string.hpp>
 
 #ifdef IRODS_ENABLE_SYSLOG
-    #define IRODS_SERVER_ONLY(x) x
-    #include "irods/irods_logger.hpp"
-namespace logger = irods::experimental::log;
+#  define IRODS_SERVER_ONLY(x) x
+#  include "irods/irods_logger.hpp"
+using log_re = irods::experimental::log::rule_engine;
 #else
-    #define IRODS_SERVER_ONLY(x)
+#  define IRODS_SERVER_ONLY(x)
 #endif // IRODS_ENABLE_SYSLOG
 
 namespace irods {
@@ -368,7 +368,7 @@ namespace irods {
                 error err = load_plugin <pluggable_rule_engine<T> > (_re_ptr, _plugin_name, dir_, _inst_name, std::string("empty_context"));
 
                 if (!err.ok()) {
-                    irods::log( PASS( err ) );
+                    IRODS_SERVER_ONLY((log_re::error(PASS(err).user_result())));
                     return err;
                 }
 
@@ -395,7 +395,7 @@ namespace irods {
             std::for_each(begin(_re_packs), end(_re_packs), [this](re_pack_inp<T> &_inp) {
                 error err = this->init_rule_engine(_inp);
                 if( !err.ok() ) {
-                    irods::log( PASS( err ) );
+                    IRODS_SERVER_ONLY((log_re::error(PASS(err).user_result())));
                 }
             });
         }
@@ -459,10 +459,10 @@ namespace irods {
                 e.code() == RE_PARSER_ERROR    ||
                 e.code() == RULE_ENGINE_ERROR)
             {
-                logger::rule_engine::debug("Rule Engine Plugin returned [{}].", e.code());
+                log_re::debug("Rule Engine Plugin returned [{}].", e.code());
             }
             else {
-                logger::rule_engine::error("Rule Engine Plugin returned [{}].", e.code());
+                log_re::error("Rule Engine Plugin returned [{}].", e.code());
             }
             // clang-format on
         )

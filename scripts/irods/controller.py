@@ -101,7 +101,6 @@ class IrodsController(object):
 
         return
 
-        '''
         self.config.clear_cache()
         if not os.path.exists(self.config.server_executable):
             raise IrodsError(
@@ -190,8 +189,6 @@ class IrodsController(object):
                     time.sleep(1)
 
                 l.info('Success')
-        '''
-
         except IrodsError as e:
             l.info('Failure')
             raise e

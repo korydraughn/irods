@@ -1,3 +1,4 @@
+#include "irods/irods_default_paths.hpp"
 #include "irods/irods_server_properties.hpp"
 #include "irods/rcMisc.h"
 #include "irods/procStat.h"
@@ -7,16 +8,71 @@
 #include "irods/rodsLog.h"
 #include "irods/rsGlobalExtern.hpp"
 #include "irods/rcGlobalExtern.h"
-#include "irods/procLog.h"
 #include "irods/rsProcStat.hpp"
 #include "irods/irods_resource_backport.hpp"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/convenience.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <cstring>
 
-using namespace boost::filesystem;
+using namespace boost::filesystem; // TODO Open issue for this.
+
+namespace
+{
+    int readProcLog(int pid, procLog_t* procLog)
+    {
+        using log_api = irods::experimental::log::api;
+
+        if (nullptr == procLog) {
+            log_api::error("{}: Invalid input argument: nullptr", __func__);
+            return USER__NULL_INPUT_ERR;
+        }
+
+        const auto proc_dir = irods::get_irods_proc_directory();
+        const auto agent_info_path = proc_dir / std::to_string(pid);
+
+        std::ifstream procStream{agent_info_path};
+        std::vector<std::string> procTokens;
+        while (!procStream.eof() && procTokens.size() < 7) {
+            std::string token;
+            procStream >> token;
+            log_api::debug("{}: Adding token to agent proc info: [{}]", __func__, token);
+            procTokens.push_back(std::move(token));
+        }
+
+        if (procTokens.size() != 7) {
+            log_api::error("{}: Agent process info: [{}], number of parameters: [{}]", __func__, agent_info_path.c_str(), procTokens.size());
+            return UNIX_FILE_READ_ERR;
+        }
+
+        procLog->pid = pid;
+
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+        std::snprintf(procLog->clientName, sizeof(procLog->clientName), "%s", procTokens[0].c_str());
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+        std::snprintf(procLog->clientZone, sizeof(procLog->clientZone), "%s", procTokens[1].c_str());
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+        std::snprintf(procLog->proxyName, sizeof(procLog->proxyName), "%s", procTokens[2].c_str());
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+        std::snprintf(procLog->proxyZone, sizeof(procLog->proxyZone), "%s", procTokens[3].c_str());
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+        std::snprintf(procLog->progName, sizeof(procLog->progName), "%s", procTokens[4].c_str());
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+        std::snprintf(procLog->remoteAddr, sizeof(procLog->remoteAddr), "%s", procTokens[5].c_str());
+
+        try {
+            procLog->startTime = boost::lexical_cast<unsigned int>(procTokens[6].c_str());
+        }
+        catch (const std::exception& e) {
+            log_api::error("{}: Could not convert [{}] to unsigned int.", __func__, procTokens[6]);
+            return INVALID_LEXICAL_CAST;
+        }
+
+        return 0;
+    } // readProcLog
+}
 
 int
 rsProcStat( rsComm_t * rsComm, procStatInp_t * procStatInp,
@@ -182,8 +238,8 @@ localProcStat( procStatInp_t *procStatInp,
     char childPath[MAX_NAME_LEN];
     int count = 0;
 
-    const auto ips_data_dir = irods::get_server_property<std::string>("ips_data_directory");
-    numProc = getNumFilesInDir(ips_data_dir.c_str()) + 2; /* add 2 to give some room */
+    const auto proc_dir = irods::get_irods_proc_directory();
+    numProc = getNumFilesInDir(proc_dir.c_str()) + 2; /* add 2 to give some room */
 
     std::memset(&procLog, 0, sizeof(procLog));
     /* init serverAddr */
@@ -204,12 +260,12 @@ localProcStat( procStatInp_t *procStatInp,
     }
 
     /* loop through the directory */
-    path srcDirPath(ips_data_dir);
+    path srcDirPath(proc_dir);
     if ( !exists( srcDirPath ) || !is_directory( srcDirPath ) ) {
         status = USER_INPUT_PATH_ERR - errno;
         // TODO Derive or log path from config file.
         rodsLogError( LOG_ERROR, status,
-                      "localProcStat: opendir local dir error for %s", ips_data_dir.c_str());
+                      "localProcStat: opendir local dir error for %s", proc_dir.c_str());
         return status;
     }
     directory_iterator end_itr; // default construction yields past-the-end

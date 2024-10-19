@@ -1,7 +1,9 @@
 #include "irods/irods_signal.hpp"
 
 #include "irods/irods_default_paths.hpp"
+#include "irods/irods_exception.hpp"
 #include "irods/irods_logger.hpp"
+#include "irods/rodsErrorTable.h"
 
 #include <boost/stacktrace/safe_dump_to.hpp>
 
@@ -89,14 +91,6 @@ namespace irods
 {
     const char* const STACKTRACE_NOT_READY_FOR_LOGGING_SUFFIX = ".not_ready_for_logging";
 
-    auto set_stacktrace_directory(std::string_view _path) -> void
-    {
-        using log_server = irods::experimental::log::server;
-        log_server::debug("{}: Stacktraces will be dumped to [{}].", __func__, g_stacktrace_dir.data());
-        std::fill(std::begin(g_stacktrace_dir), std::end(g_stacktrace_dir), 0);
-        _path.copy(g_stacktrace_dir.data(), g_stacktrace_dir.size());
-    } // set_stacktrace_directory
-
     auto get_stacktrace_directory_path() -> std::string_view
     {
         return g_stacktrace_dir.data();
@@ -105,6 +99,15 @@ namespace irods
     auto setup_unrecoverable_signal_handlers() -> void
     {
         using log_server = irods::experimental::log::server;
+
+        std::fill(std::begin(g_stacktrace_dir), std::end(g_stacktrace_dir), 0);
+        const auto path = get_irods_stacktrace_directory().string();
+        if (path.size() >= g_stacktrace_dir.size()) {
+            constexpr const auto* msg = "Stacktrace directory path cannot exceed buffer size [{}]";
+            THROW(CONFIGURATION_ERROR, fmt::format(msg, g_stacktrace_dir.size()));
+        }
+        path.copy(g_stacktrace_dir.data(), g_stacktrace_dir.size());
+        log_server::debug("{}: Stacktraces will be dumped to [{}].", __func__, g_stacktrace_dir.data());
 
         log_server::debug("{}: Setting up unrecoverable stacktrace signal handlers.", __func__);
 

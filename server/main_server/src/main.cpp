@@ -5,11 +5,13 @@
 #include "irods/irods_at_scope_exit.hpp"
 #include "irods/irods_client_api_table.hpp"
 #include "irods/irods_configuration_keywords.hpp"
+#include "irods/irods_default_paths.hpp"
 #include "irods/irods_environment_properties.hpp"
 #include "irods/irods_logger.hpp"
 #include "irods/irods_server_api_table.hpp"
 #include "irods/irods_server_properties.hpp"
 #include "irods/irods_signal.hpp"
+#include "irods/irods_version.h"
 #include "irods/plugins/api/delay_server_migration_types.h"
 #include "irods/plugins/api/grid_configuration_types.h"
 #include "irods/rcConnect.h" // For RcComm
@@ -40,6 +42,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <optional>
 #include <sstream>
@@ -80,6 +83,8 @@ namespace
     namespace fs = boost::filesystem;
 #endif
 
+    namespace log_ns = irods::experimental::log;
+
     using log_server = irods::experimental::log::server;
 
     volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -93,10 +98,10 @@ namespace
     auto print_version_info() -> void;
     auto print_configuration_template() -> void;
 
-    auto validate_configuration(const std::string& _config_file_path) -> bool;
+    auto validate_configuration() -> bool;
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
-    auto init_logger(const nlohmann::json& _config) -> void;
+    auto init_logger() -> void;
     auto setup_signal_handlers() -> int;
 
     auto handle_shutdown() -> void;
@@ -107,26 +112,23 @@ namespace
                                          std::string_view _successor) -> void;
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>;
     auto get_delay_server_successor(RcComm& _comm) -> std::optional<std::string>;
-    auto launch_agent_factory(char* _config_file_path, const char* _src_func) -> bool;
-    auto handle_configuration_reload(std::string& _config_file_path) -> void;
-    auto launch_delay_server(char* _config_file_path) -> void;
-    auto migrate_and_launch_delay_server(char* _config_file_path,
-                                         bool& _first_boot,
+    auto launch_agent_factory(const char* _src_func) -> bool;
+    auto handle_configuration_reload() -> void;
+    auto launch_delay_server() -> void;
+    auto migrate_and_launch_delay_server(bool& _first_boot,
                                          std::chrono::steady_clock::time_point& _time_start) -> void;
     auto log_stacktrace_files() -> void;
     auto remove_leftover_agent_info_files_for_ips() -> void;
 } // anonymous namespace
 
-int main(int _argc, char* _argv[])
+auto main(int _argc, char* _argv[]) -> int
 {
     // TODO Do something with this, eventually.
     [[maybe_unused]] const auto boot_time = std::chrono::system_clock::now();
 
     ProcessType = SERVER_PT; // This process identifies itself as a server.
 
-    set_ips_display_name("irodsServer5"); // TODO Update once irods5 work is closer to completion.
-
-    std::string config_file_path;
+    set_ips_display_name("irodsServer");
 
     namespace po = boost::program_options;
 
@@ -134,19 +136,15 @@ int main(int _argc, char* _argv[])
 
     // clang-format off
     opts_desc.add_options()
-        ("config-file,f", po::value<std::string>(), "")
         ("daemonize,d", "")
         ("pid-file,p", po::value<std::string>(), "")
         ("help,h", "")
         ("version,v", "");
     // clang-format on
 
-    po::positional_options_description pod;
-    pod.add("config-file", 1);
-
     try {
         po::variables_map vm;
-        po::store(po::command_line_parser(_argc, _argv).options(opts_desc).positional(pod).run(), vm);
+        po::store(po::command_line_parser(_argc, _argv).options(opts_desc).run(), vm);
         po::notify(vm);
 
         if (vm.count("help") > 0) {
@@ -159,14 +157,6 @@ int main(int _argc, char* _argv[])
             return 0;
         }
 
-        if (auto iter = vm.find("config-file"); std::end(vm) != iter) {
-            config_file_path = std::move(iter->second.as<std::string>());
-        }
-        else {
-            fmt::print(stderr, "Error: Missing [CONFIG_FILE_PATH] parameter.");
-            return 1;
-        }
-
         if (vm.count("daemonize") > 0) {
             daemonize();
         }
@@ -175,7 +165,7 @@ int main(int _argc, char* _argv[])
         // Perhaps daemonization means there's only one instance running on the machine?
         // What if the pidfile name was derived from the config file path? Only one instance can work.
         // But, what if server redirection is disabled by the admin?
-        std::string pid_file = "/var/run/irods.pid"; // TODO Derive from default root path.
+        std::string pid_file = (irods::get_irods_runstate_directory() / "irods.pid").string();
         if (const auto iter = vm.find("pid-file"); std::end(vm) != iter) {
             pid_file = std::move(iter->second.as<std::string>());
         }
@@ -190,18 +180,14 @@ int main(int _argc, char* _argv[])
         return 1;
     }
 
-    using json = nlohmann::json;
-    json config;
-
     try {
         // Load configuration.
-        if (!validate_configuration(config_file_path)) {
+        if (!validate_configuration()) {
             return 1;
         }
 
-        // TODO Pick one of the following.
-        config = json::parse(std::ifstream{config_file_path});
-        irods::server_properties::instance().init(config_file_path);
+        const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
+        irods::server_properties::instance().init(config_file_path.c_str());
         irods::environment_properties::instance().capture();
 
         // TODO Consider removing the need for these along with all options.
@@ -209,9 +195,7 @@ int main(int _argc, char* _argv[])
         rodsLogLevel(LOG_NOTICE);
     	rodsLogSqlReq(0);
 
-        init_logger(config);
-
-        irods::set_stacktrace_directory(config.at("stacktrace_directory").get_ref<const std::string&>());
+        init_logger();
 
         // Setting up signal handlers here removes the need for reacting to shutdown signals
         // such as SIGINT and SIGTERM during the startup sequence.
@@ -248,7 +232,7 @@ int main(int _argc, char* _argv[])
             return 1;
         }
 
-        if (!launch_agent_factory(config_file_path.data(), __func__)) {
+        if (!launch_agent_factory(__func__)) {
             return 1;
         }
 
@@ -279,7 +263,7 @@ int main(int _argc, char* _argv[])
             }
 
             if (g_reload_config) {
-                handle_configuration_reload(config_file_path);
+                handle_configuration_reload();
             }
 
             // Clean up any zombie child processes if they exist. These appear following a configuration
@@ -292,7 +276,7 @@ int main(int _argc, char* _argv[])
 
             log_stacktrace_files();
             remove_leftover_agent_info_files_for_ips();
-            migrate_and_launch_delay_server(config_file_path.data(), first_boot, dsm_time_start);
+            migrate_and_launch_delay_server(first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
         }
@@ -314,7 +298,7 @@ namespace
         fmt::print(
 R"__(irodsServer - Launch an iRODS server
 
-Usage: irodsServer [OPTION]... CONFIG_FILE_PATH
+Usage: irodsServer [OPTION]...
 
 TODO More words ...
 
@@ -333,15 +317,16 @@ Options:
 
     auto print_version_info() -> void
     {
-        // TODO
+        constexpr const auto commit = std::string_view{IRODS_GIT_COMMIT}.substr(0, 7);
+        fmt::print("irodsServer v{}.{}.{}-{}\n", IRODS_VERSION_MAJOR, IRODS_VERSION_MINOR, IRODS_VERSION_PATCHLEVEL, commit);
     } // print_version_info
 
-    auto validate_configuration(const std::string& _config_file_path) -> bool
+    auto validate_configuration() -> bool
     {
         try {
             namespace jsonschema = jsoncons::jsonschema;
 
-            std::ifstream config_file{_config_file_path};
+            std::ifstream config_file{irods::get_irods_config_directory() / "server_config.json"};
             if (!config_file) {
                 return false;
             }
@@ -513,15 +498,13 @@ Options:
         return 0;
     } // create_pid_file
 
-    auto init_logger(const nlohmann::json& _config) -> void
+    auto init_logger() -> void
     {
-        namespace logger = irods::experimental::log;
-
-        logger::init(false, false); // TODO Restore test mode. stdout requires synchronization so it may be dropped.
-        log_server::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
-        logger::set_server_type("server");
-        logger::set_server_zone(_config.at(irods::KW_CFG_ZONE_NAME).get<std::string>());
-        logger::set_server_hostname(boost::asio::ip::host_name());
+        log_ns::init(false, false); // TODO Restore test mode. stdout requires synchronization so it may be dropped.
+        log_server::set_level(log_ns::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
+        log_ns::set_server_type("server");
+        log_ns::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
+        log_ns::set_server_hostname(boost::asio::ip::host_name());
     } // init_logger
 
     auto setup_signal_handlers() -> int
@@ -674,7 +657,7 @@ Options:
         }
     } // set_delay_server_migration_info
 
-    auto launch_agent_factory(char* _config_file_path, const char* _src_func) -> bool
+    auto launch_agent_factory(const char* _src_func) -> bool
     {
         log_server::info("{}: Launching Agent Factory.", _src_func);
 
@@ -684,11 +667,15 @@ Options:
             std::string hn_shm_name{irods::experimental::net::hostname_cache::shared_memory_name()};
             std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
 
-            char pname[] = "/usr/sbin/irodsAgent5"; // TODO This MUST NOT assume /usr/sbin
+            const auto binary = irods::get_irods_sbin_directory() / "irodsAgent";
+
+            // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
+            char* pname = strdup(binary.c_str());
+            // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
             char boot_time_str[] = ""; // TODO Forward the boot time.
+            // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
             char* args[] = {
                 pname,
-                _config_file_path,
                 hn_shm_name.data(),
                 dns_shm_name.data(),
                 boot_time_str,
@@ -707,11 +694,11 @@ Options:
         return true;
     } // launch_agent_factory
 
-    auto handle_configuration_reload(std::string& _config_file_path) -> void
+    auto handle_configuration_reload() -> void
     {
         log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
 
-        if (!validate_configuration(_config_file_path)) {
+        if (!validate_configuration()) {
             log_server::error("{}: Invalid configuration. Continuing to run with previous configuration.", __func__);
             return;
         }
@@ -734,9 +721,9 @@ Options:
             irods::environment_properties::instance().capture();
 
             // Update the logger for the main server process.
-            log_server::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
-            logger::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
-            logger::set_server_hostname(boost::asio::ip::host_name());
+            log_server::set_level(log_ns::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
+            log_ns::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
+            log_ns::set_server_hostname(boost::asio::ip::host_name());
         }
         catch (const std::exception& e) {
             log_server::error("{}: Error reloading configuration for main server process: {}", __func__, e.what());
@@ -744,7 +731,7 @@ Options:
 
         // Launch a new agent factory to serve client requests.
         // The previous agent factory is allowed to linger around until its children terminate.
-        launch_agent_factory(_config_file_path.data(), __func__);
+        launch_agent_factory(__func__);
 
         // We do not need to manually launch the delay server because the delay server migration
         // logic will handle that for us.
@@ -752,7 +739,7 @@ Options:
         g_reload_config = 0;
     } // handle_configuration_reload
 
-    auto launch_delay_server(char* _config_file_path) -> void
+    auto launch_delay_server() -> void
     {
         auto launch = (0 == g_pid_ds);
 
@@ -769,13 +756,11 @@ Options:
             log_server::info("{}: Launching Delay Server.", __func__);
             g_pid_ds = fork();
             if (0 == g_pid_ds) {
-                char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                char* args[] = {
-                    pname,
-                    _config_file_path,
-                    // TODO Restore test mode.
-                    nullptr
-                }; // TODO Needs to take the config file path.
+                const auto binary = irods::get_irods_sbin_directory() / "irodsDelayServer";
+                // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
+                char* pname = strdup(binary.c_str());
+                // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
+                char* args[] = {pname, nullptr}; // TODO Restore test mode.
                 execv(pname, args);
                 _exit(1);
             }
@@ -789,8 +774,7 @@ Options:
         }
     } // launch_delay_server
 
-    auto migrate_and_launch_delay_server(char* _config_file_path,
-                                         bool& _first_boot,
+    auto migrate_and_launch_delay_server(bool& _first_boot,
                                          std::chrono::steady_clock::time_point& _time_start) -> void
     {
         using namespace std::chrono_literals;
@@ -829,7 +813,7 @@ Options:
                     // This server is the leader and may be running a delay server.
                     if (hostname == *leader) {
                         if (hostname == *successor) {
-                            launch_delay_server(_config_file_path);
+                            launch_delay_server();
 
                             // Clear successor entry in catalog. This isn't necessary, but helps
                             // keep the admin from becoming confused.
@@ -862,7 +846,7 @@ Options:
                             //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
                         }
                         else {
-                            launch_delay_server(_config_file_path);
+                            launch_delay_server();
                         }
                     }
                     else if (hostname == *successor) {
@@ -902,7 +886,7 @@ Options:
 #else
                         // Delay servers lock tasks before execution. This allows the successor server
                         // to launch a delay server without duplicating work.
-                        launch_delay_server(_config_file_path);
+                        launch_delay_server();
 
                         if (g_pid_ds > 0) {
                             set_delay_server_migration_info(conn, hostname, "");
@@ -937,9 +921,7 @@ Options:
 
     auto log_stacktrace_files() -> void
     {
-        const auto stacktrace_directory = irods::get_stacktrace_directory_path();
-
-        for (auto&& entry : fs::directory_iterator{stacktrace_directory}) {
+        for (auto&& entry : fs::directory_iterator{irods::get_irods_stacktrace_directory().c_str()}) {
             // Expected filename format:
             //
             //     <epoch_seconds>.<epoch_milliseconds>.<agent_pid>
@@ -1025,9 +1007,7 @@ Options:
 
     auto remove_leftover_agent_info_files_for_ips() -> void
     {
-        const auto ips_data_dir = irods::get_server_property<std::string>("ips_data_directory");
-
-        for (const auto& entry : fs::directory_iterator{ips_data_dir}) {
+        for (const auto& entry : fs::directory_iterator{irods::get_irods_proc_directory().c_str()}) {
             try {
                 const auto agent_pid = std::stoi(entry.path().stem().string());
 

@@ -40,6 +40,8 @@ namespace irods
         // If we're the server, use the plugin directory property from server_config.json when defined.
         // TODO Document this in docs.irods.org.
         if (SERVER_PT == ::ProcessType || AGENT_PT == ::ProcessType) {
+            // TODO Document this.
+            // TODO Add new keyword variable for this.
             if (irods::server_property_exists("plugin_directory")) {
                 plugin_home = irods::get_server_property<std::string>("plugin_directory");
             }

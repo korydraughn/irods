@@ -9,6 +9,7 @@
 #include "irods/irods_at_scope_exit.hpp"
 #include "irods/irods_client_api_table.hpp"
 #include "irods/irods_configuration_keywords.hpp"
+#include "irods/irods_default_paths.hpp"
 #include "irods/irods_delay_queue.hpp"
 #include "irods/irods_get_full_path_for_config_file.hpp"
 #include "irods/irods_logger.hpp"
@@ -777,7 +778,6 @@ namespace
 
 int main(int _argc, char** _argv)
 {
-    std::string config_file_path;
     bool enable_test_mode = false;
     bool write_to_stdout = false;
 
@@ -787,33 +787,24 @@ int main(int _argc, char** _argv)
 
     // clang-format off
     opts_desc.add_options()
-        ("config-file,f", po::value<std::string>(), "")
         ("test-mode,t", po::bool_switch(&enable_test_mode), "") // TODO
         ("stdout,u", po::bool_switch(&write_to_stdout), ""); // TODO stdout doesn't make sense unless synchronized
     // clang-format on
 
-    po::positional_options_description pod;
-    pod.add("config-file", 1);
-
     try {
         po::variables_map vm;
-        po::store(po::command_line_parser(_argc, _argv).options(opts_desc).positional(pod).run(), vm);
+        po::store(po::command_line_parser(_argc, _argv).options(opts_desc).run(), vm);
         po::notify(vm);
-
-        if (auto iter = vm.find("config-file"); std::end(vm) != iter) {
-            config_file_path = std::move(iter->second.as<std::string>());
-        }
-        else {
-            fmt::print(stderr, "Error: Missing [CONFIG_FILE_PATH] parameter.");
-            return 1;
-        }
     }
     catch (const std::exception& e) {
         fmt::print(stderr, "Error: {}\n", e.what());
         return 1;
     }
 
-    irods::server_properties::instance().init(config_file_path);
+    {
+        const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
+        irods::server_properties::instance().init(config_file_path.c_str());
+    }
 
     init_logger(write_to_stdout, enable_test_mode);
 
@@ -833,9 +824,9 @@ int main(int _argc, char** _argv)
         }
         catch (...) {
             log_ds::warn("Could not retrieve [{}] from advanced settings configuration. "
-                                       "Using default value of {}.",
-                                       irods::KW_CFG_DELAY_SERVER_SLEEP_TIME_IN_SECONDS,
-                                       irods::default_delay_server_sleep_time_in_seconds);
+                         "Using default value of {}.",
+                         irods::KW_CFG_DELAY_SERVER_SLEEP_TIME_IN_SECONDS,
+                         irods::default_delay_server_sleep_time_in_seconds);
         }
 
         return irods::default_delay_server_sleep_time_in_seconds;
@@ -868,9 +859,9 @@ int main(int _argc, char** _argv)
         }
         catch (...) {
             log_ds::warn("Could not retrieve [{}] from advanced settings configuration. "
-                                       "Using default value of {}.",
-                                       irods::KW_CFG_NUMBER_OF_CONCURRENT_DELAY_RULE_EXECUTORS,
-                                       irods::default_number_of_concurrent_delay_executors);
+                         "Using default value of {}.",
+                         irods::KW_CFG_NUMBER_OF_CONCURRENT_DELAY_RULE_EXECUTORS,
+                         irods::default_number_of_concurrent_delay_executors);
         }
 
         return irods::default_number_of_concurrent_delay_executors;
@@ -888,8 +879,8 @@ int main(int _argc, char** _argv)
         }
         catch (...) {
             log_ds::warn("Could not retrieve [{}] from advanced settings configuration. "
-                                       "Delay server will use as much memory as necessary.",
-                                       irods::KW_CFG_MAX_SIZE_OF_DELAY_QUEUE_IN_BYTES);
+                         "Delay server will use as much memory as necessary.",
+                         irods::KW_CFG_MAX_SIZE_OF_DELAY_QUEUE_IN_BYTES);
         }
 
         return 0;
