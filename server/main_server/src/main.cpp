@@ -170,7 +170,7 @@ auto main(int _argc, char* _argv[]) -> int
             pid_file = std::move(iter->second.as<std::string>());
         }
 
-        if (create_pid_file(pid_file) == -1) {
+        if (create_pid_file(pid_file) != 0) {
             fmt::print(stderr, "Error: could not create PID file [{}].", pid_file);
             return 1;
         }

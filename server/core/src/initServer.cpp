@@ -9,7 +9,6 @@
 #include "irods/miscServerFunct.hpp"
 #include "irods/objDesc.hpp"
 #include "irods/physPath.hpp"
-#include "irods/procLog.h"
 #include "irods/rcGlobalExtern.h"
 #include "irods/rcMisc.h"
 #include "irods/resource.hpp"
