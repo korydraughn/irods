@@ -834,13 +834,14 @@ namespace
         tv.tv_usec = 0;
 
         if (const auto res = readStartupPack(net_obj, &startupPack, &tv); !res.ok()) {
-            log_agent::error("{}: readStartupPack failed, [error code={}]", res.code());
+            log_agent::error("{}: readStartupPack failed, [error code={}]", __func__, res.code());
             sendVersion(net_obj, res.code(), 0, nullptr, 0);
             mySockClose(net_obj->socket_handle());
             return 0;
         }
 
         if (startupPack->connectCnt > /* MAX_SVR_SVR_CONNECT_CNT */ 7) {
+            log_agent::error("{}: Exceeded connect count [max=7, count={}].", __func__, startupPack->connectCnt);
             sendVersion(net_obj, SYS_EXCEED_CONNECT_CNT, 0, nullptr, 0);
             mySockClose(net_obj->socket_handle());
             std::free(startupPack);

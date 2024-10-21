@@ -2670,6 +2670,7 @@ readStartupPack(
 
     if ( strcmp(myHeader.type, RODS_HEARTBEAT_T) == 0 ) {
         *startupPack = static_cast<startupPack_t*>(malloc(sizeof(**startupPack)));
+        std::memset(*startupPack, 0, sizeof(startupPack));
         snprintf((*startupPack)->option, sizeof((*startupPack)->option), "%s", RODS_HEARTBEAT_T);
         return SUCCESS();
     }

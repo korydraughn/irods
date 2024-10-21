@@ -215,6 +215,7 @@ class IrodsController(object):
 
     def reload_configuration(self):
         """Send the SIGHUP signal to the server, causing it to reload the configuration."""
+        l = logging.getLogger(__name__)
         server_pid = self.get_server_pid()
         if server_pid is None:
             l.info('iRODS server is not running')
@@ -259,6 +260,7 @@ class IrodsController(object):
     def wait_for_server_to_start(self, retry_count=100):
         l = logging.getLogger(__name__)
         try_count = 1
+        irods_port = int(self.config.server_config['zone_port'])
 
         for _ in range(retry_count):
             l.debug('Attempting to connect to iRODS server on port %s. Attempt #%s', irods_port, try_count)
@@ -273,9 +275,9 @@ class IrodsController(object):
                         raise IrodsError('iRODS port is bound, but server is not started.')
                     s.send(b'\x00\x00\x00\x33<MsgHeader_PI><type>HEARTBEAT</type></MsgHeader_PI>')
                     message = s.recv(256)
-                    if message != b'HEARTBEAT':
-                        raise IrodsError(f'iRODS port returned non-heartbeat message:\n{message}')
-                    return
+                    if message == b'HEARTBEAT':
+                        return
+                    l.debug(f'iRODS port returned non-heartbeat message')
 
             try_count += 1
             time.sleep(1)
