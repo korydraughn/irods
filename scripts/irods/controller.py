@@ -224,7 +224,7 @@ class IrodsController(object):
         time.sleep(1)
         self.wait_for_server_to_start()
 
-    # TODO Remove this function. Admins should just use "ps".
+    # TODO Consider removing this function. Admins should just use "ps".
     def status(self):
         l = logging.getLogger(__name__)
         l.debug('Calling status on IrodsController')

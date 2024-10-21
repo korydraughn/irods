@@ -437,13 +437,16 @@ def _agent_executable():
 def agent_executable():
     return str(_agent_executable())
 
+# TODO Rename to _delay_server_executable_cache
 _rule_engine_executable_cache = None
+# TODO Rename to _delay_server_executable
 def _rule_engine_executable():
     global _rule_engine_executable_cache
     if _rule_engine_executable_cache is None:
         _rule_engine_executable_cache = _server_bin_directory() / 'irodsDelayServer'
     return _rule_engine_executable_cache
 
+# TODO Rename to delay_server_executable
 def rule_engine_executable():
     return str(_rule_engine_executable())
 
