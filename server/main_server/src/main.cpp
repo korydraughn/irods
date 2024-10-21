@@ -161,10 +161,8 @@ auto main(int _argc, char* _argv[]) -> int
             daemonize();
         }
 
-        // TODO What does it mean to daemonize and use a unique pidfile name?
-        // Perhaps daemonization means there's only one instance running on the machine?
-        // What if the pidfile name was derived from the config file path? Only one instance can work.
-        // But, what if server redirection is disabled by the admin?
+        // TODO /var/run/irods.pid fails as a default due to permissions.
+        // How do other processes handle this outside of just putting the file in another directory?
         std::string pid_file = (irods::get_irods_runstate_directory() / "irods.pid").string();
         if (const auto iter = vm.find("pid-file"); std::end(vm) != iter) {
             pid_file = std::move(iter->second.as<std::string>());
@@ -181,14 +179,13 @@ auto main(int _argc, char* _argv[]) -> int
     }
 
     try {
-        // Load configuration.
         if (!validate_configuration()) {
             return 1;
         }
 
         const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
         irods::server_properties::instance().init(config_file_path.c_str());
-        irods::environment_properties::instance().capture();
+        irods::environment_properties::instance(); // Load the local environment file.
 
         // TODO Consider removing the need for these along with all options.
         // All logging should be controlled via the new logging system.
@@ -207,12 +204,10 @@ auto main(int _argc, char* _argv[]) -> int
         log_server::info("{}: Initializing shared memory for main server process.", __func__);
 
         namespace hnc = irods::experimental::net::hostname_cache;
-        hnc::init("irods_hostname_cache5", irods::get_hostname_cache_shared_memory_size());
-        //irods::at_scope_exit deinit_hostname_cache{[] { hnc::deinit(); }};
+        hnc::init("irods_hostname_cache5", irods::get_hostname_cache_shared_memory_size()); // TODO Rename
 
         namespace dnsc = irods::experimental::net::dns_cache;
-        dnsc::init("irods_dns_cache5", irods::get_dns_cache_shared_memory_size());
-        //irods::at_scope_exit deinit_dns_cache{[] { dnsc::deinit(); }};
+        dnsc::init("irods_dns_cache5", irods::get_dns_cache_shared_memory_size()); // TODO Rename
 
         // Load server API table so that API plugins which are needed to stand up the server are
         // available for use.
@@ -247,6 +242,9 @@ auto main(int _argc, char* _argv[]) -> int
         // dsm = Short for delay server migration
         // This is used to control the frequency of the delay server migration logic.
         auto dsm_time_start = std::chrono::steady_clock::now();
+
+        // TODO Remove this and just delay the startup of the delay server. Even better if the delay server
+        // only starts up after the agent factory is accepting connections.
         auto first_boot = true;
 
         while (true) {
@@ -274,6 +272,8 @@ auto main(int _argc, char* _argv[]) -> int
                 waitpid(-1, nullptr, WNOHANG);
             }
 
+            // TODO Add logic to fork a new agent factory if not running.
+
             log_stacktrace_files();
             remove_leftover_agent_info_files_for_ips();
             migrate_and_launch_delay_server(first_boot, dsm_time_start);
@@ -295,6 +295,7 @@ namespace
 {
     auto print_usage() -> void
     {
+        // TODO Update help text.
         fmt::print(
 R"__(irodsServer - Launch an iRODS server
 
@@ -401,7 +402,7 @@ Options:
         }
 
         umask(0);
-        chdir("/");
+        chdir("/"); // TODO Should we keep this? Need to refresh my memory on why this is important.
 
         // Get max number of open file descriptors.
         auto max_fd = sysconf(_SC_OPEN_MAX);

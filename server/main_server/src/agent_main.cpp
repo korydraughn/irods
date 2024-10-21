@@ -145,7 +145,7 @@ namespace
     auto reap_agent_processes(bool _shutting_down) -> void;
 } // anonymous namespace
 
-int main(int _argc, char* _argv[])
+auto main(int _argc, char* _argv[]) -> int
 {
     ProcessType = AGENT_PT; // This process identifies itself as the agent factory or an agent.
 
@@ -203,7 +203,7 @@ int main(int _argc, char* _argv[])
         // Load configuration.
         const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
         irods::server_properties::instance().init(config_file_path.c_str());
-        irods::environment_properties::instance().capture(); // TODO This MUST NOT assume /var/lib/irods.
+        irods::environment_properties::instance(); // Load the local environment file.
 
         // Initialize global pointer to ips data directory for agent cleanup.
         // This is required so that the signal handler for reaping agents remains async-signal-safe.
@@ -300,7 +300,7 @@ int main(int _argc, char* _argv[])
         // Initialize zone information for request processing.
         // initServerMain starts the listening socket and stores it in svrComm.
         // TODO initServerMain can likely be simplified.
-        RsComm svrComm{}; // TODO RsComm contains a std::string, so never memset this type!
+        RsComm svrComm{}; // RsComm contains a std::string, so never use memset() on this type!
         if (const auto ec = initServerMain(svrComm, false, false); ec < 0) {
             log_af::error("{}: initServerMain error. [error code={}]", __func__, ec);
             return 1;
@@ -354,6 +354,7 @@ int main(int _argc, char* _argv[])
             struct timeval time_out; // NOLINT(cppcoreguidelines-pro-type-member-init)
             time_out.tv_sec  = 0;
             time_out.tv_usec = 500 * 1000;
+            const auto original_time_out = time_out;
 
             while ((numSock = select(svrComm.sock + 1, &sockMask, nullptr, nullptr, &time_out)) == -1) {
                 if (g_terminate) {
@@ -393,8 +394,7 @@ int main(int _argc, char* _argv[])
 
             if (0 == numSock) {
                 // "select" modifies the timeval structure, so reset it.
-                time_out.tv_sec  = 0;
-                time_out.tv_usec = 500 * 1000;
+                time_out = original_time_out;
                 continue;
             }
 
@@ -784,32 +784,34 @@ namespace
         // shutdown of the iRODS server.
         std::signal(SIGTERM, SIG_IGN);
 
-        // To avoid unnecessary complexity for configuration reload, shutdown, and signals,
-        // we use SIGUSR1 as the signal for instructing the agents to shutdown.
-        struct sigaction sa_terminate; // NOLINT(cppcoreguidelines-pro-type-member-init)
-        sigemptyset(&sa_terminate.sa_mask);
-        sa_terminate.sa_flags = SA_SIGINFO;
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-        sa_terminate.sa_sigaction = [](int, siginfo_t* _siginfo, void*) {
-            // Only respond to SIGUSR1 if the agent factory triggered it.
+        {
+            // To avoid unnecessary complexity for configuration reload, shutdown, and signals,
+            // we use SIGUSR1 as the signal for instructing the agents to shutdown.
+            struct sigaction sa_terminate; // NOLINT(cppcoreguidelines-pro-type-member-init)
+            sigemptyset(&sa_terminate.sa_mask);
+            sa_terminate.sa_flags = SA_SIGINFO;
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-            if (getppid() == _siginfo->si_pid) {
-                g_terminate = 1;
+            sa_terminate.sa_sigaction = [](int, siginfo_t* _siginfo, void*) {
+                // Only respond to SIGUSR1 if the agent factory triggered it.
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+                if (getppid() == _siginfo->si_pid) {
+                    g_terminate = 1;
+                }
+            };
+            if (sigaction(SIGUSR1, &sa_terminate, nullptr) == -1) {
+                return -1; // TODO Use a better error code or log instead.
             }
-        };
-        if (sigaction(SIGUSR1, &sa_terminate, nullptr) == -1) {
-            return -1; // TODO Use a better error code or log instead.
         }
 
         // SIGPIPE is ignored so that agents can detect socket issues to other servers.
         std::signal(SIGPIPE, SIG_IGN);
 
+        // Let the registered signal handler reap children and remove the agent info files for ips.
         std::signal(SIGCHLD, SIG_DFL);
 
+        // Do not allow admins to trigger a configuration reload directly. They must send
+        // the signal to the main server process.
         std::signal(SIGHUP, SIG_IGN);
-
-        //std::signal(SIGABRT, SIG_DFL);
-        //std::signal(SIGUSR1, SIG_DFL);
 
         irods::experimental::log::set_server_type("agent");
 
