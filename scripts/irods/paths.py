@@ -427,6 +427,16 @@ def _server_executable():
 def server_executable():
     return str(_server_executable())
 
+_agent_executable_cache = None
+def _agent_executable():
+    global _agent_executable_cache
+    if _agent_executable_cache is None:
+        _agent_executable_cache = _server_bin_directory() / 'irodsAgent'
+    return _agent_executable_cache
+
+def agent_executable():
+    return str(_agent_executable())
+
 _rule_engine_executable_cache = None
 def _rule_engine_executable():
     global _rule_engine_executable_cache

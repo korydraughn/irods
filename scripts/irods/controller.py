@@ -38,6 +38,7 @@ class IrodsController(object):
     def server_binaries(self):
         return [
             self.config.server_executable,
+            self.config.agent_executable,
             self.config.rule_engine_executable
         ]
 
@@ -58,6 +59,8 @@ class IrodsController(object):
 
     def get_server_proc(self):
         server_pid = self.get_server_pid()
+        if server_pid is None:
+            return None
 
         # lib.get_server_pid() does not have access to self.config, so cannot
         # check the pid from the pidfile against self.config.server_executable,
@@ -198,7 +201,7 @@ class IrodsController(object):
         l.debug('Calling stop on IrodsController')
 
         server_pid = self.get_server_pid()
-        if None == server_pid:
+        if server_pid is None:
             l.info('iRODS server is not running')
             return
 
@@ -219,7 +222,7 @@ class IrodsController(object):
     def reload_configuration(self):
         """Send the SIGHUP signal to the server, causing it to reload the configuration."""
         server_pid = self.get_server_pid()
-        if None == server_pid:
+        if server_pid is None:
             l.info('iRODS server is not running')
             return
         os.kill(server_pid, signal.SIGHUP)

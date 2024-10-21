@@ -316,6 +316,10 @@ class IrodsConfig(object):
         return paths.server_executable()
 
     @property
+    def agent_executable(self):
+        return paths.agent_executable()
+
+    @property
     def rule_engine_executable(self):
         return paths.rule_engine_executable()
 
