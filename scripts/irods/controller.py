@@ -86,9 +86,6 @@ class IrodsController(object):
         #if upgrade_configuration.requires_upgrade(self.config):
             #upgrade_configuration.upgrade(self.config)
 
-        # TODO Figure out how to move handling of this into the server.
-        delete_s3_shmem()
-
         l.info('Starting iRODS server ...')
 
         # TODO Consider implementing later.
@@ -207,9 +204,6 @@ class IrodsController(object):
 
         l.info('Stopping iRODS server...')
         os.kill(server_pid, signal.SIGTERM if not graceful else signal.SIGQUIT)
-
-        # TODO Figure out how to move handling of this into the server.
-        delete_s3_shmem()
 
     def restart(self, write_to_stdout=False, test_mode=False):
         l = logging.getLogger(__name__)
@@ -351,6 +345,7 @@ def format_binary_to_procs_dict(proc_dict):
             lib.indent(*['Process {0}'.format(proc.pid) for proc in procs])))
     return '\n'.join(text_list)
 
+# TODO Remove this. Nothing uses it in the codebase.
 def delete_cache_files_by_pid(pid):
     l = logging.getLogger(__name__)
     l.debug('Deleting cache files for pid %s...', pid)
@@ -360,6 +355,7 @@ def delete_cache_files_by_pid(pid):
             '*irods_re_cache*pid{0}_*'.format(pid)))
         delete_cache_files_by_name(*cache_shms)
 
+# TODO Remove this. Nothing uses it except delete_cache_files_by_pid() and delete_s3_shmem().
 def delete_cache_files_by_name(*filepaths):
     l = logging.getLogger(__name__)
     for path in filepaths:
@@ -369,6 +365,9 @@ def delete_cache_files_by_name(*filepaths):
         except (IOError, OSError):
             l.warning(lib.indent('Error deleting cache file: %s'), path)
 
+# TODO Remove this. The S3 resource plugin can do this itself now that iRODS 5
+# provides a setup() and teardown() hook. The teardown hook is invoked when the
+# agent factory terminates.
 def delete_s3_shmem():
     # delete s3 shared memory if any exist 
     for shm_dir in paths.possible_shm_locations():
