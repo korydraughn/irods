@@ -161,9 +161,7 @@ auto main(int _argc, char* _argv[]) -> int
             daemonize();
         }
 
-        // TODO /var/run/irods.pid fails as a default due to permissions.
-        // How do other processes handle this outside of just putting the file in another directory?
-        std::string pid_file = (irods::get_irods_runstate_directory() / "irods.pid").string();
+        std::string pid_file = (irods::get_irods_runstate_directory() / "irods-server.pid").string();
         if (const auto iter = vm.find("pid-file"); std::end(vm) != iter) {
             pid_file = std::move(iter->second.as<std::string>());
         }

@@ -43,8 +43,8 @@ class IrodsController(object):
 
     def get_server_pid(self):
         try:
-            # Use of this python script assumes the PID file is located in <prefix>/var/run.
-            pid_file = os.path.join(paths.localstate_directory(), 'run', 'irods.pid')
+            # Use of this python script assumes the PID file is located in <prefix>/var/run/irods.
+            pid_file = os.path.join(paths.runstate_directory(), 'irods', 'irods-server.pid')
             if os.path.exists(pid_file):
                 with open(pid_file, 'r') as f:
                     pid = int(f.readline().strip())
