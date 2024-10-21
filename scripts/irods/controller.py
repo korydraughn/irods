@@ -291,7 +291,7 @@ class IrodsController(object):
             if self.get_server_pid() is None:
                 return
             time.sleep(1)
-        raise IrodsError('iRODS server failed to start.')
+        raise IrodsError('iRODS server failed to shutdown.')
 
 def binary_matches(binary_path, proc):
     if proc.is_running():
