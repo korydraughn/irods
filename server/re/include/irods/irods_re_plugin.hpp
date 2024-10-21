@@ -7,6 +7,11 @@
 #include "irods/irods_re_structs.hpp"
 #include "irods/irods_state_table.h"
 
+#include <boost/any.hpp>
+#include <boost/algorithm/string.hpp>
+
+#include <fmt/format.h>
+
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -16,9 +21,6 @@
 #include <optional>
 #include <utility>
 #include <vector>
-
-#include <boost/any.hpp>
-#include <boost/algorithm/string.hpp>
 
 #ifdef IRODS_ENABLE_SYSLOG
 #  define IRODS_SERVER_ONLY(x) x
@@ -192,6 +194,34 @@ namespace irods {
             return SUCCESS();
 
         }
+
+        error setup_operation(T& _in)
+        {
+            try {
+                auto fcn = boost::any_cast<std::function<error(T&,const std::string&)>>(operations_["setup"]);
+                return fcn(_in, instance_name_);
+            }
+            catch (const boost::bad_any_cast& e) {
+                return ERROR(INVALID_ANY_CAST, fmt::format("failed to extract setup operation from instance [{}]: {}", instance_name_, e.what()));
+            }
+            catch (const std::exception& e) {
+                return ERROR(PLUGIN_ERROR, fmt::format("failed to extract setup operation from instance [{}]: {}", instance_name_, e.what()));
+            }
+        } // setup_operation
+
+        error teardown_operation(T& _in)
+        {
+            try {
+                auto fcn = boost::any_cast<std::function<error(T&,const std::string&)>>(operations_["teardown"]);
+                return fcn(_in, instance_name_);
+            }
+            catch (const boost::bad_any_cast& e) {
+                return ERROR(INVALID_ANY_CAST, fmt::format("failed to extract teardown operation from instance [{}]: {}", instance_name_, e.what()));
+            }
+            catch (const std::exception& e) {
+                return ERROR(PLUGIN_ERROR, fmt::format("failed to extract teardown operation from instance [{}]: {}", instance_name_, e.what()));
+            }
+        } // teardown_operation
 
         error start_operation(T& _in) {
             try {
@@ -416,6 +446,18 @@ namespace irods {
             re_packs_.push_back(_inp);
 
             return SUCCESS();
+        }
+
+        void call_setup_operations() {
+            std::for_each(begin(re_packs_), end(re_packs_), [](re_pack_inp<T> &_inp) {
+                _inp.re_->setup_operation(_inp.re_ctx_);
+            });
+        }
+
+        void call_teardown_operations() {
+            std::for_each(begin(re_packs_), end(re_packs_), [](re_pack_inp<T> &_inp) {
+                _inp.re_->teardown_operation(_inp.re_ctx_);
+            });
         }
 
         void call_start_operations() {

@@ -293,7 +293,8 @@ int main(int _argc, char* _argv[])
             }
         }};
 
-        // TODO Why is this necessary?
+        // Initialize the global rule engine plugin facilities.
+        // This is where the rule engine plugins are loaded (i.e. plugin_factory is invoked here).
         irods::re_plugin_globals = std::make_unique<irods::global_re_plugin_mgr>();
 
         // Initialize zone information for request processing.
@@ -319,6 +320,10 @@ int main(int _argc, char* _argv[])
             log_af::error("{}: init_api_table error for server: {}", __func__, ret.user_result());
             return 1;
         }
+
+        // Run setup() for each rule engine plugin.
+        // This allows rule engine plugins to setup state which doesn't change frequently.
+        irods::re_plugin_globals->global_re_mgr.call_setup_operations();
 
         // Enter parent process main loop.
         // 
@@ -425,6 +430,9 @@ int main(int _argc, char* _argv[])
 
         // Do not accept new client requests (i.e. close the listening socket).
         close(svrComm.sock);
+
+        // Give the rule engine plugins a chance to free any resources established during setup().
+        irods::re_plugin_globals->global_re_mgr.call_teardown_operations();
 
         if (0 == g_terminate_graceful) {
             // Instruct all agents to shutdown gracefully.
