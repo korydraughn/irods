@@ -105,6 +105,11 @@ set(
   zone_bundle.json
 )
 foreach(SCHEMA_FILE IN LISTS IRODS_CONFIGURATION_SCHEMA_FILES)
+  configure_file(                                                                                             
+    "${CMAKE_IRODS_SOURCE_DIR}/schemas/configuration/v${IRODS_CONFIGURATION_SCHEMA_VERSION}/${SCHEMA_FILE}.in"
+    "${CMAKE_IRODS_BINARY_DIR}/schemas/configuration/v${IRODS_CONFIGURATION_SCHEMA_VERSION}/${SCHEMA_FILE}"   
+    @ONLY                                                                                                     
+  )                                                                                                           
   install(
     FILES
     "${CMAKE_IRODS_BINARY_DIR}/schemas/configuration/v${IRODS_CONFIGURATION_SCHEMA_VERSION}/${SCHEMA_FILE}"
