@@ -2,6 +2,7 @@
 
 #include "irods/client_connection.hpp"
 #include "irods/connection_pool.hpp"
+#include "irods/delay_rule_tag.h"
 #include "irods/fully_qualified_username.hpp"
 #include "irods/get_delay_rule_info.h"
 #include "irods/get_grid_configuration_value.h"
@@ -603,7 +604,7 @@ namespace
             // delay rule from the in-memory queue and return.
             DelayRuleTagInput input{};
             rule_id.copy(input.rule_id, sizeof(DelayRuleTagInput::rule_id));
-            std::strcpy(input.tag, "X");
+            boost::asio::ip::host_name().copy(input.tag, sizeof(DelayRuleTagInput::tag));
 
             // TODO Replace use of "tag" with "lock".
             if (const auto ec = rc_delay_rule_tag(static_cast<RcComm*>(conn), &input); ec < 0) {
@@ -675,7 +676,8 @@ namespace
 
             // TODO This check may be incorrect. Need to think about it more.
             // Skip any rules which have been tagged.
-            if ("X" == result[1]) {
+            if (!result[1].empty()) {
+                log_ds::trace("Delay rule was tagged with [{}] earlier. Ignoring rule ID [{}] for now.", result[1], rule_id);
                 return;
             }
 

@@ -189,6 +189,17 @@ def run_update(irods_config, cursor):
             for option in password_config_dict:
                 database_connect.execute_sql_statement(cursor, statement_str.format(scheme, option, password_config_dict[option]))
 
+    elif new_schema_version == 12:
+        # Increase the size of R_RULE_EXEC.exe_status to 300 characters. This change allows the delay server
+        # to store the FQDN in the column. This is necessary for making it possible to identify which delay server
+        # is processing a delay rule.
+        if irods_config.catalog_database_type == 'postgres':
+            database_connect.execute_sql_statement(cursor, "alter table R_RULE_EXEC alter column exe_status type varchar(300);")
+        elif irods_config.catalog_database_type == 'mysql':
+            database_connect.execute_sql_statement(cursor, "alter table R_RULE_EXEC modify exe_status varchar2(300);")
+        elif irods_config.catalog_database_type == 'oracle':
+            database_connect.execute_sql_statement(cursor, "alter table R_RULE_EXEC modify (exe_status varchar2(300));")
+
     else:
         raise IrodsError('Upgrade to schema version %d is unsupported.' % (new_schema_version))
 

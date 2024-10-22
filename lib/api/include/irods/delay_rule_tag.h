@@ -13,12 +13,12 @@ struct RcComm;
 typedef struct DelayRuleTagInput
 {
     char rule_id[32]; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
-    char tag[32]; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+    char tag[300]; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
     struct KeyValPair condInput;
 } delayRuleTagInp_t;
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define DelayRuleTagInput_PI "str rule_id[32]; str tag[32]; struct KeyValPair_PI;"
+#define DelayRuleTagInput_PI "str rule_id[32]; str tag[300]; struct KeyValPair_PI;"
 
 #ifdef __cplusplus
 extern "C" {
