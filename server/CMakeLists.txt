@@ -92,7 +92,6 @@ set(
   client_hints.json
   configuration_directory.json
   database_config.json
-  grid_status.json
   host_access_control.json
   host_resolution.json
   plugin.json
