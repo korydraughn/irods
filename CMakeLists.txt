@@ -99,6 +99,11 @@ set(IRODS_VERSION_PATCH "0")
 set(IRODS_VERSION "${IRODS_VERSION_MAJOR}.${IRODS_VERSION_MINOR}.${IRODS_VERSION_PATCH}")
 set(IRODS_PACKAGE_REVISION "0")
 
+# Bump this variable anytime the catalog schema is modified.
+set(IRODS_CATALOG_SCHEMA_VERSION "12")
+# Bump this variable anytime a JSON schema is modified.
+set(IRODS_CONFIGURATION_SCHEMA_VERSION "5")
+
 project(irods
   VERSION ${IRODS_VERSION}
   LANGUAGES C CXX)

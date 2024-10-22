@@ -98,6 +98,10 @@
                 "required": ["catalog_provider_hosts","negotiation_key","zone_key","zone_name"]
             }
         },
+        "graceful_shutdown_timeout_in_seconds": {
+            "type": "integer",
+            "minimum": 0
+        },
         "host_access_control": {
             "$ref": "host_access_control.json"
         },
@@ -134,7 +138,11 @@
                 },
                 "database": {
                     "type": "object",
-                    "additionalProperties": {"$ref": "database_config.json"},
+                    "patternProperties": {
+                        "^[^\\s]+$": {
+                            "$ref": "database_config.json"
+                        }
+                    },
                     "maxProperties" : 1,
                     "minProperties" : 1
                 },
@@ -183,6 +191,7 @@
         "default_hash_scheme",
         "environment_variables",
         "federation",
+        "graceful_shutdown_timeout_in_seconds",
         "host_access_control",
         "host_resolution",
         "log_level",

@@ -1,3 +1,4 @@
+#include "irods/catalog.hpp"
 #include "irods/client_connection.hpp"
 #include "irods/dns_cache.hpp"
 #include "irods/get_grid_configuration_value.h"
@@ -49,6 +50,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 
 #ifdef __cpp_lib_filesystem
 #  include <filesystem>
@@ -102,6 +104,7 @@ namespace
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
     auto init_logger() -> void;
+    auto check_catalog_schema_version() -> std::pair<bool, int>;
     auto setup_signal_handlers() -> int;
 
     auto handle_shutdown() -> void;
@@ -191,6 +194,13 @@ auto main(int _argc, char* _argv[]) -> int
     	rodsLogSqlReq(0);
 
         init_logger();
+
+        if (const auto [up_to_date, db_vers] = check_catalog_schema_version(); !up_to_date) {
+            const auto msg = fmt::format("Catalog schema version mismatch: expected [{}], found [{}]", IRODS_CATALOG_SCHEMA_VERSION, db_vers);
+            log_server::critical(msg);
+            fmt::print(msg);
+            return 1;
+        }
 
         // Setting up signal handlers here removes the need for reacting to shutdown signals
         // such as SIGINT and SIGTERM during the startup sequence.
@@ -368,7 +378,9 @@ Options:
 
             // Validate the server configuration. If that succeeds, move on to validating the
             // irods_environment.json file.
-            if (do_validate(config, config.at("json_schema_file").as<std::string>())) {
+            const auto schema_dir = irods::get_irods_home_directory() / fmt::format("configuration_schemas/v{}", IRODS_CONFIGURATION_SCHEMA_VERSION);
+            const auto server_config_schema = schema_dir / "server_config.json";
+            if (do_validate(config, server_config_schema.c_str())) {
                 std::string env_file;
                 std::string session_file;
                 if (const auto err = irods::get_json_environment_file(env_file, session_file); !err.ok()) {
@@ -382,7 +394,8 @@ Options:
                     return false;
                 }
                 const auto env_file_config = jsoncons::json::parse(in);
-                return do_validate(env_file_config, config.at("environment_json_schema_file").as<std::string>());
+                const auto svc_acct_schema = schema_dir / "service_account_environment.json";
+                return do_validate(env_file_config, svc_acct_schema.c_str());
             }
         }
         catch (const std::exception& e) {
@@ -519,6 +532,38 @@ Options:
         log_ns::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
         log_ns::set_server_hostname(boost::asio::ip::host_name());
     } // init_logger
+
+    auto check_catalog_schema_version() -> std::pair<bool, int>
+    {
+        try {
+            const auto role = irods::get_server_property<std::string>(irods::KW_CFG_CATALOG_SERVICE_ROLE);
+
+            if (role == irods::KW_CFG_SERVICE_ROLE_PROVIDER) {
+                auto [db_instance, db_conn] = irods::experimental::catalog::new_database_connection();
+
+                auto row = nanodbc::execute(db_conn, "select option_value from R_GRID_CONFIGURATION where namespace = 'database' and option_name = 'schema_version'");
+                if (!row.next()) {
+                    return {false, -1};
+                }
+
+                const auto vers = row.get<int>(0);
+                return {vers == IRODS_CATALOG_SCHEMA_VERSION, vers};
+            }
+            
+            if (role == irods::KW_CFG_SERVICE_ROLE_CONSUMER) {
+                // TODO What should the consumer do? It doesn't have database credentials.
+                // Should all consumers have database credentials in iRODS 5?
+            }
+        }
+        catch (const irods::exception& e) {
+            log_server::error("{}: Could not verify catalog schema version: {}", __func__, e.client_display_what());
+        }
+        catch (const std::exception& e) {
+            log_server::error("{}: Could not verify catalog schema version. Is the catalog service role defined in server_config.json?", __func__);
+        }
+
+        return {false, -1};
+    } // check_catalog_schema_version
 
     auto setup_signal_handlers() -> int
     {
