@@ -556,10 +556,10 @@ Options:
             }
         }
         catch (const irods::exception& e) {
-            log_server::error("{}: Could not verify catalog schema version: {}", __func__, e.client_display_what());
+            log_server::error("{}: Could not verify catalog schema version: {}\n", __func__, e.client_display_what());
         }
         catch (const std::exception& e) {
-            log_server::error("{}: Could not verify catalog schema version. Is the catalog service role defined in server_config.json?", __func__);
+            log_server::error("{}: Could not verify catalog schema version. Is the catalog service role defined in server_config.json?\n", __func__);
         }
 
         return {false, -1};
