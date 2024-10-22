@@ -333,10 +333,24 @@ Options:
 
             // NOLINTNEXTLINE(bugprone-lambda-function-name)
             const auto do_validate = [fn = __func__](const auto& _config, const std::string& _schema_file) {
+                const auto resolver = [](const jsoncons::uri& _uri) {
+                    fmt::print("uri = [{}], path = [{}]\n", _uri.string(), _uri.path());
+
+                    std::ifstream in{"." + _uri.path()};
+                    if (!in) {
+                        return jsoncons::json::null();
+                    }
+
+                    return jsoncons::json::parse(in);
+                };
+
                 fmt::print("{}: JSON schema file = [{}].\n", fn, _schema_file);
                 std::ifstream in{_schema_file};
+                if (!in) {
+                    return false;
+                }
                 const auto schema = jsoncons::json::parse(in); // The stream object cannot be instantiated inline.
-                const auto compiled = jsonschema::make_json_schema(schema);
+                const auto compiled = jsonschema::make_json_schema(schema, resolver);
 
                 jsoncons::json_decoder<jsoncons::ojson> decoder;
                 compiled.validate(_config, decoder);
@@ -350,7 +364,7 @@ Options:
                 }
 
                 return true;
-            };
+            }; // do_validate
 
             // Validate the server configuration. If that succeeds, move on to validating the
             // irods_environment.json file.
