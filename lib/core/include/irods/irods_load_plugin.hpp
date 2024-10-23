@@ -33,7 +33,7 @@ namespace irods
     inline error resolve_plugin_path(const std::string& _type, std::string& _path)
     {
         namespace fs = boost::filesystem;
-        using log_server = irods::experimental::log::server;
+        //using log_server = irods::experimental::log::server;
 
         fs::path plugin_home;
 
@@ -61,7 +61,7 @@ namespace irods
                 plugin_home = get_irods_default_plugin_directory();
             }
             catch (const irods::exception& e) {
-                log_server::error("{}: Could not load plugin [type={}, path={}]: {}", __func__, _type, _path, e.client_display_what());
+                //log_server::error("{}: Could not load plugin [type={}, path={}]: {}", __func__, _type, _path, e.client_display_what());
                 return ERROR(SYS_INVALID_INPUT_PARAM, "failed to get default plugin directory");
             }
         }
@@ -88,7 +88,7 @@ namespace irods
                 _path += fs::path::preferred_separator;
             }
 
-            log_server::debug("{}: Resolved plugin directory [{}]", __func__, p.c_str());
+            //log_server::debug("{}: Resolved plugin directory [{}]", __func__, p.c_str());
 
             return SUCCESS();
 
