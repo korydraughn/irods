@@ -74,6 +74,7 @@ def main():
     operations_dict['restart'] = lambda: irods_controller.restart(write_to_stdout=options.write_to_stdout, test_mode=options.test_mode)
     operations_dict['status'] = lambda: irods_controller.status()
     operations_dict['get_environment'] = lambda: irods_config.print_execution_environment()
+    operations_dict['upgrade'] = lambda: irods_controller.upgrade()
 
     (options, arguments) = parse_options()
     if len(arguments) != 1:

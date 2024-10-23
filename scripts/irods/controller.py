@@ -76,15 +76,18 @@ class IrodsController(object):
 
         return None
 
+    def upgrade(self):
+        l = logging.getLogger(__name__)
+        l.debug('Calling upgrade on IrodsController')
+
+        if upgrade_configuration.requires_upgrade(self.config):
+            l.info('Upgrading iRODS server ...')
+            upgrade_configuration.upgrade(self.config)
+            l.info('Success!')
+
     def start(self, write_to_stdout=False, test_mode=False):
         l = logging.getLogger(__name__)
         l.debug('Calling start on IrodsController')
-
-        # TODO Starting the server no longer executes upgrade logic. The server assumes the
-        # administrator has run the upgrade logic. The server MUST verify the schemas and things
-        # are correct before proceeding though.
-        #if upgrade_configuration.requires_upgrade(self.config):
-            #upgrade_configuration.upgrade(self.config)
 
         l.info('Starting iRODS server ...')
 
