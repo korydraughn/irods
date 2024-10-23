@@ -33,7 +33,7 @@ namespace
         const auto proc_dir = irods::get_irods_proc_directory();
         const auto agent_info_path = proc_dir / std::to_string(pid);
 
-        std::ifstream procStream{agent_info_path};
+        std::ifstream procStream{agent_info_path.c_str()};
         std::vector<std::string> procTokens;
         while (!procStream.eof() && procTokens.size() < 7) {
             std::string token;
