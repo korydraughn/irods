@@ -198,7 +198,7 @@ auto main(int _argc, char* _argv[]) -> int
         if (const auto [up_to_date, db_vers] = check_catalog_schema_version(); !up_to_date) {
             const auto msg = fmt::format("Catalog schema version mismatch: expected [{}], found [{}]", IRODS_CATALOG_SCHEMA_VERSION, db_vers);
             log_server::critical(msg);
-            fmt::print(msg);
+            fmt::print(fmt::runtime(msg));
             return 1;
         }
 
@@ -335,7 +335,7 @@ Options:
         try {
             namespace jsonschema = jsoncons::jsonschema;
 
-            std::ifstream config_file{irods::get_irods_config_directory() / "server_config.json"};
+            std::ifstream config_file{(irods::get_irods_config_directory() / "server_config.json").c_str()};
             if (!config_file) {
                 return false;
             }
