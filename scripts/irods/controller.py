@@ -80,6 +80,10 @@ class IrodsController(object):
         l = logging.getLogger(__name__)
         l.debug('Calling upgrade on IrodsController')
 
+        if self.config.is_catalog:
+            from . import database_interface
+            database_interface.server_launch_hook(self.config)
+
         if upgrade_configuration.requires_upgrade(self.config):
             l.info('Upgrading iRODS server ...')
             upgrade_configuration.upgrade(self.config)
