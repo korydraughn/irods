@@ -103,7 +103,7 @@ namespace
     auto validate_configuration() -> bool;
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
-    auto init_logger() -> void;
+    auto init_logger(bool _enable_test_mode) -> void;
     auto check_catalog_schema_version() -> std::pair<bool, int>;
     auto setup_signal_handlers() -> int;
 
@@ -115,10 +115,11 @@ namespace
                                          std::string_view _successor) -> void;
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>;
     auto get_delay_server_successor(RcComm& _comm) -> std::optional<std::string>;
-    auto launch_agent_factory(const char* _src_func) -> bool;
-    auto handle_configuration_reload() -> void;
-    auto launch_delay_server() -> void;
-    auto migrate_and_launch_delay_server(bool& _first_boot,
+    auto launch_agent_factory(const char* _src_func, bool _enable_test_mode) -> bool;
+    auto handle_configuration_reload(bool _enable_test_mode) -> void;
+    auto launch_delay_server(bool _enable_test_mode) -> void;
+    auto migrate_and_launch_delay_server(bool _enable_test_mode,
+                                         bool& _first_boot,
                                          std::chrono::steady_clock::time_point& _time_start) -> void;
     auto log_stacktrace_files() -> void;
     auto remove_leftover_agent_info_files_for_ips() -> void;
@@ -135,12 +136,15 @@ auto main(int _argc, char* _argv[]) -> int
 
     namespace po = boost::program_options;
 
+    bool enable_test_mode = false;
+
     po::options_description opts_desc{""};
 
     // clang-format off
     opts_desc.add_options()
         ("daemonize,d", "")
         ("pid-file,p", po::value<std::string>(), "")
+        ("test-mode,t", po::bool_switch(&enable_test_mode), "")
         ("help,h", "")
         ("version,v", "");
     // clang-format on
@@ -193,7 +197,7 @@ auto main(int _argc, char* _argv[]) -> int
         rodsLogLevel(LOG_NOTICE);
     	rodsLogSqlReq(0);
 
-        init_logger();
+        init_logger(enable_test_mode);
 
         if (const auto [up_to_date, db_vers] = check_catalog_schema_version(); !up_to_date) {
             const auto msg = fmt::format("Catalog schema version mismatch: expected [{}], found [{}]", IRODS_CATALOG_SCHEMA_VERSION, db_vers);
@@ -235,7 +239,7 @@ auto main(int _argc, char* _argv[]) -> int
             return 1;
         }
 
-        if (!launch_agent_factory(__func__)) {
+        if (!launch_agent_factory(__func__, enable_test_mode)) {
             return 1;
         }
 
@@ -269,7 +273,7 @@ auto main(int _argc, char* _argv[]) -> int
             }
 
             if (g_reload_config) {
-                handle_configuration_reload();
+                handle_configuration_reload(enable_test_mode);
             }
 
             // Clean up any zombie child processes if they exist. These appear following a configuration
@@ -284,7 +288,7 @@ auto main(int _argc, char* _argv[]) -> int
 
             log_stacktrace_files();
             remove_leftover_agent_info_files_for_ips();
-            migrate_and_launch_delay_server(first_boot, dsm_time_start);
+            migrate_and_launch_delay_server(enable_test_mode, first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
         }
@@ -346,7 +350,7 @@ Options:
                 const auto resolver = [](const jsoncons::uri& _uri) {
                     fmt::print("uri = [{}], path = [{}]\n", _uri.string(), _uri.path());
 
-                    std::ifstream in{"." + _uri.path()};
+                    std::ifstream in{(irods::get_irods_home_directory() / _uri.path()).c_str()};
                     if (!in) {
                         return jsoncons::json::null();
                     }
@@ -524,9 +528,9 @@ Options:
         return 0;
     } // create_pid_file
 
-    auto init_logger() -> void
+    auto init_logger(bool _enable_test_mode) -> void
     {
-        log_ns::init(false, false); // TODO Restore test mode. stdout requires synchronization so it may be dropped.
+        log_ns::init(false, _enable_test_mode); // TODO Restore stdout requires synchronization so it may be dropped.
         log_server::set_level(log_ns::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
         log_ns::set_server_type("server");
         log_ns::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
@@ -715,32 +719,35 @@ Options:
         }
     } // set_delay_server_migration_info
 
-    auto launch_agent_factory(const char* _src_func) -> bool
+    auto launch_agent_factory(const char* _src_func, bool _enable_test_mode) -> bool
     {
         log_server::info("{}: Launching Agent Factory.", _src_func);
+
+        // If we're planning on calling one of the functions from the exec-family,
+        // then we're only allowed to use async-signal-safe functions following the call
+        // to fork(). To avoid potential issues, we build up the argument list before
+        // doing the fork-exec.
+
+        auto binary = (irods::get_irods_sbin_directory() / "irodsAgent").string();
+        std::string hn_shm_name{irods::experimental::net::hostname_cache::shared_memory_name()};
+        std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
+
+        // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
+        char boot_time_str[] = ""; // TODO Forward the boot time.
+        // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
+
+        std::vector<char*> args{binary.data(), hn_shm_name.data(), dns_shm_name.data(), boot_time_str};
+
+        if (_enable_test_mode) {
+            args.push_back("-t");
+        }
+
+        args.push_back(nullptr);
 
         g_pid_af = fork();
 
         if (0 == g_pid_af) {
-            std::string hn_shm_name{irods::experimental::net::hostname_cache::shared_memory_name()};
-            std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
-
-            const auto binary = irods::get_irods_sbin_directory() / "irodsAgent";
-
-            // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
-            char* pname = strdup(binary.c_str());
-            // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
-            char boot_time_str[] = ""; // TODO Forward the boot time.
-            // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
-            char* args[] = {
-                pname,
-                hn_shm_name.data(),
-                dns_shm_name.data(),
-                boot_time_str,
-                nullptr
-            };
-
-            execv(pname, args);
+            execv(args[0], args.data());
             _exit(1);
         }
         else if (-1 == g_pid_af) {
@@ -752,7 +759,7 @@ Options:
         return true;
     } // launch_agent_factory
 
-    auto handle_configuration_reload() -> void
+    auto handle_configuration_reload(bool _enable_test_mode) -> void
     {
         log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
 
@@ -789,7 +796,7 @@ Options:
 
         // Launch a new agent factory to serve client requests.
         // The previous agent factory is allowed to linger around until its children terminate.
-        launch_agent_factory(__func__);
+        launch_agent_factory(__func__, _enable_test_mode);
 
         // We do not need to manually launch the delay server because the delay server migration
         // logic will handle that for us.
@@ -797,7 +804,7 @@ Options:
         g_reload_config = 0;
     } // handle_configuration_reload
 
-    auto launch_delay_server() -> void
+    auto launch_delay_server(bool _enable_test_mode) -> void
     {
         auto launch = (0 == g_pid_ds);
 
@@ -812,14 +819,25 @@ Options:
 
         if (launch) {
             log_server::info("{}: Launching Delay Server.", __func__);
+
+            // If we're planning on calling one of the functions from the exec-family,
+            // then we're only allowed to use async-signal-safe functions following the call
+            // to fork(). To avoid potential issues, we build up the argument list before
+            // doing the fork-exec.
+
+            auto binary = (irods::get_irods_sbin_directory() / "irodsDelayServer").string();
+            std::vector<char*> args{binary.data(), nullptr};
+
+            if (_enable_test_mode) {
+                args.push_back("-t");
+            }
+
+            args.push_back(nullptr);
+
             g_pid_ds = fork();
+
             if (0 == g_pid_ds) {
-                const auto binary = irods::get_irods_sbin_directory() / "irodsDelayServer";
-                // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
-                char* pname = strdup(binary.c_str());
-                // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
-                char* args[] = {pname, nullptr}; // TODO Restore test mode.
-                execv(pname, args);
+                execv(args[0], args.data());
                 _exit(1);
             }
             else if (g_pid_ds > 0) {
@@ -832,7 +850,8 @@ Options:
         }
     } // launch_delay_server
 
-    auto migrate_and_launch_delay_server(bool& _first_boot,
+    auto migrate_and_launch_delay_server(bool _enable_test_mode,
+                                         bool& _first_boot,
                                          std::chrono::steady_clock::time_point& _time_start) -> void
     {
         using namespace std::chrono_literals;
@@ -871,7 +890,7 @@ Options:
                     // This server is the leader and may be running a delay server.
                     if (hostname == *leader) {
                         if (hostname == *successor) {
-                            launch_delay_server();
+                            launch_delay_server(_enable_test_mode);
 
                             // Clear successor entry in catalog. This isn't necessary, but helps
                             // keep the admin from becoming confused.
@@ -904,7 +923,7 @@ Options:
                             //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
                         }
                         else {
-                            launch_delay_server();
+                            launch_delay_server(_enable_test_mode);
                         }
                     }
                     else if (hostname == *successor) {
@@ -944,7 +963,7 @@ Options:
 #else
                         // Delay servers lock tasks before execution. This allows the successor server
                         // to launch a delay server without duplicating work.
-                        launch_delay_server();
+                        launch_delay_server(_enable_test_mode);
 
                         if (g_pid_ds > 0) {
                             set_delay_server_migration_info(conn, hostname, "");

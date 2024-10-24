@@ -122,7 +122,7 @@ namespace
     std::array<char, _POSIX_PATH_MAX> g_proc_directory; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     std::time_t g_graceful_shutdown_timeout{}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-    auto init_logger() -> void;
+    auto init_logger(bool _enable_test_mode) -> void;
     auto load_log_levels_for_loggers() -> void;
     auto setup_signal_handlers() -> int;
     auto createAndSetRECacheSalt() -> irods::error;
@@ -151,6 +151,7 @@ auto main(int _argc, char* _argv[]) -> int
 
     std::string hostname_cache_shm_name;
     std::string dns_cache_shm_name;
+    bool enable_test_mode = false;
 
     // TODO Boost.ProgramOptions isn't necessary.
 
@@ -162,7 +163,8 @@ auto main(int _argc, char* _argv[]) -> int
     opts_desc.add_options()
         ("hostname-cache-shm-name,x", po::value<std::string>(), "")
         ("dns-cache-shm-name,y", po::value<std::string>(), "")
-        ("boot-time,b", po::value<std::string>(), "");
+        ("boot-time,b", po::value<std::string>(), "")
+        ("test-mode,t", po::bool_switch(&enable_test_mode), "");
     // clang-format on
 
     po::positional_options_description pod;
@@ -196,9 +198,6 @@ auto main(int _argc, char* _argv[]) -> int
         return 1;
     }
 
-    using json = nlohmann::json;
-    json config;
-
     try {
         // Load configuration.
         const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
@@ -230,8 +229,7 @@ auto main(int _argc, char* _argv[]) -> int
         rodsLogLevel(LOG_NOTICE);
     	rodsLogSqlReq(0);
 
-        // To see log messages from rsyslog, you must add irodsAgent5 to /etc/rsyslog.d/00-irods.conf.
-        init_logger();
+        init_logger(enable_test_mode); // TODO This may be an issue because the main server process opens test_mode_output.log first.
 
         log_af::info("{}: Initializing loggers for agent factory.", __func__);
         load_log_levels_for_loggers();
@@ -455,11 +453,11 @@ auto main(int _argc, char* _argv[]) -> int
 
 namespace
 {
-    auto init_logger() -> void
+    auto init_logger(bool _enable_test_mode) -> void
     {
         namespace logger = irods::experimental::log;
 
-        logger::init(false, false);
+        logger::init(false, _enable_test_mode);
         log_af::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_AGENT_FACTORY));
         logger::set_server_type("agent_factory");
         logger::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
