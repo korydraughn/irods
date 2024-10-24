@@ -127,7 +127,6 @@ namespace
 
 auto main(int _argc, char* _argv[]) -> int
 {
-    // TODO Do something with this, eventually.
     [[maybe_unused]] const auto boot_time = std::chrono::system_clock::now();
 
     ProcessType = SERVER_PT; // This process identifies itself as a server.
