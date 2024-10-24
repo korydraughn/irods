@@ -289,7 +289,7 @@ class Test_Rulebase(ResourceBase, unittest.TestCase):
             with open(server_config_filename, 'w') as f:
                 f.write(new_server_config)
 
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
             # checkpoint log to know where to look for the string
             initial_log_size = lib.get_file_size_by_path(paths.server_log_path())
             self.admin.assert_icommand('irule -F ' + rule_file)
@@ -307,7 +307,7 @@ class Test_Rulebase(ResourceBase, unittest.TestCase):
             lib.delayAssert(lambda: lib.count_occurrences_of_string_in_log(paths.server_log_path(), 'TEST_STRING_TO_FIND_2_2585', start_index=initial_log_size))
 
         # cleanup
-        IrodsController().restart()
+        IrodsController().restart(test_mode=True)
         os.unlink(test_re)
         os.unlink(rule_file)
 
@@ -503,7 +503,7 @@ class Test_Rulebase(ResourceBase, unittest.TestCase):
             with open(server_config_filename, 'w') as f:
                 f.write(new_server_config)
 
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
             # checkpoint log to know where to look for the string
             initial_log_size = lib.get_file_size_by_path(irods_config.server_log_path)
 
@@ -516,7 +516,7 @@ class Test_Rulebase(ResourceBase, unittest.TestCase):
                                                           "TEST_STRING_TO_FIND_DEFECT_3560", start_index=initial_log_size))
 
         # cleanup
-        IrodsController().restart()
+        IrodsController().restart(test_mode=True)
         os.unlink(rulefile1)
         os.unlink(rulefile2)
         os.unlink(rulefile3)

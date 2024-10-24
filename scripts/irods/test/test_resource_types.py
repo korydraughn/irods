@@ -588,7 +588,7 @@ OUTPUT ruleExecOut
                 with open(server_config_filename, 'w') as f:
                     f.write(new_server_config)
 
-                IrodsController().restart()
+                IrodsController().restart(test_mode=True)
 
                 lib.make_file(file_name, 15)
                 initial_log_size = lib.get_file_size_by_path(IrodsConfig().server_log_path)
@@ -612,7 +612,7 @@ OUTPUT ruleExecOut
                         start_index=initial_log_size))
 
         finally:
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
             if os.path.exists(file_name):
                 os.unlink(file_name)
             if os.path.exists(other_file_name):
@@ -2775,7 +2775,7 @@ class Test_Resource_Compound(ChunkyDevTest, ResourceSuite, unittest.TestCase):
             core.add_rule(pep_map[self.plugin_name])
 
             # restart the server to reread the new core.re
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
 
             # manually update the replica in archive vault
             out, _, _ = self.admin.run_icommand('ils -L ' + filename)
@@ -3683,7 +3683,7 @@ class Test_Resource_ReplicationToTwoCompound(ChunkyDevTest, ResourceSuite, unitt
             core.add_rule(pep_map[self.plugin_name])
 
             # restart the server to reread the new core.re
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
 
             # manually update the replicas in archive vaults
             out, _, _ = self.admin.run_icommand('ils -L ' + filename)

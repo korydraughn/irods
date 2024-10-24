@@ -73,7 +73,7 @@ class Test_ICommands_File_Operations_1(resource_suite.ResourceBase, shared_funct
             initial_size_of_server_log = lib.get_file_size_by_path(paths.server_log_path())
             with temporary_core_file() as core:
                 core.add_rule(pep_map[self.plugin_name])
-                IrodsController().start()
+                IrodsController().start(test_mode=True)
                 with tempfile.NamedTemporaryFile(prefix='test_re_serialization__prep_13') as f:
                     lib.make_file(f.name, 80, contents='arbitrary')
                     self.admin.assert_icommand(['iput', f.name])
@@ -102,7 +102,7 @@ class Test_ICommands_File_Operations_1(resource_suite.ResourceBase, shared_funct
             initial_size_of_server_log = lib.get_file_size_by_path(paths.server_log_path())
             with temporary_core_file() as core:
                 core.add_rule(pep_map[self.plugin_name])
-                IrodsController().start()
+                IrodsController().start(test_mode=True)
                 with tempfile.NamedTemporaryFile(prefix='test_re_serialization__prep_55') as f:
                     lib.make_file(f.name, 80, contents='arbitrary')
                     self.admin.assert_icommand(['iput', f.name])
@@ -253,7 +253,7 @@ class Test_ICommands_File_Operations_1(resource_suite.ResourceBase, shared_funct
                         start_index=initial_size_of_server_log))
 
         finally:
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
 
 @unittest.skipIf(test.settings.TOPOLOGY_FROM_RESOURCE_SERVER, "Skip for topology testing from resource server")
 class Test_ICommands_File_Operations_2(resource_suite.ResourceBase, shared_functions, unittest.TestCase):
@@ -679,7 +679,7 @@ class Test_ICommands_File_Operations_3(resource_suite.ResourceBase, unittest.Tes
             try:
                 yield
             finally:
-                control.start()
+                control.start(test_mode=True)
         with irods_server_stopped():
             self.admin.assert_icommand(['ils'], 'STDERR_SINGLELINE', 'Connection refused')
 

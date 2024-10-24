@@ -25,7 +25,7 @@ class Test_Irodsctl(unittest.TestCase):
         irodsctl_fullpath = os.path.join(IrodsConfig().irods_directory, 'irodsctl')
         assert_command([irodsctl_fullpath, 'stop', '-v'], 'STDOUT_SINGLELINE', 'Stopping iRODS server')
         assert not lib.re_shm_exists(), lib.re_shm_exists()
-        IrodsController().start()
+        IrodsController().start(test_mode=True)
 
     def test_configuration_schema_validation_from_file(self):
         with lib.file_backed_up(IrodsConfig().server_config_path) as server_config_filename:
@@ -115,7 +115,7 @@ class Test_Irodsctl(unittest.TestCase):
 
             finally:
                 # Restart the server.
-                IrodsController().restart()
+                IrodsController().restart(test_mode=True)
 
                 # Set the replica to stale (it will be in the intermediate status - this is not a bug) and remove.
                 admin_session.run_icommand(

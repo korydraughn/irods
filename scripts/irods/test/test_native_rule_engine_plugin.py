@@ -519,13 +519,13 @@ class Test_Native_Rule_Engine_Plugin(resource_suite.ResourceBase, unittest.TestC
                 f.write(new_server_config)
 
             # Bounce server to apply setting
-            irodsctl.restart()
+            irodsctl.restart(test_mode=True)
 
             # Actually run the test
             self.helper_test_pep(pep_map[self.plugin_name], "iput -f --metadata ATTR;VALUE;UNIT "+self.testfile)
 
         # Bounce server to get back original settings
-        irodsctl.restart()
+        irodsctl.restart(test_mode=True)
 
     def test_auth_pep(self):
         pep_map = {

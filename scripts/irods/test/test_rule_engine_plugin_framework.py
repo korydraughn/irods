@@ -714,7 +714,7 @@ msiDataObjCreate("{0}", "forceFlag=", *out)
             with lib.file_backed_up(config.server_config_path):
                 config.server_config['advanced_settings']['delay_server_sleep_time_in_seconds'] = 1
                 lib.update_json_file_from_dict(config.server_config_path, config.server_config)
-                IrodsController().restart()
+                IrodsController().restart(test_mode=True)
 
                 self.admin.assert_icommand(['irule', '-F', rule_file])
                 self.admin.assert_icommand('iqstat', 'STDOUT_SINGLELINE', 'irods_policy_execute_rule')
@@ -760,7 +760,7 @@ msiSleep("60", "0")
             with lib.file_backed_up(config.server_config_path):
                 config.server_config['advanced_settings']['delay_server_sleep_time_in_seconds'] = 1
                 lib.update_json_file_from_dict(config.server_config_path, config.server_config)
-                IrodsController().restart()
+                IrodsController().restart(test_mode=True)
 
                 self.admin.assert_icommand(['irule', '-F', rule_file])
                 self.admin.assert_icommand('iqstat', 'STDOUT_SINGLELINE', 'sleep_policy')

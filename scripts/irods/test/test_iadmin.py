@@ -1273,7 +1273,7 @@ class Test_Iadmin(resource_suite.ResourceBase, unittest.TestCase):
             core.add_rule(pep_map[self.plugin_name])
 
             # restart the server to reread the new core.re
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
 
             self.admin.assert_icommand("ils", 'STDOUT_SINGLELINE', self.admin.zone_name)
 
@@ -1295,7 +1295,7 @@ class Test_Iadmin(resource_suite.ResourceBase, unittest.TestCase):
             irods_config.commit(server_config, irods_config.server_config_path)
 
             # bounce the server to get the new env variable
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
 
             # look for the error "unable to read session variable $userNameClient."
             cmd_directory = os.path.join(irods_config.irods_directory, 'msiExecCmd_bin')
@@ -1307,7 +1307,7 @@ class Test_Iadmin(resource_suite.ResourceBase, unittest.TestCase):
                     'writeLine("stdout", "*out")\' null ruleExecOut'.format(os.path.basename(env_script.name)),
                 'STDOUT_SINGLELINE', the_value)
             os.unlink(env_script.name)
-        IrodsController().restart()
+        IrodsController().restart(test_mode=True)
 
     def test_set_resource_comment_to_emptystring_ticket_2434(self):
         mycomment = "notemptystring"
@@ -1394,7 +1394,7 @@ class Test_Iadmin(resource_suite.ResourceBase, unittest.TestCase):
                 }
             }
             lib.update_json_file_from_dict(server_config_filename, server_config_update)
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
 
             name_of_bogus_resource = 'name_of_bogus_resource'
             name_of_missing_plugin = 'name_of_missing_plugin'
@@ -1411,7 +1411,7 @@ class Test_Iadmin(resource_suite.ResourceBase, unittest.TestCase):
                     start_index=initial_size_of_server_log))
 
         self.admin.assert_icommand(['iadmin', 'rmresc', name_of_bogus_resource])
-        IrodsController().restart()
+        IrodsController().restart(test_mode=True)
 
     @unittest.skipIf(True, "Activate once fixed issue#3387")
     def test_dlopen_failure_error_message(self):

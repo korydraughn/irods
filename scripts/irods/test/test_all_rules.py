@@ -410,7 +410,7 @@ output ruleExecOut
             irods_config.server_config['plugin_configuration']['rule_engines'] = orig
             irods_config.commit(irods_config.server_config, irods_config.server_config_path, make_backup=True)
 
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
     @unittest.skip('Delete this line upon resolving #3957')
     @unittest.skipIf(plugin_name == 'irods_rule_engine_plugin-irods_rule_language', 'only applicable for python REP')
@@ -460,7 +460,7 @@ output ruleExecOut
             irods_config.server_config['plugin_configuration']['rule_engines'] = orig
             irods_config.commit(irods_config.server_config, irods_config.server_config_path, make_backup=True)
 
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
 
     @unittest.skipUnless(plugin_name == 'irods_rule_engine_plugin-irods_rule_language', 'only applicable for irods_rule_language REP')
@@ -1272,7 +1272,7 @@ OUTPUT ruleExecOut
 
                     # Restart the server. This is done so that the delay server does not fill
                     # the log with errors due having incorrect zone information.
-                    IrodsController().restart()
+                    IrodsController().restart(test_mode=True)
 
                     # Update the rods session with the new zone information so that icommands succeed.
                     with open(config.client_environment_path, 'r') as f:
@@ -1293,7 +1293,7 @@ OUTPUT ruleExecOut
         finally:
             # Restart the server. This is done so that the delay server does not fill
             # the log file with errors due having incorrect zone information.
-            IrodsController().restart()
+            IrodsController().restart(test_mode=True)
 
             # Update the rods session with the original zone information so that icommands succeed.
             with open(config.client_environment_path, 'r') as f:

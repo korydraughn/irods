@@ -349,7 +349,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
                     rule_args[0] = str(n)
                 '''))
 
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
             rule_file = ""
             with generateRuleFile( names_list = self.to_unlink, **{'prefix':"test_mult256_"} ) as f:
@@ -371,7 +371,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
 
             IrodsController().stop()
 
-        IrodsController().start()
+        IrodsController().start(test_mode=True)
 
 
     #=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#
@@ -444,7 +444,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
                         rule_args[0] = str(L[0]) if len(L) == {Outer_Loop_Reps} and L == L[:1] * len(L) else "-1"
                 '''.format(**locals())))
 
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
             rule_file = ""
             with generateRuleFile( names_list = self.to_unlink, **{'prefix':"test_mult256_nn_"} ) as f:
@@ -466,7 +466,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
 
             IrodsController().stop()
 
-        IrodsController().start()
+        IrodsController().start(test_mode=True)
     #=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#
 
     # Remove the next line when msiGetMoreRows always returns an accurate value for continueInx
@@ -507,7 +507,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
                     rule_args[0] = str(n)
                 '''))
 
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
             rule_file = ""
             with generateRuleFile( names_list = self.to_unlink, **{'prefix':"test_mult256_n_"} ) as f:
@@ -532,7 +532,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
 
             IrodsController().stop()
 
-        IrodsController().start()
+        IrodsController().start(test_mode=True)
 
     #=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#=-=-=-=-=-#
 
@@ -633,11 +633,11 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
                         valid_count.append(n == 1)
                     callback.writeLine("stdout", str( 1 if len( valid_count ) == {0} and all (valid_count) else 0) )
                 ''').format(outer_loop_reps , collection_to_query))
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
             run_irule = "irule attempt_to_fill_statement_table null ruleExecOut"
             self.admin.assert_icommand(run_irule, 'STDOUT_SINGLELINE', r'^1$', use_regex=True)
             IrodsController().stop()
-        IrodsController().start()
+        IrodsController().start(test_mode=True)
 
     @unittest.skipIf(plugin_name == 'irods_rule_engine_plugin-irods_rule_language', 'only applicable for python REP')
     def test_with_modified_rulebase_off_boundary(self):
@@ -646,7 +646,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
             IrodsController().stop()
             with lib.file_backed_up (self.server_config_path):
                 self.boundary_with_size(512 + 7 * 8 * 9, self.modify_rulebase_and_tst, pre_start = True)
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
 
     @unittest.skipIf(plugin_name == 'irods_rule_engine_plugin-irods_rule_language', 'only applicable for python REP')
@@ -655,16 +655,16 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
         if self.full_test:
             IrodsController().stop()
             with lib.file_backed_up (self.server_config_path):
-                #IrodsController().start()
+                #IrodsController().start(test_mode=True)
                 self.boundary_with_size(512 + 7 * 8 * 9, self.modify_rulebase_and_tst, pre_start = True)
                 #IrodsController().stop()  # -- done internally by above call
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
 
     def boundary_with_size(self, N, func, pre_start = False):
 
         if pre_start:
-            IrodsController().start() # -- for cases where Native REP was inserted to svr config
+            IrodsController().start(test_mode=True) # -- for cases where Native REP was inserted to svr config
 
         lib.create_directory_of_small_files(self.dir_for_coll,N)
         lib.execute_command ('tar -cvf {} {}'.format(self.bundled_coll, self.dir_for_coll))
@@ -718,7 +718,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
                          ''' % (self.test_admin_coll_path,))
                 print(rule_string, file = f, end = '')
 
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
             irods_rule_language_option = ""  #default to python
             pattern=re.compile(r'^(\S+):\s*(\[.*\]$)',re.M)
@@ -798,7 +798,7 @@ class Test_Genquery_Iterator(resource_suite.ResourceBase, unittest.TestCase):
                          ''' % (self.test_admin_coll_path,))
                 print(rule_string, file = f, end = '')
 
-            IrodsController().start()
+            IrodsController().start(test_mode=True)
 
             irods_rule_language_option = "-r irods_rule_engine_plugin-irods_rule_language-instance"
             pattern=re.compile(r'^(\S+):\s*(\[.*\]$)',re.M)
