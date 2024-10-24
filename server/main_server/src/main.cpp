@@ -867,6 +867,13 @@ Options:
 
             if (0 == g_pid_ds) {
                 execv(args[0], args.data());
+
+                // If execv() fails, the POSIX standard recommends using _exit() instead of exit() to avoid
+                // flushing stdio buffers and handlers registered by the parent.
+                //
+                // In the case of C++, this is necessary to avoid triggering destructors. Triggering a destructor
+                // could result in assertions made by the struct/class being violatied. For some data types,
+                // violating an assertion results in program termination (i.e. SIGABRT).
                 _exit(1);
             }
             else if (g_pid_ds > 0) {
