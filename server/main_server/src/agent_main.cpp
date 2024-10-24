@@ -163,14 +163,12 @@ auto main(int _argc, char* _argv[]) -> int
     opts_desc.add_options()
         ("hostname-cache-shm-name,x", po::value<std::string>(), "")
         ("dns-cache-shm-name,y", po::value<std::string>(), "")
-        ("boot-time,b", po::value<std::string>(), "")
         ("test-mode,t", po::bool_switch(&enable_test_mode), "");
     // clang-format on
 
     po::positional_options_description pod;
     pod.add("hostname-cache-shm-name", 1);
     pod.add("dns-cache-shm-name", 1);
-    pod.add("boot-time", 1);
 
     try {
         po::variables_map vm;

@@ -732,11 +732,7 @@ Options:
         std::string hn_shm_name{irods::experimental::net::hostname_cache::shared_memory_name()};
         std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
 
-        // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
-        char boot_time_str[] = ""; // TODO Forward the boot time.
-        // NOLINTNEXTLINE(modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
-
-        std::vector<char*> args{binary.data(), hn_shm_name.data(), dns_shm_name.data(), boot_time_str};
+        std::vector<char*> args{binary.data(), hn_shm_name.data(), dns_shm_name.data()};
 
         if (_enable_test_mode) {
             args.push_back("-t");
