@@ -93,6 +93,11 @@ namespace
     volatile std::sig_atomic_t g_terminate_graceful = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     volatile std::sig_atomic_t g_reload_config = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
+    // This global variable MUST always hold the max number of child processes forkable
+    // by the main server process. It guarantees that the main server process reaps children
+    // it's lost due to desync issues stemming from fork(), exec() and kill().
+    const int g_max_number_of_child_processes = 2;
+
     pid_t g_pid_af = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     pid_t g_pid_ds = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
@@ -278,8 +283,7 @@ auto main(int _argc, char* _argv[]) -> int
             // Clean up any zombie child processes if they exist. These appear following a configuration
             // reload. We call waitpid() multiple times because the main server processes may have multiple
             // child processes.
-            // TODO The number of iterations should always match the number of child processes.
-            for (int i = 0, children = 2; i < children; ++i) {
+            for (int i = 0; i < g_max_number_of_child_processes; ++i) {
                 waitpid(-1, nullptr, WNOHANG);
             }
 
