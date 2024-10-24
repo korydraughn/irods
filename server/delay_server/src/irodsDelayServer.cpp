@@ -1,5 +1,6 @@
 #include "irods/irodsDelayServer.hpp"
 
+#include "boost/asio/ip/host_name.hpp"
 #include "irods/client_connection.hpp"
 #include "irods/connection_pool.hpp"
 #include "irods/delay_rule_tag.h"
@@ -47,6 +48,8 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <unistd.h>
+
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
@@ -89,22 +92,18 @@ namespace
 {
     volatile std::sig_atomic_t g_terminate = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-    void init_logger(const bool write_to_stdout, const bool enable_test_mode)
+    void init_logger(pid_t _pid, const bool write_to_stdout, const bool enable_test_mode)
     {
         namespace logger = irods::experimental::log;
 
-        logger::init(write_to_stdout, enable_test_mode);
+        logger::init(_pid, write_to_stdout, enable_test_mode);
 
         logger::server::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
         logger::legacy::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_LEGACY));
         logger::delay_server::set_level(logger::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_DELAY_SERVER));
 
         logger::set_server_type("delay_server");
-
-        if (char hostname[HOST_NAME_MAX + 1]{}; gethostname(hostname, sizeof(hostname)) == 0) {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-            logger::set_server_hostname(hostname);
-        }
+        logger::set_server_hostname(boost::asio::ip::host_name());
 
         // Attach the zone name to the logger.
         // We can't use the server properties interface because it depends on the logger.
@@ -789,8 +788,8 @@ int main(int _argc, char** _argv)
 
     // clang-format off
     opts_desc.add_options()
-        ("test-mode,t", po::bool_switch(&enable_test_mode), "") // TODO
-        ("stdout,u", po::bool_switch(&write_to_stdout), ""); // TODO stdout doesn't make sense unless synchronized
+        ("stdout", po::bool_switch(&write_to_stdout), "")
+        ("test-mode,t", po::bool_switch(&enable_test_mode), "");
     // clang-format on
 
     try {
@@ -808,7 +807,7 @@ int main(int _argc, char** _argv)
         irods::server_properties::instance().init(config_file_path.c_str());
     }
 
-    init_logger(write_to_stdout, enable_test_mode);
+    init_logger(getppid(), write_to_stdout, enable_test_mode);
 
     log_ds::info("Initializing delay server ...");
 

@@ -108,7 +108,7 @@ namespace
     auto validate_configuration() -> bool;
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
-    auto init_logger(bool _enable_test_mode) -> void;
+    auto init_logger(pid_t _pid, bool _write_to_stdout, bool _enable_test_mode) -> void;
     auto check_catalog_schema_version() -> std::pair<bool, int>;
     auto setup_signal_handlers() -> int;
 
@@ -120,10 +120,11 @@ namespace
                                          std::string_view _successor) -> void;
     auto get_delay_server_leader(RcComm& _comm) -> std::optional<std::string>;
     auto get_delay_server_successor(RcComm& _comm) -> std::optional<std::string>;
-    auto launch_agent_factory(const char* _src_func, bool _enable_test_mode) -> bool;
-    auto handle_configuration_reload(bool _enable_test_mode) -> void;
-    auto launch_delay_server(bool _enable_test_mode) -> void;
-    auto migrate_and_launch_delay_server(bool _enable_test_mode,
+    auto launch_agent_factory(const char* _src_func, bool _write_to_stdout, bool _enable_test_mode) -> bool;
+    auto handle_configuration_reload(bool _write_to_stdout, bool _enable_test_mode) -> void;
+    auto launch_delay_server(bool _write_to_stdout, bool _enable_test_mode) -> void;
+    auto migrate_and_launch_delay_server(bool _write_to_stdout,
+                                         bool _enable_test_mode,
                                          bool& _first_boot,
                                          std::chrono::steady_clock::time_point& _time_start) -> void;
     auto log_stacktrace_files() -> void;
@@ -134,13 +135,14 @@ auto main(int _argc, char* _argv[]) -> int
 {
     [[maybe_unused]] const auto boot_time = std::chrono::system_clock::now();
 
+    bool write_to_stdout = false;
+    bool enable_test_mode = false;
+
     ProcessType = SERVER_PT; // This process identifies itself as a server.
 
     set_ips_display_name("irodsServer");
 
     namespace po = boost::program_options;
-
-    bool enable_test_mode = false;
 
     po::options_description opts_desc{""};
 
@@ -148,6 +150,7 @@ auto main(int _argc, char* _argv[]) -> int
     opts_desc.add_options()
         ("daemonize,d", "")
         ("pid-file,p", po::value<std::string>(), "")
+        ("stdout", po::bool_switch(&write_to_stdout), "")
         ("test-mode,t", po::bool_switch(&enable_test_mode), "")
         ("help,h", "")
         ("version,v", "");
@@ -201,7 +204,7 @@ auto main(int _argc, char* _argv[]) -> int
         rodsLogLevel(LOG_NOTICE);
     	rodsLogSqlReq(0);
 
-        init_logger(enable_test_mode);
+        init_logger(getpid(), write_to_stdout, enable_test_mode);
 
         if (const auto [up_to_date, db_vers] = check_catalog_schema_version(); !up_to_date) {
             const auto msg = fmt::format("Catalog schema version mismatch: expected [{}], found [{}]", IRODS_CATALOG_SCHEMA_VERSION, db_vers);
@@ -243,7 +246,7 @@ auto main(int _argc, char* _argv[]) -> int
             return 1;
         }
 
-        if (!launch_agent_factory(__func__, enable_test_mode)) {
+        if (!launch_agent_factory(__func__, write_to_stdout, enable_test_mode)) {
             return 1;
         }
 
@@ -277,7 +280,7 @@ auto main(int _argc, char* _argv[]) -> int
             }
 
             if (g_reload_config) {
-                handle_configuration_reload(enable_test_mode);
+                handle_configuration_reload(write_to_stdout, enable_test_mode);
             }
 
             // Clean up any zombie child processes if they exist. These appear following a configuration
@@ -289,8 +292,8 @@ auto main(int _argc, char* _argv[]) -> int
 
             log_stacktrace_files();
             remove_leftover_agent_info_files_for_ips();
-            launch_agent_factory(__func__, enable_test_mode);
-            migrate_and_launch_delay_server(enable_test_mode, first_boot, dsm_time_start);
+            launch_agent_factory(__func__, write_to_stdout, enable_test_mode);
+            migrate_and_launch_delay_server(write_to_stdout, enable_test_mode, first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
         }
@@ -538,9 +541,9 @@ Options:
         return 0;
     } // create_pid_file
 
-    auto init_logger(bool _enable_test_mode) -> void
+    auto init_logger(pid_t _pid, bool _write_to_stdout, bool _enable_test_mode) -> void
     {
-        log_ns::init(false, _enable_test_mode); // TODO Restore stdout requires synchronization so it may be dropped.
+        log_ns::init(_pid, _write_to_stdout, _enable_test_mode);
         log_server::set_level(log_ns::get_level_from_config(irods::KW_CFG_LOG_LEVEL_CATEGORY_SERVER));
         log_ns::set_server_type("server");
         log_ns::set_server_zone(irods::get_server_property<std::string>(irods::KW_CFG_ZONE_NAME));
@@ -729,7 +732,7 @@ Options:
         }
     } // set_delay_server_migration_info
 
-    auto launch_agent_factory(const char* _src_func, bool _enable_test_mode) -> bool
+    auto launch_agent_factory(const char* _src_func, bool _write_to_stdout, bool _enable_test_mode) -> bool
     {
         auto launch = (0 == g_pid_af);
 
@@ -758,6 +761,10 @@ Options:
         std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
 
         std::vector<char*> args{binary.data(), hn_shm_name.data(), dns_shm_name.data()};
+
+        if (_write_to_stdout) {
+            args.push_back("--stdout");
+        }
 
         if (_enable_test_mode) {
             args.push_back("-t");
@@ -788,7 +795,7 @@ Options:
         return true;
     } // launch_agent_factory
 
-    auto handle_configuration_reload(bool _enable_test_mode) -> void
+    auto handle_configuration_reload(bool _write_to_stdout, bool _enable_test_mode) -> void
     {
         log_server::info("{}: Received configuration reload instruction. Reloading configuration.", __func__);
 
@@ -825,7 +832,7 @@ Options:
 
         // Launch a new agent factory to serve client requests.
         // The previous agent factory is allowed to linger around until its children terminate.
-        launch_agent_factory(__func__, _enable_test_mode);
+        launch_agent_factory(__func__, _write_to_stdout, _enable_test_mode);
 
         // We do not need to manually launch the delay server because the delay server migration
         // logic will handle that for us.
@@ -833,7 +840,7 @@ Options:
         g_reload_config = 0;
     } // handle_configuration_reload
 
-    auto launch_delay_server(bool _enable_test_mode) -> void
+    auto launch_delay_server(bool _write_to_stdout, bool _enable_test_mode) -> void
     {
         auto launch = (0 == g_pid_ds);
 
@@ -855,7 +862,11 @@ Options:
             // doing the fork-exec.
 
             auto binary = (irods::get_irods_sbin_directory() / "irodsDelayServer").string();
-            std::vector<char*> args{binary.data(), nullptr};
+            std::vector<char*> args{binary.data()};
+
+            if (_write_to_stdout) {
+                args.push_back("--stdout");
+            }
 
             if (_enable_test_mode) {
                 args.push_back("-t");
@@ -886,7 +897,8 @@ Options:
         }
     } // launch_delay_server
 
-    auto migrate_and_launch_delay_server(bool _enable_test_mode,
+    auto migrate_and_launch_delay_server(bool _write_to_stdout,
+                                         bool _enable_test_mode,
                                          bool& _first_boot,
                                          std::chrono::steady_clock::time_point& _time_start) -> void
     {
@@ -926,7 +938,7 @@ Options:
                     // This server is the leader and may be running a delay server.
                     if (hostname == *leader) {
                         if (hostname == *successor) {
-                            launch_delay_server(_enable_test_mode);
+                            launch_delay_server(_write_to_stdout, _enable_test_mode);
 
                             // Clear successor entry in catalog. This isn't necessary, but helps
                             // keep the admin from becoming confused.
@@ -959,7 +971,7 @@ Options:
                             //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
                         }
                         else {
-                            launch_delay_server(_enable_test_mode);
+                            launch_delay_server(_write_to_stdout, _enable_test_mode);
                         }
                     }
                     else if (hostname == *successor) {
@@ -999,7 +1011,7 @@ Options:
 #else
                         // Delay servers lock tasks before execution. This allows the successor server
                         // to launch a delay server without duplicating work.
-                        launch_delay_server(_enable_test_mode);
+                        launch_delay_server(_write_to_stdout, _enable_test_mode);
 
                         if (g_pid_ds > 0) {
                             set_delay_server_migration_info(conn, hostname, "");
