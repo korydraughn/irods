@@ -80,14 +80,12 @@ class IrodsController(object):
         l = logging.getLogger(__name__)
         l.debug('Calling upgrade on IrodsController')
 
+        if upgrade_configuration.requires_upgrade(self.config):
+            upgrade_configuration.upgrade(self.config)
+
         if self.config.is_catalog:
             from . import database_interface
             database_interface.server_launch_hook(self.config)
-
-        if upgrade_configuration.requires_upgrade(self.config):
-            l.info('Upgrading iRODS server ...')
-            upgrade_configuration.upgrade(self.config)
-            l.info('Success!')
 
     def start(self, write_to_stdout=False, test_mode=False):
         l = logging.getLogger(__name__)
@@ -95,12 +93,12 @@ class IrodsController(object):
 
         l.info('Starting iRODS server ...')
 
-        # TODO Consider implementing later.
-        #env_var_name = 'IRODS_ENABLE_TEST_MODE'
-        #if test_mode or (env_var_name in os.environ and os.environ[env_var_name] == '1'):
-        #    cmd.append('-t')
-
         cmd = [self.config.server_executable, '-d']
+
+        env_var_name = 'IRODS_ENABLE_TEST_MODE'
+        if test_mode or (env_var_name in os.environ and os.environ[env_var_name] == '1'):
+            cmd.append('-t')
+
         lib.execute_command(cmd,
                             cwd=self.config.server_bin_directory,
                             env=self.config.execution_environment)
