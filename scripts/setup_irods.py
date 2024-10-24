@@ -130,6 +130,8 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
         from irods import database_interface
         l.info(irods.lib.get_header('Setting up the database'))
         database_interface.setup_catalog(irods_config, default_resource_directory=default_resource_directory, default_resource_name=default_resource_name)
+        l.info(irods.lib.get_header('Applying updates to database'))
+        database_interface.run_catalog_update(irods_config)
 
     l.info(irods.lib.get_header('Starting iRODS...'))
     IrodsController(irods_config).start(test_mode=test_mode)

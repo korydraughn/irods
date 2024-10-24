@@ -83,119 +83,34 @@ class IrodsController(object):
         if upgrade_configuration.requires_upgrade(self.config):
             upgrade_configuration.upgrade(self.config)
 
-        if self.config.is_catalog:
+        if self.config.is_provider:
             from . import database_interface
-            database_interface.server_launch_hook(self.config)
+            database_interface.run_catalog_update(self.config)
 
     def start(self, write_to_stdout=False, test_mode=False):
         l = logging.getLogger(__name__)
         l.debug('Calling start on IrodsController')
 
-        l.info('Starting iRODS server ...')
-
-        cmd = [self.config.server_executable, '-d']
+        cmd = [self.config.server_executable]
 
         env_var_name = 'IRODS_ENABLE_TEST_MODE'
         if test_mode or (env_var_name in os.environ and os.environ[env_var_name] == '1'):
             cmd.append('-t')
 
-        lib.execute_command(cmd,
-                            cwd=self.config.server_bin_directory,
-                            env=self.config.execution_environment)
-
-        return
-
-        self.config.clear_cache()
-        if not os.path.exists(self.config.server_executable):
-            raise IrodsError(
-                'Configuration problem:\n'
-                '\tThe \'%s\' application could not be found.' % (
-                    os.path.basename(self.config.server_executable)))
-
-        try:
-            (test_file_handle, test_file_name) = tempfile.mkstemp(
-                dir=self.config.log_directory)
-            os.close(test_file_handle)
-            os.unlink(test_file_name)
-        except (IOError, OSError) as e:
-            raise IrodsError(
-                'Configuration problem:\n'
-                'The server log directory, \'%s\''
-                'is not writeable.' % (
-                    self.config.log_directory)) from e
-
-        for f in ['core.re', 'core.dvm', 'core.fnm']:
-            path = os.path.join(self.config.config_directory, f)
-            if not os.path.exists(path):
-                shutil.copyfile(paths.get_template_filepath(path), path)
-
-        try:
-            irods_port = int(self.config.server_config['zone_port'])
-            l.debug('Attempting to bind socket %s', irods_port)
-            with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-                try:
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    s.bind(('127.0.0.1', irods_port))
-                except socket.error as e:
-                    raise IrodsError('Could not bind port {0}.'.format(irods_port)) from e
-            l.debug('Socket %s bound and released successfully.', irods_port)
-
-            if self.config.is_catalog:
-                from . import database_interface
-                database_interface.server_launch_hook(self.config)
-
-            cmd = [self.config.server_executable]
-
-            if write_to_stdout:
-                l.info('Starting iRODS server in foreground ...')
-
-                cmd.append('-u')
-
-                env_var_name = 'IRODS_ENABLE_TEST_MODE'
-                if test_mode or (env_var_name in os.environ and os.environ[env_var_name] == '1'):
-                    cmd.append('-t')
-
-                lib.execute_command(cmd,
-                                    stdout=sys.stdout,
-                                    stderr=sys.stdout,
-                                    cwd=self.config.server_bin_directory,
-                                    env=self.config.execution_environment)
-            else:
-                l.info('Starting iRODS server ...')
-
-                env_var_name = 'IRODS_ENABLE_TEST_MODE'
-                if test_mode or (env_var_name in os.environ and os.environ[env_var_name] == '1'):
-                    cmd.append('-t')
-
-                lib.execute_command(cmd,
-                                    cwd=self.config.server_bin_directory,
-                                    env=self.config.execution_environment)
-
-                try_count = 1
-                max_retries = 100
-                while True:
-                    l.debug('Attempting to connect to iRODS server on port %s. Attempt #%s',
-                            irods_port, try_count)
-                    with contextlib.closing(socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM)) as s:
-                        if s.connect_ex(('127.0.0.1', irods_port)) == 0:
-                            l.debug('Successfully connected to port %s.', irods_port)
-                            if self.get_server_proc() is None:
-                                raise IrodsError('iRODS port is bound, but server is not started.')
-                            s.send(b'\x00\x00\x00\x33<MsgHeader_PI><type>HEARTBEAT</type></MsgHeader_PI>')
-                            message = s.recv(256)
-                            if message != b'HEARTBEAT':
-                                raise IrodsError('iRODS port returned non-heartbeat message:\n{0}'.format(message))
-                            break
-                    if try_count >= max_retries:
-                        raise IrodsError('iRODS server failed to start.')
-                    try_count += 1
-                    time.sleep(1)
-
-                l.info('Success')
-        except IrodsError as e:
-            l.info('Failure')
-            raise e
+        if write_to_stdout:
+            l.info('Starting iRODS server ...')
+            cmd.append('--stdout')
+            lib.execute_command(cmd,
+                                stdout=sys.stdout,
+                                stderr=sys.stdout,
+                                cwd=self.config.server_bin_directory,
+                                env=self.config.execution_environment)
+        else:
+            l.info('Starting iRODS server as a daemon ...')
+            cmd.append('-d')
+            lib.execute_command(cmd,
+                                cwd=self.config.server_bin_directory,
+                                env=self.config.execution_environment)
 
     def stop(self, timeout=20, graceful=False):
         l = logging.getLogger(__name__)
@@ -351,34 +266,3 @@ def format_binary_to_procs_dict(proc_dict):
             os.path.basename(binary),
             lib.indent(*['Process {0}'.format(proc.pid) for proc in procs])))
     return '\n'.join(text_list)
-
-# TODO Remove this. Nothing uses it in the codebase.
-def delete_cache_files_by_pid(pid):
-    l = logging.getLogger(__name__)
-    l.debug('Deleting cache files for pid %s...', pid)
-    for shm_dir in paths.possible_shm_locations():
-        cache_shms = glob.glob(os.path.join(
-            shm_dir,
-            '*irods_re_cache*pid{0}_*'.format(pid)))
-        delete_cache_files_by_name(*cache_shms)
-
-# TODO Remove this. Nothing uses it except delete_cache_files_by_pid() and delete_s3_shmem().
-def delete_cache_files_by_name(*filepaths):
-    l = logging.getLogger(__name__)
-    for path in filepaths:
-        try:
-            l.debug('Deleting %s', path)
-            os.unlink(path)
-        except (IOError, OSError):
-            l.warning(lib.indent('Error deleting cache file: %s'), path)
-
-# TODO Remove this. The S3 resource plugin can do this itself now that iRODS 5
-# provides a setup() and teardown() hook. The teardown hook is invoked when the
-# agent factory terminates.
-def delete_s3_shmem():
-    # delete s3 shared memory if any exist 
-    for shm_dir in paths.possible_shm_locations():
-        s3_plugin_shms = glob.glob(os.path.join(
-            shm_dir,
-            '*irods_s3-shm*'))
-        delete_cache_files_by_name(*s3_plugin_shms)
