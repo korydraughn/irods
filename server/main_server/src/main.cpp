@@ -287,10 +287,9 @@ auto main(int _argc, char* _argv[]) -> int
                 waitpid(-1, nullptr, WNOHANG);
             }
 
-            // TODO Add logic to fork a new agent factory if not running.
-
             log_stacktrace_files();
             remove_leftover_agent_info_files_for_ips();
+            launch_agent_factory(__func__, enable_test_mode);
             migrate_and_launch_delay_server(enable_test_mode, first_boot, dsm_time_start);
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
@@ -732,6 +731,21 @@ Options:
 
     auto launch_agent_factory(const char* _src_func, bool _enable_test_mode) -> bool
     {
+        auto launch = (0 == g_pid_af);
+
+        if (g_pid_af > 0) {
+            if (const auto ec = kill(g_pid_af, 0); ec == -1) {
+                if (EPERM == errno || ESRCH == errno) {
+                    launch = true;
+                    g_pid_af = 0;
+                }
+            }
+        }
+
+        if (!launch) {
+            return false;
+        }
+
         log_server::info("{}: Launching Agent Factory.", _src_func);
 
         // If we're planning on calling one of the functions from the exec-family,
@@ -755,9 +769,17 @@ Options:
 
         if (0 == g_pid_af) {
             execv(args[0], args.data());
+
+            // If execv() fails, the POSIX standard recommends using _exit() instead of exit() to avoid
+            // flushing stdio buffers and handlers registered by the parent.
+            //
+            // In the case of C++, this is necessary to avoid triggering destructors. Triggering a destructor
+            // could result in assertions made by the struct/class being violatied. For some data types,
+            // violating an assertion results in program termination (i.e. SIGABRT).
             _exit(1);
         }
         else if (-1 == g_pid_af) {
+            g_pid_af = 0;
             log_server::error("{}: Could not launch agent factory.", __func__);
             return false;
         }
