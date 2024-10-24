@@ -431,7 +431,15 @@ Options:
         }
 
         umask(0);
-        chdir("/"); // TODO Should we keep this? Need to refresh my memory on why this is important.
+
+        // Change the working directory to the root directory. Using the root directory is
+        // common and protects the OS by allowing it to unmount file systems. If the working
+        // directory of the daemon existed on a file system other than the one containing "/",
+        // the OS would not be able to unmount it.
+        //
+        // It's also possible to change the working directory to other directories, for example,
+        // the iRODS home directory. However, that directory normally exists under /var.
+        chdir("/");
 
         // Get max number of open file descriptors.
         auto max_fd = sysconf(_SC_OPEN_MAX);
