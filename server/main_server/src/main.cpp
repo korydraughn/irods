@@ -1210,16 +1210,20 @@ Signals:
             if (leader && successor) {
                 log_server::debug("{}: Delay server leader [{}] and successor [{}].", __func__, *leader, *successor);
 
-                // 4 cases:
-                // L  S
-                // ----
-                // 0  0 (invalid state / no-op)
-                // 1  0 (migration complete)
-                // 0  1 (leader has shut down ds, successor launching ds)
-                // 1  1 (leader running ds, admin requested migration)
+                // 4 cases
+                // ----------------------------------------------------------------------------
+                // C  L  S  R
+                // ----------------------------------------------------------------------------
+                // 0  0  0  Invalid state / No-op
+                // 1  1  0  Delay server migration complete
+                // 2  0  1  Leader has shut down delay server, Successor launching delay server
+                // 3  1  1  Leader running delay server, Admin requested migration
+                // ----------------------------------------------------------------------------
+                // C = Case, L = Leader, S = Successor, R = Result
 
                 // This server is the leader and may be running a delay server.
                 if (local_server_host == *leader) {
+                    // Case 3
                     if (local_server_host == *successor) {
                         launch_delay_server(_write_to_stdout, _enable_test_mode);
 
@@ -1229,6 +1233,7 @@ Signals:
                             set_delay_server_migration_info(conn, KW_DELAY_SERVER_MIGRATION_IGNORE, "");
                         }
                     }
+                    // Case 3
                     else if (!successor->empty()) {
                         // Migration requested. Stop local delay server if running and clear the
                         // leader entry in the catalog.
@@ -1242,56 +1247,16 @@ Signals:
                             log_server::info("Delay server has completed shutdown [exit_code={}].", WEXITSTATUS(status));
                             g_pid_ds = 0;
                         }
-
-                        // TODO This isn't necessary if we can get task locking working (i.e. delay servers
-                        // lock tasks just before execution).
-                        //
-                        // TODO However, we can uncomment the following if the server can confirm the host
-                        // doesn't exist in the zone.
-                        //
-                        // Clear the leader entry. This acts as a signal to the successor server
-                        // that it is safe to launch the delay server.
-                        //set_delay_server_migration_info(conn, "", KW_DELAY_SERVER_MIGRATION_IGNORE);
                     }
+                    // Case 1
                     else {
                         launch_delay_server(_write_to_stdout, _enable_test_mode);
                     }
                 }
+                // Case 2
                 else if (local_server_host == *successor) {
-                    // leader == successor is covered by first if-branch.
-#if 0
-                    if (leader->empty()) {
-                        // The leader's delay server has been shut down. Launch the delay server if
-                        // not running already.
+                    // leader == successor (i.e. case 3) is covered by the first if-branch.
 
-                        log_server::info("{}: Launching Delay Server.", __func__);
-                        g_pid_ds = fork();
-                        if (0 == g_pid_ds) {
-                            char pname[] = "/usr/sbin/irodsDelayServer"; // TODO This MUST NOT assume /usr/sbin.
-                            char* args[] = {pname, nullptr}; // TODO Needs to take the config file path.
-                            execv(pname, args);
-                            _exit(1);
-                        }
-                        else if (g_pid_ds > 0) {
-                            log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
-                            set_delay_server_migration_info(conn, local_server_host, "");
-                        }
-                        else {
-                            log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
-                        }
-                    }
-                    else {
-                        // TODO
-                        // Determine when it's safe to auto-promote the successor to the leader
-                        // (i.e. the leader value is never cleared).
-
-                        // 1. Connect to leader.
-                        // 2. Use API to get the PID of the delay server.
-                        // 3. If we find a PID for the delay server, try again later (because we're waiting for it to shutdown).
-                        // 4. If we fail to reach the leader (due to network, etc), start counting failures.
-                        // 5. If the successor fails to get the PID N times, auto-promote successor to leader.
-                    }
-#else
                     // Delay servers lock tasks before execution. This allows the successor server
                     // to launch a delay server without duplicating work.
                     launch_delay_server(_write_to_stdout, _enable_test_mode);
@@ -1299,11 +1264,6 @@ Signals:
                     if (g_pid_ds > 0) {
                         set_delay_server_migration_info(conn, local_server_host, "");
                     }
-#endif
-                }
-                else {
-                    // TODO Reap child processes: agent factory, delay server
-                    // TODO Fork agent factory and/or delay server again if necessary.
                 }
             }
         }
