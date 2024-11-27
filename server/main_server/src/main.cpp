@@ -132,6 +132,7 @@ namespace
     auto launch_agent_factory(const char* _src_func, bool _write_to_stdout, bool _enable_test_mode) -> bool;
     auto handle_configuration_reload(bool _write_to_stdout, bool _enable_test_mode) -> void;
     auto launch_delay_server(bool _write_to_stdout, bool _enable_test_mode) -> void;
+    auto get_preferred_host(const std::string_view _host) -> std::string;
     auto migrate_and_launch_delay_server(bool _write_to_stdout,
                                          bool _enable_test_mode,
                                          std::chrono::steady_clock::time_point& _time_start) -> void;
@@ -413,14 +414,7 @@ Signals:
 
             // NOLINTNEXTLINE(bugprone-lambda-function-name)
             const auto do_validate = [fn = __func__](const auto& _config, const std::string& _schema_file) {
-                const auto resolver = [fn](const jsoncons::uri& _uri) {
-                    if (g_logger_initialized) {
-                        log_server::debug("{}: uri = [{}], path = [{}]", fn, _uri.string(), _uri.path());
-                    }
-                    else {
-                        fmt::print(stderr, "uri = [{}], path = [{}]\n", _uri.string(), _uri.path());
-                    }
-
+                const auto resolver = [](const jsoncons::uri& _uri) {
                     std::ifstream in{(irods::get_irods_home_directory() / _uri.path()).c_str()};
                     if (!in) {
                         return jsoncons::json::null();
@@ -428,13 +422,6 @@ Signals:
 
                     return jsoncons::json::parse(in);
                 };
-
-                if (g_logger_initialized) {
-                    log_server::debug("{}: JSON schema file = [{}]", fn, _schema_file);
-                }
-                else {
-                    fmt::print(stderr, "{}: JSON schema file = [{}].\n", fn, _schema_file);
-                }
 
                 std::ifstream in{_schema_file};
                 if (!in) {
@@ -791,7 +778,7 @@ Signals:
                     const auto& config = config_handle.get_json();
 
                     const nlohmann::json::json_pointer json_path{"/catalog_provider_hosts/0"};
-                    const auto& provider_host = config.at(json_path).get_ref<const std::string&>();
+                    const auto provider_host = get_preferred_host(config.at(json_path).get_ref<const std::string&>());
                     const auto zone_port = config.at(irods::KW_CFG_ZONE_PORT).get<int>();
                     const auto zone_port_string = std::to_string(zone_port);
 
@@ -1160,6 +1147,15 @@ Signals:
         }
     } // launch_delay_server
 
+    auto get_preferred_host(const std::string_view _host) -> std::string
+    {
+        if (const auto resolved = resolve_hostname(_host, hostname_resolution_scheme::match_preferred); resolved) {
+            return *resolved;
+        }
+
+        return std::string{_host};
+    } // get_preferred_host
+
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     auto migrate_and_launch_delay_server(bool _write_to_stdout,
                                          bool _enable_test_mode,
@@ -1209,6 +1205,10 @@ Signals:
 
             if (leader && successor) {
                 log_server::debug("{}: Delay server leader [{}] and successor [{}].", __func__, *leader, *successor);
+
+                // Update the host information based on the "host_resolution" configuration, if defined.
+                leader = get_preferred_host(*leader);
+                successor = get_preferred_host(*successor);
 
                 // 4 cases
                 // ----------------------------------------------------------------------------

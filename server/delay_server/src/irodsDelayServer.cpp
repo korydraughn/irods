@@ -482,7 +482,7 @@ namespace
         // r_rule_exec.exe_context for migrated rules. If the rule has not been migrated,
         // then the context information must be stored in an REI file.
         if (kvp.contains(RULE_EXECUTION_CONTEXT_KW) && !kvp[RULE_EXECUTION_CONTEXT_KW].value().empty()) {
-            rodsLog(LOG_DEBUG, "Inflating rule execution context from JSON string [rule_id=%s] ...", _inp.ruleExecId);
+            log_ds::debug("Inflating rule execution context from JSON string [rule_id={}] ...", _inp.ruleExecId);
 
             rei = irods::to_rule_execution_info(kvp[RULE_EXECUTION_CONTEXT_KW].value());
             rei_ptr = &rei;
@@ -495,7 +495,7 @@ namespace
             }
         }
         else {
-            rodsLog(LOG_DEBUG, "Inflating rule execution context from REI file [rule_id=%s] ...", _inp.ruleExecId);
+            log_ds::debug("Inflating rule execution context from REI file [rule_id={}] ...", _inp.ruleExecId);
 
             // Rules are only migrated into the catalog if they do not use session variables.
             // This is because session variables are considered obsolete and will not be available
