@@ -1165,16 +1165,16 @@ Signals:
                                          bool _enable_test_mode,
                                          std::chrono::steady_clock::time_point& _time_start) -> void
     {
+        // The host property in server_config.json defines the true identity of the local server.
+        // We cannot use localhost or the loopback address because the computer may have multiple
+        // network interfaces and/or hostnames which map to different IPs.
+        const auto local_server_host = irods::get_server_property<std::string>(irods::KW_CFG_HOST);
+
         if (0 == g_pid_ds) {
             log_server::debug("{}: Checking if Agent Factory is ready to accept client requests before launching the Delay Server.", __func__);
 
             // Defer the launch of the delay server if the agent factory isn't listening.
             try {
-                // The host property in server_config.json defines the true identity of the local server.
-                // We cannot use localhost or the loopback address because the computer may have multiple
-                // network interfaces and/or hostnames which map to different IPs.
-                const auto local_server_host = irods::get_server_property<std::string>(irods::KW_CFG_HOST);
-
                 // Use the zone port property from server_config.json. This property defines the port for
                 // server-to-server connections within the zone.
                 const auto local_server_port = irods::get_server_property<int>(irods::KW_CFG_ZONE_PORT);
@@ -1199,7 +1199,6 @@ Signals:
 
         _time_start = now;
 
-        const auto hostname = irods::get_server_property<std::string>(irods::KW_CFG_HOST);
         std::optional<std::string> leader;
         std::optional<std::string> successor;
 
@@ -1220,8 +1219,8 @@ Signals:
                 // 1  1 (leader running ds, admin requested migration)
 
                 // This server is the leader and may be running a delay server.
-                if (hostname == *leader) {
-                    if (hostname == *successor) {
+                if (local_server_host == *leader) {
+                    if (local_server_host == *successor) {
                         launch_delay_server(_write_to_stdout, _enable_test_mode);
 
                         // Clear successor entry in catalog. This isn't necessary, but helps
@@ -1258,7 +1257,7 @@ Signals:
                         launch_delay_server(_write_to_stdout, _enable_test_mode);
                     }
                 }
-                else if (hostname == *successor) {
+                else if (local_server_host == *successor) {
                     // leader == successor is covered by first if-branch.
 #if 0
                     if (leader->empty()) {
@@ -1275,7 +1274,7 @@ Signals:
                         }
                         else if (g_pid_ds > 0) {
                             log_server::info("{}: Delay Server PID = [{}].", __func__, g_pid_ds);
-                            set_delay_server_migration_info(conn, hostname, "");
+                            set_delay_server_migration_info(conn, local_server_host, "");
                         }
                         else {
                             log_server::error("{}: Could not launch delay server [errno={}].", __func__, errno);
@@ -1298,7 +1297,7 @@ Signals:
                     launch_delay_server(_write_to_stdout, _enable_test_mode);
 
                     if (g_pid_ds > 0) {
-                        set_delay_server_migration_info(conn, hostname, "");
+                        set_delay_server_migration_info(conn, local_server_host, "");
                     }
 #endif
                 }
