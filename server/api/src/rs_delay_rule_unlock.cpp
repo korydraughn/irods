@@ -16,8 +16,8 @@ auto rs_delay_rule_unlock(RsComm* _comm, DelayRuleUnlockInput* _input) -> int
         return SYS_INTERNAL_NULL_INPUT_ERR;
     }
 
-    if (!is_non_empty_string(_input->rule_id, sizeof(DelayRuleUnlockInput::rule_id))) {
-        log_api::error("{}: Rule ID must be a non-empty string.", __func__);
+    if (!_input->rule_ids) {
+        log_api::error("{}: Rule ID must be a non-empty JSON string.", __func__);
         return SYS_INVALID_INPUT_PARAM;
     }
 
@@ -41,7 +41,7 @@ auto rs_delay_rule_unlock(RsComm* _comm, DelayRuleUnlockInput* _input) -> int
     //
 
     try {
-        const auto ec = chl_delay_rule_unlock(*_comm, _input->rule_id);
+        const auto ec = chl_delay_rule_unlock(*_comm, _input->rule_ids);
 
         if (ec < 0) {
             log_api::error("{}: chl_delay_rule_unlock failed with error code [{}].", __func__, ec);

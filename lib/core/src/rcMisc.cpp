@@ -1836,6 +1836,7 @@ void clearDelayRuleUnlockInput(void* _p)
 
     auto* q = static_cast<DelayRuleUnlockInput*>(_p);
 
+    free_pointer(q->rule_ids);
     clearKeyVal(&q->cond_input);
 
     std::memset(q, 0, sizeof(DelayRuleUnlockInput));

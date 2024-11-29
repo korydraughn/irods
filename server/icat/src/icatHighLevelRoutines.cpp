@@ -4921,7 +4921,7 @@ auto chl_delay_rule_lock(RsComm& _comm, const char* _rule_id, const char* _lock_
     return ret.code();
 } // chl_delay_rule_lock
 
-auto chl_delay_rule_unlock(RsComm& _comm, const char* _rule_id) -> int
+auto chl_delay_rule_unlock(RsComm& _comm, const char* _rule_ids) -> int
 {
     irods::database_object_ptr db_obj_ptr;
     if (const auto ret = irods::database_factory(database_plugin_type, db_obj_ptr); !ret.ok()) {
@@ -4940,7 +4940,7 @@ auto chl_delay_rule_unlock(RsComm& _comm, const char* _rule_id) -> int
     irods::first_class_object_ptr ptr = boost::dynamic_pointer_cast<irods::first_class_object>(db_obj_ptr);
     irods::database_ptr db = boost::dynamic_pointer_cast<irods::database>(db_plug_ptr);
 
-    const auto ret = db->call(&_comm, irods::DATABASE_OP_DELAY_RULE_UNLOCK, ptr, _rule_id);
+    const auto ret = db->call(&_comm, irods::DATABASE_OP_DELAY_RULE_UNLOCK, ptr, _rule_ids);
 
     // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
     return ret.code();

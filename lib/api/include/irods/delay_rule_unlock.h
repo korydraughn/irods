@@ -12,12 +12,14 @@ struct RcComm;
 /// \since 5.0.0
 typedef struct DelayRuleUnlockInput
 {
-    /// The catalog ID of the delay rule to unlock.
+    /// The list of delay rule IDs to unlock.
     ///
-    /// Must be a non-empty string.
+    /// The following requirements must be satisfied:
+    /// - It must be non-empty
+    /// - It must be a JSON list
     ///
     /// \since 5.0.0
-    char rule_id[32]; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+    char* rule_ids; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 
     /// The set of key-value pair strings used to influence the behavior of the API
     /// operation.
@@ -27,27 +29,28 @@ typedef struct DelayRuleUnlockInput
 } delayRuleUnlockInp_t;
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define DelayRuleUnlockInput_PI "str rule_id[32]; struct KeyValPair_PI;"
+#define DelayRuleUnlockInput_PI "str *rule_ids; struct KeyValPair_PI;"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/// Removes the delay server lock information from a delay rule if it exists.
+/// Atomically removes the delay server lock information from one or more delay rules.
 ///
 /// Requires \p rodsadmin level privileges.
 ///
-/// On success, the following information will be removed from the target delay rule's catalog
-/// entry:
+/// On success, the following information will be removed from the delay rule catalog entries:
 /// - The host identifying the delay server
 /// - The PID of the delay server
 /// - The time the entry was locked
+///
+/// On failure, all catalog updates are rolled back and an error code is returned to the client.
 ///
 /// \param[in] _comm  A pointer to a RcComm.
 /// \param[in] _input A pointer to a DelayRuleUnlockInput.
 ///
 /// \return An integer.
-/// \retval 0  On success.
+/// \retval  0 On success.
 /// \retval <0 On failure.
 ///
 /// \b Example
@@ -58,7 +61,9 @@ extern "C" {
 /// struct DelayRuleUnlockInput input;
 /// memset(&input, 0, sizeof(struct DelayRuleUnlockInput));
 ///
-/// strncpy(input.rule_id, "12345", sizeof(DelayRuleUnlockInput::rule_id) - 1);
+/// // Don't forget to deallocate the memory pointed to by "input.rule_ids"
+/// // following the completion of the API operation.
+/// input.rule_ids = strdup("[\"12345\", \"67890\"]");
 ///
 /// const int ec = rc_delay_rule_unlock(comm, &input);
 ///
