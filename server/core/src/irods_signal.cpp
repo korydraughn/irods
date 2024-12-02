@@ -8,7 +8,6 @@
 #include <boost/stacktrace/safe_dump_to.hpp>
 
 #include <array>
-#include <climits> // For _POSIX_PATH_MAX
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -22,8 +21,14 @@
 
 namespace
 {
+    // This value represents the maximum size of a path for stacktrace handling. By picking a
+    // value, we are opting to "try" writing the stacktrace to a file first, rather than checking
+    // the OS limits and adapting to them.
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-    std::array<char, _POSIX_PATH_MAX> g_stacktrace_dir;
+    constexpr auto g_max_path_size = 1024;
+
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    std::array<char, g_max_path_size> g_stacktrace_dir;
 } // anonymous namespace
 
 extern "C"
@@ -34,10 +39,8 @@ void stacktrace_signal_handler(int _signal)
         _exit(_signal);
     }
 
-    // "_POSIX_PATH_MAX" is guaranteed to be defined as 256.
-    // This value represents the minimum path length supported by POSIX operating systems.
-    char file_path_unprocessed[_POSIX_PATH_MAX];
-    std::strncpy(file_path_unprocessed, g_stacktrace_dir.data(), _POSIX_PATH_MAX);
+    char file_path_unprocessed[g_max_path_size];
+    std::strncpy(file_path_unprocessed, g_stacktrace_dir.data(), g_max_path_size);
     std::strcat(file_path_unprocessed, "/");
 
     // At this point, "file_path_unprocessed" should have the following path:
@@ -68,7 +71,7 @@ void stacktrace_signal_handler(int _signal)
                 // This keeps the files sorted by timestamp and by pid.
                 *pid_end = 0;
 
-                char file_path[_POSIX_PATH_MAX];
+                char file_path[g_max_path_size];
                 std::strcpy(file_path, file_path_unprocessed);
                 
                 // An indicator to the thread handling the logging of these files that this file

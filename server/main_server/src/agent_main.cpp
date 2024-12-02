@@ -99,7 +99,7 @@ namespace
     using log_af = irods::experimental::log::agent_factory;
     using log_agent = irods::experimental::log::agent;
 
-    std::array<char, _POSIX_PATH_MAX> g_proc_directory; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    std::array<char, 1024> g_proc_directory; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     std::time_t g_graceful_shutdown_timeout{}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     auto init_logger(pid_t _pid, bool _write_to_stdout, bool _enable_test_mode) -> void;
@@ -1113,7 +1113,7 @@ namespace
         pid_t pid;
         int status;
         char agent_pid[16];
-        char agent_pid_file_path[1024]; // TODO _POSIX_PATH_MAX?
+        char agent_pid_file_path[1024];
 
         const auto unlink_agent_pid_file = [&](const pid_t _pid) {
             auto [p, ec] = std::to_chars(agent_pid, agent_pid + sizeof(agent_pid), _pid);
