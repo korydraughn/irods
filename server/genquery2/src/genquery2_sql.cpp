@@ -524,7 +524,7 @@ namespace
             }
 
             // The alias for R_USER_MAIN as it relates to data objects.
-            if (tail == "USER_NAME") {
+            if (tail == "USER_NAME") { // TODO Should this be extended to USER_ZONE?
                 return "pdu";
             }
 
@@ -537,7 +537,7 @@ namespace
             const auto tail = _column.substr(prefix_length);
 
             // The alias for R_TOKN_MAIN as it relates to collections.
-            if (tail == "PERM_NAME") {
+            if (tail == "PERM_NAME") { // TODO Should this be extended to USER_ZONE?
                 return "pct";
             }
 
