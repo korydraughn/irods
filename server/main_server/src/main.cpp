@@ -1719,7 +1719,26 @@ Signals:
                 return;
             }
 
-            irods::experimental::client_connection conn;
+            irods::experimental::client_connection conn{irods::experimental::defer_connection};
+
+            const auto role = irods::get_server_property<std::string>(irods::KW_CFG_CATALOG_SERVICE_ROLE);
+            if (role == irods::KW_CFG_SERVICE_ROLE_PROVIDER) {
+                conn.connect();
+            }
+            else if (role == irods::KW_CFG_SERVICE_ROLE_CONSUMER) {
+                const auto config_handle = irods::server_properties::instance().map();
+                const auto& config = config_handle.get_json();
+
+                const nlohmann::json::json_pointer json_path{"/catalog_provider_hosts/0"};
+                const auto& provider_host = get_preferred_host(config.at(json_path).get_ref<const std::string&>());
+                const auto zone_port = config.at(irods::KW_CFG_ZONE_PORT).get<int>();
+
+                const auto& username = config.at(json_path).get_ref<const std::string&>();
+                const auto& zone = config.at(json_path).get_ref<const std::string&>();
+
+                conn.connect(provider_host, zone_port, {username, zone});
+            }
+
             irods::access_time_queue::access_time_data data;
             nlohmann::json::array_t updates;
 
