@@ -12,7 +12,7 @@
 #include "irods/irods_configuration_keywords.hpp"
 #include "irods/irods_configuration_parser.hpp" // For key_path_t
 #include "irods/irods_default_paths.hpp"
-#include "irods/irods_environment_properties.hpp"
+//#include "irods/irods_environment_properties.hpp"
 #include "irods/irods_exception.hpp"
 #include "irods/irods_logger.hpp"
 #include "irods/irods_network_factory.hpp"
@@ -217,7 +217,7 @@ auto main(int _argc, char* _argv[]) -> int
         // Load configuration.
         const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
         irods::server_properties::instance().init(config_file_path.c_str());
-        irods::environment_properties::instance(); // Load the local environment file.
+        //irods::environment_properties::instance(); // Load the local environment file.
 
         // Initialize global pointer to ips data directory for agent cleanup.
         // This is required so that the signal handler for reaping agents remains async-signal-safe.
@@ -269,7 +269,6 @@ auto main(int _argc, char* _argv[]) -> int
 
         log_af::info("{}: Initializing access time queue for agent factory.", __func__);
         irods::access_time_queue::init_no_create(access_time_queue_shm_name);
-        irods::at_scope_exit deinit_access_time_queue{[] { irods::access_time_queue::deinit(); }};
 
         log_af::info("{}: Initializing zone information for agent factory.", __func__);
 
@@ -895,12 +894,6 @@ namespace
         if (!ret.ok()) {
             log_agent::error(PASS(ret).result());
             return 1;
-        }
-
-        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == svc_role) {
-            if (std::strstr(rsComm.myEnv.rodsDebug, "CAT") != nullptr) {
-                chlDebug(rsComm.myEnv.rodsDebug);
-            }
         }
 
         status = initAgent(RULE_ENGINE_TRY_CACHE, &rsComm);

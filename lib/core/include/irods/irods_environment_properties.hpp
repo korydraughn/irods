@@ -13,6 +13,7 @@ namespace irods {
 
     static const std::string IRODS_JSON_ENV_FILE = "/.irods/irods_environment.json";
 
+    // TODO Make sure server isn't using this.
     error get_json_environment_file( std::string& _env_file, std::string& _session_file);
 
     class environment_properties {
