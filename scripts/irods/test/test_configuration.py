@@ -119,3 +119,9 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
             # Now that the service account user's environment has been restored, show they can
             # execute icommands again.
             rods.assert_icommand(['ils'], 'STDOUT', [rods.home_collection])
+
+    @unittest.skipUnless(test.settings.RUN_IN_TOPOLOGY and test.settings.USE_SSL, 'Requires TLS be configured on all servers in a topology')
+    def test_server_honors_tls_options_for_server_to_server_connections__issue_8012(self):
+        # TODO The servers are already configured for the environment, therefore we can confirm
+        # correctness by misconfiguring the local server and watching it report TLS errors.
+        pass
