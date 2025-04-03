@@ -1,8 +1,10 @@
 import unittest
 
+import copy
 import json
 import os
 import socket
+import time
 
 from . import session
 from ..configuration import IrodsConfig
@@ -61,13 +63,13 @@ class TestConfigurationReload(session.make_sessions_mixin([('otherrods', 'rods')
 class test_server_configuration__issue_8012(session.make_sessions_mixin([('otherrods', 'rods')], []), unittest.TestCase):
 
     def setUp(self):
-        super(test_server_configuration, self).setUp()
+        super(test_server_configuration__issue_8012, self).setUp()
         self.otherrods = self.admin_sessions[0]
 
-    def tearDown(test_server_configuration):
-        super(test_server_configuration, self).tearDown()
+    def tearDown(self):
+        super(test_server_configuration__issue_8012, self).tearDown()
 
-    def test_server_is_functional_without_service_environment_json_file__issue_8012(self):
+    def test_server_is_functional_without_service_environment_json_file(self):
         # First, let's make sure our iRODS server is functional.
         self.otherrods.assert_icommand(['ils'], 'STDOUT', [self.otherrods.session_collection])
 
@@ -76,14 +78,12 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
             # correctly. That is, make sure we can interact with the server.
             rods.assert_icommand(['ils'], 'STDOUT', [rods.home_collection])
 
-            config = IrodsConfig()
-
-            with lib.file_backed_up(config.client_environment_path):
+            try:
                 # Break the service account user's irods_environment.json file so the icommands
                 # no longer work. This helps prove the server no longer cares about it.
-                lib.update_json_file_from_dict(config.client_environment_path, {})
-                ec, _, _ = rods.assert_icommand(['ils'], 'STDERR')
-                self.assertNotEqual(ec, 0)
+                old_rods_environment = copy.deepcopy(rods.environment_file_contents)
+                rods.environment_file_contents.update({'irods_port': 1257})
+                rods.assert_icommand(['ils'], 'STDERR', ['-305111 USER_SOCK_CONNECT_ERR'])
 
                 # With the service account user's environment now broken, we now start the
                 # the true tests.
@@ -91,37 +91,37 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
                 resc_name = 'issue_8012_ufs_resc'
                 data_object = f'{self.otherrods.session_collection}/issue_8012_data_object.txt'
 
-                try:
-                    # Create a new unixfilesystem resource. This resource will be used to confirm
-                    # redirection works in a topology environment. Creating the resource on
-                    # HOSTNAME_2 means a server redirect will be required to reach the target
-                    # resource (when creating a replica).
-                    lib.create_ufs_resource(self.otherrods, resc_name, test.settings.HOSTNAME_2)
+                # Create a new unixfilesystem resource. This resource will be used to confirm
+                # redirection works in a topology environment. Creating the resource on
+                # HOSTNAME_2 means a server redirect will be required to reach the target
+                # resource (when creating a replica).
+                lib.create_ufs_resource(self.otherrods, resc_name, test.settings.HOSTNAME_2)
 
-                    controller = IrodsController()
+                controller = IrodsController()
 
-                    with self.subTest('Server is functional after reloading the configuration'):
-                        controller.reload_configuration()
-                        self.otherrods.assert_icommand(['itouch', '-R', resc_name, data_object])
-                        self.otherrods.assert_icommand(['ils', '-l', data_object], 'STDOUT', [data_object, resc_name])
+                with self.subTest('Server is functional after reloading the configuration'):
+                    controller.reload_configuration()
+                    self.otherrods.assert_icommand(['itouch', '-R', resc_name, data_object])
+                    self.otherrods.assert_icommand(['ils', '-l', data_object], 'STDOUT', [os.path.basename(data_object), resc_name])
 
-                    with self.subTest('Server is functional after restart'):
-                        controller.restart(test_mode=True)
-                        old_mtime = lib.get_replica_mtime(self.otherrods, data_object, 0)
-                        time.sleep(2) # Make sure the mtime changes.
-                        self.otherrods.assert_icommand(['itouch', '-R', resc_name, data_object])
-                        self.assertGreater(lib.get_replica_mtime(self.otherrods, data_object, 0), old_mtime)
+                with self.subTest('Server is functional after restart'):
+                    controller.restart(test_mode=True)
+                    old_mtime = lib.get_replica_mtime(self.otherrods, data_object, 0)
+                    time.sleep(2) # Make sure the mtime changes.
+                    self.otherrods.assert_icommand(['itouch', '-R', resc_name, data_object])
+                    self.assertGreater(lib.get_replica_mtime(self.otherrods, data_object, 0), old_mtime)
 
-                finally:
-                    self.otherrods.run_icommand(['irm', '-f', data_object])
-                    self.otherrods.run_icommand(['iadmin', 'rmresc', resc_name])
+            finally:
+                self.otherrods.run_icommand(['irm', '-f', data_object])
+                self.otherrods.run_icommand(['iadmin', 'rmresc', resc_name])
+                rods.environment_file_contents = old_rods_environment 
 
             # Now that the service account user's environment has been restored, show they can
             # execute icommands again.
             rods.assert_icommand(['ils'], 'STDOUT', [rods.home_collection])
 
     @unittest.skipUnless(test.settings.RUN_IN_TOPOLOGY and test.settings.USE_SSL, 'Requires TLS be configured on all servers in a topology')
-    def test_server_honors_tls_options_for_server_to_server_connections__issue_8012(self):
+    def test_server_honors_tls_options_for_server_to_server_connections(self):
         # TODO The servers are already configured for the environment, therefore we can confirm
         # correctness by misconfiguring the local server and watching it report TLS errors.
         pass
