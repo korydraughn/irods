@@ -103,6 +103,8 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
                     controller.reload_configuration()
                     self.otherrods.assert_icommand(['itouch', '-R', resc_name, data_object])
                     self.otherrods.assert_icommand(['ils', '-l', data_object], 'STDOUT', [os.path.basename(data_object), resc_name])
+                    # Show that the service account user's environment is still in a bad state.
+                    rods.assert_icommand(['ils'], 'STDERR', ['-305111 USER_SOCK_CONNECT_ERR'])
 
                 with self.subTest('Server is functional after restart'):
                     controller.restart(test_mode=True)
@@ -110,6 +112,8 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
                     time.sleep(2) # Make sure the mtime changes.
                     self.otherrods.assert_icommand(['itouch', '-R', resc_name, data_object])
                     self.assertGreater(lib.get_replica_mtime(self.otherrods, data_object, 0), old_mtime)
+                    # Show that the service account user's environment is still in a bad state.
+                    rods.assert_icommand(['ils'], 'STDERR', ['-305111 USER_SOCK_CONNECT_ERR'])
 
             finally:
                 self.otherrods.run_icommand(['irm', '-f', data_object])
@@ -120,8 +124,26 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
             # execute icommands again.
             rods.assert_icommand(['ils'], 'STDOUT', [rods.home_collection])
 
-    @unittest.skipUnless(test.settings.RUN_IN_TOPOLOGY and test.settings.USE_SSL, 'Requires TLS be configured on all servers in a topology')
+    @unittest.skipUnless(test.settings.TOPOLOGY_FROM_RESOURCE_SERVER and test.settings.USE_SSL,
+        'Requires TLS be configured on all servers in a topology')
     def test_server_honors_tls_options_for_server_to_server_connections(self):
-        # TODO The servers are already configured for the environment, therefore we can confirm
-        # correctness by misconfiguring the local server and watching it report TLS errors.
-        pass
+        controller = IrodsController()
+
+        try:
+            config = IrodsConfig()
+            with lib.file_backed_up(config.server_config_path):
+                # The servers are properly configured at the start of this test, therefore we can
+                # confirm correctness by misconfiguring the local server and watching it report TLS
+                # errors.
+                lib.update_json_file_from_dict(config.server_config_path, {
+                    'tls_client': {'ca_certificate_file': 'invalid'}
+                })
+                controller.reload_configuration()
+
+                # "ils" will redirect from the consumer to the provider because it needs to query the
+                # catalog. This will result in the consumer server loading the TLS options to establish
+                # a server-to-server connection.
+                self.otherrods.assert_icommand(['ils'], 'STDERR', ['-2103000 SSL_HANDSHAKE_ERROR'])
+
+        finally:
+            controller.reload_configuration()
