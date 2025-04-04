@@ -198,11 +198,12 @@ namespace irods
     extern const char* const KW_CFG_ACCESS_TIME_RESOLUTION_IN_SECONDS;
 
     // TLS server configurations (server-side)
-    extern const char* const KW_CFG_TLS_CONFIGURATION;
+    extern const char* const KW_CFG_TLS_SERVER;
     extern const char* const KW_CFG_TLS_CERTIFICATE_CHAIN_FILE;
     extern const char* const KW_CFG_TLS_CERTIFICATE_KEY_FILE;
     extern const char* const KW_CFG_TLS_DH_PARAMS_FILE;
     // TLS server configurations (client-side)
+    extern const char* const KW_CFG_TLS_CLIENT;
     extern const char* const KW_CFG_TLS_CA_CERTIFICATE_FILE;
     extern const char* const KW_CFG_TLS_CERTIFICATE_PATH;
     extern const char* const KW_CFG_TLS_VERIFY_SERVER;

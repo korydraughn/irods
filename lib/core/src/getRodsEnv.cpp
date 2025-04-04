@@ -86,7 +86,7 @@ namespace
         copy_string(irods::KW_CFG_DEFAULT_RESOURCE_NAME, _env.rodsDefResource);
         copy_int(irods::KW_CFG_CONNECTION_POOL_REFRESH_TIME, _env.irodsConnectionPoolRefreshTime);
 
-        if (const auto tls_iter = config.find(irods::KW_CFG_TLS_CONFIGURATION); tls_iter != std::end(config)) {
+        if (const auto tls_iter = config.find(irods::KW_CFG_TLS_CLIENT); tls_iter != std::end(config)) {
             const auto copy_tls_string = []<std::size_t N>(char (&_dst)[N], const nlohmann::json& _src) {
                 _src.get_ref<const std::string&>().copy(_dst, N - 1);
             };
@@ -128,7 +128,6 @@ namespace
         _env.irodsTransBufferSizeForParaTrans = advanced_settings.at(irods::KW_CFG_TRANS_BUFFER_SIZE_FOR_PARA_TRANS).get<int>();
 
         if (auto iter = config.find(irods::KW_CFG_PLUGIN_DIRECTORY); iter != std::end(config)) {
-            // TODO Apply maxLength constraint on each property.
             iter->get_ref<const std::string&>().copy(_env.irodsPluginDirectory, sizeof(rodsEnv::irodsPluginDirectory) - 1);
         }
     } // init_from_server_properties

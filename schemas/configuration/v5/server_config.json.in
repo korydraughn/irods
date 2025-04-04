@@ -215,14 +215,24 @@
         "schema_version": {"type": "string"},
         "server_port_range_end": {"type": "integer"},
         "server_port_range_start": {"type": "integer"},
-        "tls": {
+        "tls_server": {
+            "type": "object",
+            "properties": {
+                "certificate_chain_file": {"type": "string"},
+                "certificate_key_file": {"type": "string"},
+                "dh_params_file": {"type": "string"}
+            },
+            "required": [
+                "certificate_chain_file",
+                "certificate_key_file",
+                "dh_params_file"
+            ]
+        },
+        "tls_client": {
             "type": "object",
             "properties": {
                 "ca_certificate_file": {"type": "string"},
-                "certificate_chain_file": {"type": "string"},
-                "certificate_key_file": {"type": "string"},
                 "certificate_path": {"type": "string"},
-                "dh_params_file": {"type": "string"},
                 "verify_server": {
                     "enum": [
                         "none",
@@ -234,38 +244,13 @@
             "anyOf": [
                 {
                     "required": [
-                        "certificate_chain_file",
-                        "certificate_key_file",
-                        "dh_params_file"
-                    ]
-                },
-                {
-                    "required": [
-                        "certificate_chain_file",
-                        "certificate_key_file",
-                        "dh_params_file",
                         "ca_certificate_file",
                         "verify_server"
                     ]
                 },
                 {
                     "required": [
-                        "certificate_chain_file",
-                        "certificate_key_file",
-                        "dh_params_file",
                         "certificate_path",
-                        "verify_server"
-                    ]
-                },
-                {
-                    "required": [
-                        "certificate_path",
-                        "verify_server"
-                    ]
-                },
-                {
-                    "required": [
-                        "ca_certificate_file",
                         "verify_server"
                     ]
                 }
