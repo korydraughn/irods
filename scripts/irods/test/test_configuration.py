@@ -136,7 +136,10 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
                 # confirm correctness by misconfiguring the local server and watching it report TLS
                 # errors.
                 lib.update_json_file_from_dict(config.server_config_path, {
-                    'tls_client': {'ca_certificate_file': 'invalid'}
+                    'tls_client': {
+                        'ca_certificate_file': 'invalid',
+                        'verify_server': 'cert'
+                    }
                 })
                 controller.reload_configuration()
 
