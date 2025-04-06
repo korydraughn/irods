@@ -146,6 +146,7 @@ class Test_ICommands(SessionsMixin, unittest.TestCase):
 						lib.update_json_file_from_dict(client_env_file, env_update)
 		
 						# Make sure communications with the local zone are in working order...
+                                                # TODO Why do these two commands work?
 						_, pwd, _ = test_session.assert_icommand(['ipwd'], 'STDOUT', test_session.zone_name)
 						test_session.assert_icommand(['ils'], 'STDOUT_SINGLELINE', pwd.strip())
 		
