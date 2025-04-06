@@ -213,6 +213,7 @@ class IrodsConfig(object):
         with tempfile.NamedTemporaryFile(mode='wt', delete=False) as f:
             json.dump(config_dict, f, indent=4, sort_keys=True)
         if os.path.exists(path):
+            # TODO How is "f.name" still accessible?
             if filecmp.cmp(f.name, path):
                 return
             if make_backup:

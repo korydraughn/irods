@@ -110,9 +110,7 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
         default_resource_name = json_configuration_dict['default_resource_name']
         default_resource_directory = json_configuration_dict.get('default_resource_directory', os.path.join(irods_config.irods_directory, 'Vault'))
         # client environment
-        if not os.path.exists(os.path.dirname(irods_config.client_environment_path)):
-            os.makedirs(os.path.dirname(irods_config.client_environment_path), mode=0o700)
-        irods_config.commit(json_configuration_dict['service_account_environment'], irods_config.client_environment_path)
+        os.makedirs(os.path.dirname(irods_config.client_environment_path), mode=0o700, exist_ok=True)
         # password
         irods_config.admin_password = json_configuration_dict['admin_password']
     else:
@@ -127,8 +125,12 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
         default_resource_name, default_resource_directory = setup_storage(irods_config)
         # server config
         setup_server_config(irods_config)
-        # client environment and password
-        setup_client_environment(irods_config)
+        # create the $HOME/.irods directory and write password to .irodsA file
+        os.makedirs(os.path.dirname(irods_config.client_environment_path), mode=0o700, exist_ok=True)
+        irods_config.admin_password = irods.lib.prompt(
+            'iRODS server\'s administrator password',
+            input_filter=irods.lib.character_count_filter(minimum=3, maximum=maximum_password_length, field='Admin password'),
+            echo=False)
 
     if irods_config.is_provider:
         from irods import database_interface
@@ -443,46 +445,6 @@ def setup_server_config(irods_config):
         echo=False)
 
     irods_config.commit(irods_config.server_config, irods_config.server_config_path, clear_cache=False)
-
-def setup_client_environment(irods_config):
-    l = logging.getLogger(__name__)
-    l.info(irods.lib.get_header('Setting up the client environment'))
-
-    print('\n', end='')
-
-    irods_config.admin_password = irods.lib.prompt(
-        'iRODS server\'s administrator password',
-        input_filter=irods.lib.character_count_filter(minimum=3, maximum=maximum_password_length, field='Admin password'),
-        echo=False)
-
-    print('\n', end='')
-
-    service_account_dict = {
-            'schema_name': 'service_account_environment',
-            'schema_version': 'v5',
-            'irods_host': irods_config.server_config['host'],
-            'irods_port': irods_config.server_config['zone_port'],
-            'irods_default_resource': irods_config.server_config['default_resource_name'],
-            'irods_home': '/'.join(['', irods_config.server_config['zone_name'], 'home', irods_config.server_config['zone_user']]),
-            'irods_cwd': '/'.join(['', irods_config.server_config['zone_name'], 'home', irods_config.server_config['zone_user']]),
-            'irods_user_name': irods_config.server_config['zone_user'],
-            'irods_zone_name': irods_config.server_config['zone_name'],
-            'irods_client_server_negotiation': 'request_server_negotiation',
-            'irods_client_server_policy': 'CS_NEG_REFUSE',
-            'irods_encryption_key_size': 32,
-            'irods_encryption_salt_size': 8,
-            'irods_encryption_num_hash_rounds': 16,
-            'irods_encryption_algorithm': 'AES-256-CBC',
-            'irods_default_hash_scheme': irods_config.server_config['default_hash_scheme'],
-            'irods_match_hash_policy': irods_config.server_config['match_hash_policy'],
-            'irods_maximum_size_for_single_buffer_in_megabytes': irods_config.server_config['advanced_settings']['maximum_size_for_single_buffer_in_megabytes'],
-            'irods_default_number_of_transfer_threads': irods_config.server_config['advanced_settings']['default_number_of_transfer_threads'],
-            'irods_transfer_buffer_size_for_parallel_transfer_in_megabytes': irods_config.server_config['advanced_settings']['transfer_buffer_size_for_parallel_transfer_in_megabytes'],
-            'irods_connection_pool_refresh_time_in_seconds': 300,
-        }
-    if not os.path.exists(os.path.dirname(irods_config.client_environment_path)):
-        os.makedirs(os.path.dirname(irods_config.client_environment_path), mode=0o700)
-    irods_config.commit(service_account_dict, irods_config.client_environment_path, clear_cache=False)
 
 def main():
     l = logging.getLogger(__name__)
