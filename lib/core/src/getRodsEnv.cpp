@@ -33,6 +33,9 @@
 #include "irods/irods_version.h"
 #include "irods/irods_environment_properties.hpp"
 #include "irods/irods_configuration_keywords.hpp"
+#include "irods/irods_server_properties.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <cstring>
 
@@ -40,6 +43,102 @@
 #define LARGE_BUF_LEN MAX_NAME_LEN+20
 
 #define RODS_ENV_FILE "/.irods/irods_environment.json"  /* under the HOME directory */
+
+namespace
+{
+    void init_from_server_properties(rodsEnv& _env)
+    {
+        // The following members are not used by the server:
+        //
+        //    - rodsAuthFile
+
+        // iRODS 5 servers always request client-server negotiation on redirects.
+        std::strncpy(
+            _env.rodsClientServerNegotiation, REQ_SVR_NEG, sizeof(RodsEnvironment::rodsClientServerNegotiation) - 1);
+
+        const auto config_handle = irods::server_properties::instance().map();
+        const auto& config = config_handle.get_json();
+
+        // clang-format off
+        const auto copy_string = [&config]<std::size_t N>(const char* const _k, char (&_v)[N]) {
+            config.at(_k).get_ref<const std::string&>().copy(_v, N - 1);
+        };
+        // clang-format on
+
+        const auto copy_int = [&config](const char* const _k, int& _v) { _v = config.at(_k).get<int>(); };
+
+        copy_string(irods::KW_CFG_HOST, _env.rodsHost);
+        copy_int(irods::KW_CFG_ZONE_PORT, _env.rodsPort);
+
+        copy_string(irods::KW_CFG_ZONE_NAME, _env.rodsZone);
+        copy_string(irods::KW_CFG_ZONE_USER, _env.rodsUserName);
+        copy_string(irods::KW_CFG_ZONE_AUTH_SCHEME, _env.rodsAuthScheme);
+
+        copy_string(irods::KW_CFG_CLIENT_SERVER_POLICY, _env.rodsClientServerPolicy);
+
+        copy_string(irods::KW_CFG_ENCRYPTION_ALGORITHM, _env.rodsEncryptionAlgorithm);
+        copy_int(irods::KW_CFG_ENCRYPTION_KEY_SIZE, _env.rodsEncryptionKeySize);
+        copy_int(irods::KW_CFG_ENCRYPTION_NUM_HASH_ROUNDS, _env.rodsEncryptionNumHashRounds);
+        copy_int(irods::KW_CFG_ENCRYPTION_SALT_SIZE, _env.rodsEncryptionSaltSize);
+
+        copy_string(irods::KW_CFG_DEFAULT_HASH_SCHEME, _env.rodsDefaultHashScheme);
+        copy_string(irods::KW_CFG_MATCH_HASH_POLICY, _env.rodsMatchHashPolicy);
+
+        copy_string(irods::KW_CFG_DEFAULT_RESOURCE_NAME, _env.rodsDefResource);
+        copy_int(irods::KW_CFG_CONNECTION_POOL_REFRESH_TIME, _env.irodsConnectionPoolRefreshTime);
+
+        if (const auto tls_iter = config.find(irods::KW_CFG_TLS_CLIENT); tls_iter != std::end(config)) {
+            // clang-format off
+            const auto copy_tls_string = []<std::size_t N>(char (&_dst)[N], const nlohmann::json& _src) {
+                _src.get_ref<const std::string&>().copy(_dst, N - 1);
+            };
+            // clang-format on
+
+            for (auto&& [k, v] : tls_iter->items()) {
+                if (irods::KW_CFG_TLS_CA_CERTIFICATE_FILE == k) {
+                    copy_tls_string(_env.irodsSSLCACertificateFile, v);
+                }
+                else if (irods::KW_CFG_TLS_CERTIFICATE_PATH == k) {
+                    copy_tls_string(_env.irodsSSLCACertificatePath, v);
+                }
+                else if (irods::KW_CFG_TLS_VERIFY_SERVER == k) {
+                    copy_tls_string(_env.irodsSSLVerifyServer, v);
+                }
+            }
+        }
+
+        // If the configuration is not set for the TCP keepalive options, set the value to something invalid. This
+        // indicates that we should not set the option on the socket, which will allow the socket to use the kernel
+        // configuration.
+        _env.tcp_keepalive_intvl = config.value(irods::KW_CFG_TCP_KEEPALIVE_INTVL_IN_SECONDS, -1);
+        if (_env.tcp_keepalive_intvl < 0) {
+            _env.tcp_keepalive_intvl = -1;
+        }
+
+        _env.tcp_keepalive_probes = config.value(irods::KW_CFG_TCP_KEEPALIVE_PROBES, -1);
+        if (_env.tcp_keepalive_probes < 0) {
+            _env.tcp_keepalive_probes = -1;
+        }
+
+        _env.tcp_keepalive_time = config.value(irods::KW_CFG_TCP_KEEPALIVE_TIME_IN_SECONDS, -1);
+        if (_env.tcp_keepalive_time < 0) {
+            _env.tcp_keepalive_time = -1;
+        }
+
+        const auto& advanced_settings = config.at(irods::KW_CFG_ADVANCED_SETTINGS);
+        _env.irodsDefaultNumberTransferThreads =
+            advanced_settings.at(irods::KW_CFG_DEF_NUMBER_TRANSFER_THREADS).get<int>();
+        _env.irodsMaxSizeForSingleBuffer = advanced_settings.at(irods::KW_CFG_MAX_SIZE_FOR_SINGLE_BUFFER).get<int>();
+        _env.irodsTransBufferSizeForParaTrans =
+            advanced_settings.at(irods::KW_CFG_TRANS_BUFFER_SIZE_FOR_PARA_TRANS).get<int>();
+
+        if (auto iter = config.find(irods::KW_CFG_PLUGIN_DIRECTORY); iter != std::end(config)) {
+            iter->get_ref<const std::string&>().copy(
+                _env.irodsPluginDirectory, sizeof(rodsEnv::irodsPluginDirectory) - 1);
+        }
+    } // init_from_server_properties
+} // anonymous namespace
+
 extern "C" {
 
     extern int ProcessType;
@@ -121,14 +220,29 @@ extern "C" {
         return 0;
     }
 
-    void _getRodsEnv( rodsEnv &rodsEnvArg ) {
-        memset( &rodsEnvArg, 0, sizeof( rodsEnv ) );
+    void _getRodsEnv(rodsEnv& rodsEnvArg)
+    {
+        std::memset(&rodsEnvArg, 0, sizeof(rodsEnv));
+
+        if (CLIENT_PT != ::ProcessType) {
+            init_from_server_properties(rodsEnvArg);
+            return;
+        }
+
         getRodsEnvFromFile( &rodsEnvArg );
         getRodsEnvFromEnv( &rodsEnvArg );
         createRodsEnvDefaults( &rodsEnvArg );
     }
 
-    void _reloadRodsEnv( rodsEnv &rodsEnvArg ) {
+    void _reloadRodsEnv(rodsEnv& rodsEnvArg)
+    {
+        memset(&rodsEnvArg, 0, sizeof(rodsEnv));
+
+        if (CLIENT_PT != ::ProcessType) {
+            init_from_server_properties(rodsEnvArg);
+            return;
+        }
+
         try {
             irods::environment_properties::instance().capture();
         } catch ( const irods::exception& e ) {
@@ -136,7 +250,6 @@ extern "C" {
             return;
         }
 
-        memset( &rodsEnvArg, 0, sizeof( rodsEnv ) );
         getRodsEnvFromFile( &rodsEnvArg );
         getRodsEnvFromEnv( &rodsEnvArg );
         createRodsEnvDefaults( &rodsEnvArg );
