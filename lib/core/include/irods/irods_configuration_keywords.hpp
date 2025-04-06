@@ -164,6 +164,7 @@ namespace irods
     extern const char* const KW_CFG_SERVICE_ROLE_PROXY;
 
     extern const char* const KW_CFG_IRODS_PLUGIN_DIRECTORY;
+    extern const char* const KW_CFG_PLUGIN_DIRECTORY;
 
     extern const char* const KW_CFG_PLUGIN_CONFIGURATION;
 
