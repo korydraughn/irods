@@ -90,7 +90,7 @@ int checkHostAccessControl(const std::string& _user_name,
         return e.code();
     }
 
-    return UNMATCHED_KEY_OR_INDEX;
+    return SYS_USER_NOT_ALLOWED_TO_CONN;
 } // checkHostAccessControl
 
 /**
