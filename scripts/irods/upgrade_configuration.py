@@ -333,8 +333,8 @@ def convert_to_v5_schema_and_add_missing_properties(server_config):
     if "irods_ssl_ca_certificate_file" in service_account_environment:
         new_server_config["tls_client"]["ca_certificate_file"] = service_account_environment.get("irods_ssl_ca_certificate_file", None)
         add_verify_server_property = True
-    if "irods_ssl_certificate_path" in service_account_environment:
-        new_server_config["tls_client"]["certificate_path"] = service_account_environment.get("irods_ssl_certificate_path", None)
+    if "irods_ssl_ca_certificate_path" in service_account_environment:
+        new_server_config["tls_client"]["ca_certificate_path"] = service_account_environment.get("irods_ssl_ca_certificate_path", None)
         add_verify_server_property = True
     if add_verify_server_property:
         new_server_config["tls_client"]["verify_server"] = service_account_environment.get("irods_ssl_verify_server", None)
