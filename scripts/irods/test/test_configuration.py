@@ -70,13 +70,13 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
         super(test_server_configuration__issue_8012, self).tearDown()
 
     def test_server_is_functional_without_service_environment_json_file(self):
-        # First, let's make sure our iRODS server is functional.
-        self.otherrods.assert_icommand(['ils'], 'STDOUT', [self.otherrods.session_collection])
-
         with session.make_session_for_existing_admin() as rods:
             # Let's confirm the service account user's irods_environment.json file is configured
             # correctly. That is, make sure we can interact with the server.
             rods.assert_icommand(['ils'], 'STDOUT', [rods.home_collection])
+
+            resc_name = 'issue_8012_ufs_resc'
+            data_object = f'{self.otherrods.session_collection}/issue_8012_data_object.txt'
 
             try:
                 # Break the service account user's irods_environment.json file so the icommands
@@ -87,9 +87,6 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
 
                 # With the service account user's environment now broken, we now start the
                 # the true tests.
-
-                resc_name = 'issue_8012_ufs_resc'
-                data_object = f'{self.otherrods.session_collection}/issue_8012_data_object.txt'
 
                 # Create a new unixfilesystem resource. This resource will be used to confirm
                 # redirection works in a topology environment. Creating the resource on
@@ -125,7 +122,7 @@ class test_server_configuration__issue_8012(session.make_sessions_mixin([('other
             rods.assert_icommand(['ils'], 'STDOUT', [rods.home_collection])
 
     @unittest.skipUnless(test.settings.USE_SSL, 'Requires TLS-enabled enivronment')
-    @unittest.skipUnless(test.settings.TOPOLOGY_FROM_RESOURCE_SERVER, 'Requires a zone with more than one server')
+    @unittest.skipUnless(test.settings.TOPOLOGY_FROM_RESOURCE_SERVER, 'Must be run from a Catalog Service Consumer')
     def test_server_honors_tls_options_for_server_to_server_connections(self):
         controller = IrodsController()
 
