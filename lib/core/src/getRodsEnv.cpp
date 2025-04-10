@@ -98,7 +98,7 @@ namespace
                 if (irods::KW_CFG_TLS_CA_CERTIFICATE_FILE == k) {
                     copy_tls_string(_env.irodsSSLCACertificateFile, v);
                 }
-                else if (irods::KW_CFG_TLS_CERTIFICATE_PATH == k) {
+                else if (irods::KW_CFG_TLS_CA_CERTIFICATE_PATH == k) {
                     copy_tls_string(_env.irodsSSLCACertificatePath, v);
                 }
                 else if (irods::KW_CFG_TLS_VERIFY_SERVER == k) {
