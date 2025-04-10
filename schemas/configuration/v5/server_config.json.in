@@ -329,7 +329,7 @@
             "type": "object",
             "properties": {
                 "ca_certificate_file": {"type": "string"},
-                "certificate_path": {"type": "string"},
+                "ca_certificate_path": {"type": "string"},
                 "verify_server": {
                     "enum": [
                         "none",
