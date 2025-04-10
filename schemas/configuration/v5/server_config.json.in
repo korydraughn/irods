@@ -8,7 +8,7 @@
             "properties": {
                 "default_number_of_transfer_threads": {
                     "type": "integer",
-                    "minimum": 1
+                    "minimum": 0
                 },
                 "default_temporary_password_lifetime_in_seconds": {
                     "type": "integer",
