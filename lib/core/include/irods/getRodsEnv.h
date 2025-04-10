@@ -1,5 +1,5 @@
-#ifndef GET_RODS_ENV_H
-#define GET_RODS_ENV_H
+#ifndef IRODS_GET_RODS_ENV_H
+#define IRODS_GET_RODS_ENV_H
 
 #include "irods/rodsDef.h"
 
@@ -68,4 +68,5 @@ void _reloadRodsEnv( rodsEnv &myRodsEnv );
 
 }
 #endif
-#endif // GET_RODS_ENV_H
+
+#endif // IRODS_GET_RODS_ENV_H
