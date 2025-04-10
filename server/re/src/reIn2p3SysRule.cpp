@@ -109,7 +109,7 @@ int checkHostAccessControl(const std::string& _user_name,
     }
 
     log_svr::debug("{}: User blocked by host access control list.", __func__);
-    return SYS_USER_NOT_ALLOWED_TO_CONN;
+    return CONNECTION_REFUSED;
 } // checkHostAccessControl
 
 /**
