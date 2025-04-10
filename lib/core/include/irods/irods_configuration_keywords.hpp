@@ -200,7 +200,7 @@ namespace irods
     // TLS server configurations (outbound traffic)
     extern const char* const KW_CFG_TLS_CLIENT;
     extern const char* const KW_CFG_TLS_CA_CERTIFICATE_FILE;
-    extern const char* const KW_CFG_TLS_CERTIFICATE_PATH;
+    extern const char* const KW_CFG_TLS_CA_CERTIFICATE_PATH;
     extern const char* const KW_CFG_TLS_VERIFY_SERVER;
 
     extern const char* const KW_CFG_CONNECTION_POOL_REFRESH_TIME;
