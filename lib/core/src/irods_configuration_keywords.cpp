@@ -187,12 +187,12 @@ namespace irods
     const char* const KW_CFG_ACCESS_TIME_BATCH_SIZE{"batch_size"};
     const char* const KW_CFG_ACCESS_TIME_RESOLUTION_IN_SECONDS{"resolution_in_seconds"};
 
-    // TLS server configurations (server-side)
+    // TLS server configurations (inbound traffic)
     const char* const KW_CFG_TLS_SERVER{"tls_server"};
     const char* const KW_CFG_TLS_CERTIFICATE_CHAIN_FILE{"certificate_chain_file"};
     const char* const KW_CFG_TLS_CERTIFICATE_KEY_FILE{"certificate_key_file"};
     const char* const KW_CFG_TLS_DH_PARAMS_FILE{"dh_params_file"};
-    // TLS server configurations (client-side)
+    // TLS server configurations (outbound traffic)
     const char* const KW_CFG_TLS_CLIENT{"tls_client"};
     const char* const KW_CFG_TLS_CA_CERTIFICATE_FILE{"ca_certificate_file"};
     const char* const KW_CFG_TLS_CERTIFICATE_PATH{"certificate_path"};
