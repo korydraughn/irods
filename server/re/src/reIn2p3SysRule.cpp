@@ -48,12 +48,7 @@ int checkHostAccessControl(const std::string& _user_name,
                 const auto& addy = access_entry.at(irods::KW_CFG_ADDRESS).get_ref<const std::string&>();
                 const auto& mask = access_entry.at(irods::KW_CFG_MASK).get_ref<const std::string&>();
 
-                log_svr::debug("{}: Host access entry: user=[{}], group=[{}], address=[{}], mask=[{}]",
-                               __func__,
-                               user,
-                               group,
-                               addy,
-                               mask);
+                log_svr::debug("{}: Checking user against host access control entry: user=[{}], group=[{}], address=[{}], mask=[{}]", __func__, user, group, addy, mask);
 
                 boost::system::error_code error_code;
                 const auto address_entry = ip::make_address_v4(addy, error_code);
@@ -108,7 +103,7 @@ int checkHostAccessControl(const std::string& _user_name,
         return e.code(); // NOLINT(bugprone-narrowing-conversions, cppcoreguidelines-narrowing-conversions)
     }
 
-    log_svr::debug("{}: User blocked by host access control list.", __func__);
+    log_svr::debug("{}: User [{}] does not meet host access control requirements.", __func__, _user_name);
     return CONNECTION_REFUSED;
 } // checkHostAccessControl
 
