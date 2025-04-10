@@ -141,7 +141,6 @@ namespace irods
     const char* const KW_CFG_IRODS_SSL_DH_PARAMS_FILE{"irods_ssl_dh_params_file"};
 
     // irods environment values now included in server_config
-    const char* const KW_CFG_CLIENT_SERVER_NEGOTIATION{"client_server_negotiation"};
     const char* const KW_CFG_CLIENT_SERVER_POLICY{"client_server_policy"};
     const char* const KW_CFG_DEFAULT_RESOURCE_NAME{"default_resource_name"};
     const char* const KW_CFG_ENCRYPTION_ALGORITHM{"encryption_algorithm"};

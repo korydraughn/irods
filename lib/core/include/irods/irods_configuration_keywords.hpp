@@ -146,7 +146,6 @@ namespace irods
     extern const char* const KW_CFG_IRODS_SSL_DH_PARAMS_FILE;
 
     // irods environment values now included in server_config
-    extern const char* const KW_CFG_CLIENT_SERVER_NEGOTIATION;
     extern const char* const KW_CFG_CLIENT_SERVER_POLICY;
     extern const char* const KW_CFG_DEFAULT_RESOURCE_NAME;
     extern const char* const KW_CFG_ENCRYPTION_ALGORITHM;
