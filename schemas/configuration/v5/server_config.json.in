@@ -28,7 +28,7 @@
                     "properties": {
                         "shared_memory_size_in_bytes": {
                             "type": "integer",
-                            "minimum": 0
+                            "minimum": 1
                         },
                         "eviction_age_in_seconds": {
                             "type": "integer",
@@ -45,7 +45,7 @@
                     "properties": {
                         "shared_memory_size_in_bytes": {
                             "type": "integer",
-                            "minimum": 0
+                            "minimum": 1
                         },
                         "eviction_age_in_seconds": {
                             "type": "integer",
@@ -59,7 +59,7 @@
                 },
                 "maximum_size_for_single_buffer_in_megabytes": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 1
                 },
                 "maximum_size_of_delay_queue_in_bytes": {
                     "type": "integer",
@@ -83,11 +83,11 @@
                 },
                 "transfer_buffer_size_for_parallel_transfer_in_megabytes": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 1
                 },
                 "transfer_chunk_size_for_parallel_transfer_in_megabytes": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 1
                 }
             },
             "required": [
