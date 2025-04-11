@@ -82,18 +82,20 @@ TEST_CASE("#8012: getRodsEnv() loads data from server_properties when called fro
         "default_hash_scheme": "SHA256",
         "default_number_of_transfer_threads": 4,
         "default_resource_name": "demoResc",
-        "encryption_algorithm": "{}",
-        "encryption_key_size": 32,
-        "encryption_num_hash_rounds": 16,
-        "encryption_salt_size": 8,
+        "encryption": {{
+            "algorithm": "{}",
+            "key_size": 32,
+            "num_hash_rounds": 16,
+            "salt_size": 8,
+        }},
         "home": "/tempZone/home/rods",
         "host": "{}",
         "match_hash_policy": "compatible",
         "maximum_size_for_single_buffer_in_megabytes": 32,
-        "zone_port": {},
-        "zone_user": "rods",
+        "zone_auth_scheme": "native",
         "zone_name": "tempZone",
-        "zone_auth_scheme": "native"
+        "zone_port": {},
+        "zone_user": "rods"
     }})_"), transfer_threads, encryption_algo, host, port);
     irods::at_scope_exit delete_test_file{[&test_file] { remove(test_file); }};
 
