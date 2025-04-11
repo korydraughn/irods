@@ -152,21 +152,32 @@
             "type": "string",
             "maxLength": 63
         },
-        "encryption_algorithm": {
-            "type": "string",
-            "maxLength": 127
-        },
-        "encryption_key_size": {
-            "type": "integer",
-            "minimum": 32
-        },
-        "encryption_num_hash_rounds": {
-            "type": "integer",
-            "minimum": 16
-        },
-        "encryption_salt_size": {
-            "type": "integer",
-            "minimum": 8
+        "encryption": {
+            "type": "object",
+            "properties": {
+                "algorithm": {
+                    "type": "string",
+                    "maxLength": 127
+                },
+                "key_size": {
+                    "type": "integer",
+                    "minimum": 32
+                },
+                "num_hash_rounds": {
+                    "type": "integer",
+                    "minimum": 16
+                },
+                "salt_size": {
+                    "type": "integer",
+                    "minimum": 8
+                }
+            },
+            "required": [
+                "algorithm",
+                "key_size",
+                "num_hash_rounds",
+                "salt_size"
+            ]
         },
         "environment_variables": {
             "type": "object",
@@ -384,10 +395,7 @@
         "default_dir_mode",
         "default_file_mode",
         "default_hash_scheme",
-        "encryption_algorithm",
-        "encryption_key_size",
-        "encryption_num_hash_rounds",
-        "encryption_salt_size",
+        "encryption",
         "environment_variables",
         "federation",
         "graceful_shutdown_timeout_in_seconds",

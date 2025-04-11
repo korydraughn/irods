@@ -36,10 +36,12 @@
     "default_dir_mode": "0750",
     "default_file_mode": "0600",
     "default_hash_scheme": "SHA256",
-    "encryption_algorithm": "AES-256-CBC",
-    "encryption_key_size": 32,
-    "encryption_num_hash_rounds": 16,
-    "encryption_salt_size": 8,
+    "encryption": {
+        "algorithm": "AES-256-CBC",
+        "key_size": 32,
+        "num_hash_rounds": 16,
+        "salt_size": 8
+    },
     "environment_variables": {},
     "federation": [],
     "graceful_shutdown_timeout_in_seconds": 30,
