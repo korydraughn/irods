@@ -299,20 +299,16 @@ def convert_to_v5_schema_and_add_missing_properties(server_config):
     new_server_config.pop('server_control_plane_port', None)
     new_server_config.pop('server_control_plane_timeout_milliseconds', None)
 
-    # Add encryption properties based on presence of keys in the service account client environment.
-    encryption_configurations_to_migrate = [
-        'irods_encryption_algorithm',
-        'irods_encryption_key_size',
-        'irods_encryption_num_hash_rounds',
-        'irods_encryption_salt_size'
-    ]
-    if any([config in service_account_environment for config in encryption_configurations_to_migrate]):
-        new_server_config['encryption'] = {
-            'algorithm': service_account_environment.get('irods_encryption_algorithm', 'AES-256-CBC'),
-            'key_size': service_account_environment.get('irods_encryption_key_size', 32),
-            'num_hash_rounds': service_account_environment.get('irods_encryption_num_hash_rounds', 16),
-            'salt_size': service_account_environment.get('irods_encryption_salt_size', 8)
-        }
+    # Add encryption properties based on the service account client environment. If any of the
+    # configuration values are missing, we put an invalid value in the server configuration so that
+    # the situation is brought to the attention of the administrator. All of these properties are
+    # required.
+    new_server_config['encryption'] = {
+        'algorithm': service_account_environment.get('irods_encryption_algorithm', None),
+        'key_size': service_account_environment.get('irods_encryption_key_size', None),
+        'num_hash_rounds': service_account_environment.get('irods_encryption_num_hash_rounds', None),
+        'salt_size': service_account_environment.get('irods_encryption_salt_size', None)
+    }
 
     # Add TLS properties for inbound traffic based on presence of keys in the service account client environment.
     ssl_configurations_to_migrate = [
