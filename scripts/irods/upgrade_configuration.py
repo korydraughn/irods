@@ -307,10 +307,12 @@ def convert_to_v5_schema_and_add_missing_properties(server_config):
         'irods_encryption_salt_size'
     ]
     if any([config in service_account_environment for config in encryption_configurations_to_migrate]):
-        new_server_config['encryption_algorithm'] = service_account_environment.get('irods_encryption_algorithm', 'AES-256-CBC')
-        new_server_config['encryption_key_size'] = service_account_environment.get('irods_encryption_key_size', 32)
-        new_server_config['encryption_num_hash_rounds'] = service_account_environment.get('irods_encryption_num_hash_rounds', 16)
-        new_server_config['encryption_salt_size'] = service_account_environment.get('irods_encryption_salt_size', 8)
+        new_server_config['encryption'] = {
+            'algorithm': service_account_environment.get('irods_encryption_algorithm', 'AES-256-CBC'),
+            'key_size': service_account_environment.get('irods_encryption_key_size', 32),
+            'num_hash_rounds': service_account_environment.get('irods_encryption_num_hash_rounds', 16),
+            'salt_size': service_account_environment.get('irods_encryption_salt_size', 8)
+        }
 
     # Add TLS properties for inbound traffic based on presence of keys in the service account client environment.
     ssl_configurations_to_migrate = [
