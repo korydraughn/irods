@@ -86,7 +86,7 @@ TEST_CASE("#8012: getRodsEnv() loads data from server_properties when called fro
             "algorithm": "{}",
             "key_size": 32,
             "num_hash_rounds": 16,
-            "salt_size": 8,
+            "salt_size": 8
         }},
         "home": "/tempZone/home/rods",
         "host": "{}",
