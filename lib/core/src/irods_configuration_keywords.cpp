@@ -142,10 +142,11 @@ namespace irods
     // irods environment values now included in server_config
     const char* const KW_CFG_CLIENT_SERVER_POLICY{"client_server_policy"};
     const char* const KW_CFG_DEFAULT_RESOURCE_NAME{"default_resource_name"};
-    const char* const KW_CFG_ENCRYPTION_ALGORITHM{"encryption_algorithm"};
-    const char* const KW_CFG_ENCRYPTION_KEY_SIZE{"encryption_key_size"};
-    const char* const KW_CFG_ENCRYPTION_NUM_HASH_ROUNDS{"encryption_num_hash_rounds"};
-    const char* const KW_CFG_ENCRYPTION_SALT_SIZE{"encryption_salt_size"};
+    const char* const KW_CFG_ENCRYPTION{"encryption"};
+    const char* const KW_CFG_ENCRYPTION_ALGORITHM{"algorithm"};
+    const char* const KW_CFG_ENCRYPTION_KEY_SIZE{"key_size"};
+    const char* const KW_CFG_ENCRYPTION_NUM_HASH_ROUNDS{"num_hash_rounds"};
+    const char* const KW_CFG_ENCRYPTION_SALT_SIZE{"salt_size"};
     const char* const KW_CFG_ZONE_AUTH_SCHEME{"zone_auth_scheme"};
     const char* const KW_CFG_ZONE_PORT{"zone_port"};
     const char* const KW_CFG_ZONE_USER{"zone_user"};
