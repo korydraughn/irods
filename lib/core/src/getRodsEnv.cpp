@@ -59,33 +59,38 @@ namespace
         const auto config_handle = irods::server_properties::instance().map();
         const auto& config = config_handle.get_json();
 
+        using json = nlohmann::json;
+
         // clang-format off
-        const auto copy_string = [&config]<std::size_t N>(const char* const _k, char (&_v)[N]) {
-            config.at(_k).get_ref<const std::string&>().copy(_v, N - 1);
+        const auto copy_string = []<std::size_t N>(const json& _config, const char* const _k, char (&_v)[N]) {
+            _config.at(_k).get_ref<const std::string&>().copy(_v, N - 1);
+        };
+
+        const auto copy_int = [](const json& _config, const char* const _k, int& _v) {
+            _v = _config.at(_k).get<int>();
         };
         // clang-format on
 
-        const auto copy_int = [&config](const char* const _k, int& _v) { _v = config.at(_k).get<int>(); };
+        copy_string(config, irods::KW_CFG_HOST, _env.rodsHost);
+        copy_int(config, irods::KW_CFG_ZONE_PORT, _env.rodsPort);
 
-        copy_string(irods::KW_CFG_HOST, _env.rodsHost);
-        copy_int(irods::KW_CFG_ZONE_PORT, _env.rodsPort);
+        copy_string(config, irods::KW_CFG_ZONE_NAME, _env.rodsZone);
+        copy_string(config, irods::KW_CFG_ZONE_USER, _env.rodsUserName);
+        copy_string(config, irods::KW_CFG_ZONE_AUTH_SCHEME, _env.rodsAuthScheme);
 
-        copy_string(irods::KW_CFG_ZONE_NAME, _env.rodsZone);
-        copy_string(irods::KW_CFG_ZONE_USER, _env.rodsUserName);
-        copy_string(irods::KW_CFG_ZONE_AUTH_SCHEME, _env.rodsAuthScheme);
+        copy_string(config, irods::KW_CFG_CLIENT_SERVER_POLICY, _env.rodsClientServerPolicy);
 
-        copy_string(irods::KW_CFG_CLIENT_SERVER_POLICY, _env.rodsClientServerPolicy);
+        const auto& encryption = config.at(irods::KW_CFG_ENCRYPTION);
+        copy_string(encryption, irods::KW_CFG_ENCRYPTION_ALGORITHM, _env.rodsEncryptionAlgorithm);
+        copy_int(encryption, irods::KW_CFG_ENCRYPTION_KEY_SIZE, _env.rodsEncryptionKeySize);
+        copy_int(encryption, irods::KW_CFG_ENCRYPTION_NUM_HASH_ROUNDS, _env.rodsEncryptionNumHashRounds);
+        copy_int(encryption, irods::KW_CFG_ENCRYPTION_SALT_SIZE, _env.rodsEncryptionSaltSize);
 
-        copy_string(irods::KW_CFG_ENCRYPTION_ALGORITHM, _env.rodsEncryptionAlgorithm);
-        copy_int(irods::KW_CFG_ENCRYPTION_KEY_SIZE, _env.rodsEncryptionKeySize);
-        copy_int(irods::KW_CFG_ENCRYPTION_NUM_HASH_ROUNDS, _env.rodsEncryptionNumHashRounds);
-        copy_int(irods::KW_CFG_ENCRYPTION_SALT_SIZE, _env.rodsEncryptionSaltSize);
+        copy_string(config, irods::KW_CFG_DEFAULT_HASH_SCHEME, _env.rodsDefaultHashScheme);
+        copy_string(config, irods::KW_CFG_MATCH_HASH_POLICY, _env.rodsMatchHashPolicy);
 
-        copy_string(irods::KW_CFG_DEFAULT_HASH_SCHEME, _env.rodsDefaultHashScheme);
-        copy_string(irods::KW_CFG_MATCH_HASH_POLICY, _env.rodsMatchHashPolicy);
-
-        copy_string(irods::KW_CFG_DEFAULT_RESOURCE_NAME, _env.rodsDefResource);
-        copy_int(irods::KW_CFG_CONNECTION_POOL_REFRESH_TIME, _env.irodsConnectionPoolRefreshTime);
+        copy_string(config, irods::KW_CFG_DEFAULT_RESOURCE_NAME, _env.rodsDefResource);
+        copy_int(config, irods::KW_CFG_CONNECTION_POOL_REFRESH_TIME, _env.irodsConnectionPoolRefreshTime);
 
         if (const auto tls_iter = config.find(irods::KW_CFG_TLS_CLIENT); tls_iter != std::end(config)) {
             // clang-format off
@@ -126,11 +131,9 @@ namespace
         }
 
         const auto& advanced_settings = config.at(irods::KW_CFG_ADVANCED_SETTINGS);
-        _env.irodsDefaultNumberTransferThreads =
-            advanced_settings.at(irods::KW_CFG_DEF_NUMBER_TRANSFER_THREADS).get<int>();
-        _env.irodsMaxSizeForSingleBuffer = advanced_settings.at(irods::KW_CFG_MAX_SIZE_FOR_SINGLE_BUFFER).get<int>();
-        _env.irodsTransBufferSizeForParaTrans =
-            advanced_settings.at(irods::KW_CFG_TRANS_BUFFER_SIZE_FOR_PARA_TRANS).get<int>();
+        copy_int(advanced_settings, irods::KW_CFG_DEF_NUMBER_TRANSFER_THREADS, _env.irodsDefaultNumberTransferThreads);
+        copy_int(advanced_settings, irods::KW_CFG_MAX_SIZE_FOR_SINGLE_BUFFER, _env.irodsMaxSizeForSingleBuffer);
+        copy_int(advanced_settings, irods::KW_CFG_TRANS_BUFFER_SIZE_FOR_PARA_TRANS, _env.irodsTransBufferSizeForParaTrans);
 
         if (auto iter = config.find(irods::KW_CFG_PLUGIN_DIRECTORY); iter != std::end(config)) {
             iter->get_ref<const std::string&>().copy(
