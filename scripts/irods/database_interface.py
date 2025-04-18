@@ -152,7 +152,7 @@ def setup_database_config(irods_config):
                 'Database ODBC Driver: %s\n',
                 'Database Host:        %s\n',
                 'Database Port:        %d\n',
-                'Database Name:        %s\n' if irods_config.catalog_database_type != 'oracle' else 'Service Name:  %s\n',
+                'Database Name:        %s\n',
                 'Database Username:    %s\n',
                 'Database Certificate: %s\n' if db_type == 'cockroachdb' else '%s',
                 '-------------------------------------------------------------\n\n',
