@@ -51,6 +51,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <ios> // For std::streamsize
 #include <iterator>
@@ -61,12 +62,6 @@
 #include <thread>
 #include <unordered_map>
 #include <utility>
-
-#ifdef __cpp_lib_filesystem
-#  include <filesystem>
-#else
-#  include <boost/filesystem.hpp>
-#endif
 
 // __has_feature is a Clang specific feature.
 // The preprocessor code below exists so that other compilers can be used (e.g. GCC).
@@ -97,11 +92,7 @@ extern "C" const char* __ubsan_default_options()
 
 namespace
 {
-#ifdef __cpp_lib_filesystem
     namespace fs = std::filesystem;
-#else
-    namespace fs = boost::filesystem;
-#endif
 
     namespace log_ns = irods::experimental::log;
 
@@ -145,6 +136,7 @@ namespace
     auto check_catalog_schema_version() -> std::pair<bool, int>;
     auto setup_signal_handlers() -> int;
     auto wait_for_external_dependent_servers_to_start() -> int;
+    auto set_environment_variables() -> void;
 
     auto handle_shutdown() -> void;
     auto handle_shutdown_graceful() -> void;
@@ -156,16 +148,29 @@ namespace
     auto handle_configuration_reload(bool _write_to_stdout, bool _enable_test_mode) -> void;
     auto launch_delay_server(bool _write_to_stdout, bool _enable_test_mode) -> void;
     auto get_preferred_host(const std::string_view _host) -> std::string;
-    auto migrate_and_launch_delay_server(bool _write_to_stdout,
-                                         bool _enable_test_mode,
-                                         std::chrono::steady_clock::time_point& _time_start) -> void;
+    auto migrate_and_launch_delay_server(std::chrono::steady_clock::time_point& _time_start,
+                                         bool _write_to_stdout,
+                                         bool _enable_test_mode) -> void;
     auto log_stacktrace_files(std::chrono::steady_clock::time_point& _time_start) -> void;
+    auto evict_expired_dns_cache_entries(std::chrono::steady_clock::time_point& _time_start) -> void;
+    auto evict_expired_hostname_cache_entries(std::chrono::steady_clock::time_point& _time_start) -> void;
     auto remove_leftover_agent_info_files_for_ips() -> void;
 
     auto init_access_time_queue() -> bool;
     auto apply_access_time_updates() -> void;
 
     auto is_server_listening_for_connections(const std::string& _host, const std::string& _port) -> int;
+
+    // Returns an invocable object which attaches a unique mutable timepoint member variable to
+    // "_callable". Invocation of the returned object results in the timepoint member being passed
+    // to the wrapped object.
+    template <typename Callable, typename... Args>
+    auto make_periodic(Callable&& _callable, Args&&... _args)
+    {
+        return [callable = std::forward<Callable>(_callable), time_start = std::chrono::steady_clock::now(), _args...]() mutable {
+            return callable(time_start, std::forward<Args>(_args)...);
+        };
+    } // make_periodic
 } // anonymous namespace
 
 auto main(int _argc, char* _argv[]) -> int
@@ -244,6 +249,11 @@ auto main(int _argc, char* _argv[]) -> int
     try {
         const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
         irods::server_properties::instance().init(config_file_path.c_str());
+
+        // TODO Requires a full server restart when they are changed.
+        // We could make a reload cover this, but that means we'd have to handle removal of old env vars,
+        // which doesn't sound like it offers much benefit.
+        set_environment_variables();
 
         // Configure the legacy rodsLog API so messages are written to the legacy log category
         // provided by the new logging API.
@@ -324,6 +334,12 @@ auto main(int _argc, char* _argv[]) -> int
 
         irods::notify_service_manager("READY=1");
 
+        // These are operations which will execute periodically.
+        auto migrate_and_launch_delay_server_periodically = make_periodic(migrate_and_launch_delay_server, write_to_stdout, enable_test_mode);
+        auto log_stacktrace_files_periodically = make_periodic(log_stacktrace_files);
+        auto evict_expired_dns_cache_entries_periodically = make_periodic(evict_expired_dns_cache_entries);
+        auto evict_expired_hostname_cache_entries_periodically = make_periodic(evict_expired_hostname_cache_entries);
+
         // Enter parent process main loop.
         //
         // This process should never introduce threads. Everything it cares about must be handled
@@ -331,14 +347,6 @@ auto main(int _argc, char* _argv[]) -> int
         //
         // THE PARENT PROCESS IS THE ONLY PROCESS THAT SHOULD/CAN REACT TO SIGNALS!
         // EVERYTHING IS PROPAGATED THROUGH/FROM THE PARENT PROCESS!
-
-        // dsm = Short for delay server migration
-        // This is used to control the frequency of the delay server migration logic.
-        auto dsm_time_start = std::chrono::steady_clock::now();
-
-        // stfp = Short for stacktrace file processor
-        // This is used to control the frequency of the stacktrace file processing logic.
-        auto stfp_time_start = dsm_time_start;
 
         while (true) {
             if (g_terminate) {
@@ -364,11 +372,14 @@ auto main(int _argc, char* _argv[]) -> int
                 waitpid(-1, nullptr, WNOHANG);
             }
 
-            log_stacktrace_files(stfp_time_start);
+            log_stacktrace_files_periodically();
             remove_leftover_agent_info_files_for_ips();
             launch_agent_factory(__func__, write_to_stdout, enable_test_mode);
-            migrate_and_launch_delay_server(write_to_stdout, enable_test_mode, dsm_time_start);
+            migrate_and_launch_delay_server_periodically();
             apply_access_time_updates();
+
+            evict_expired_dns_cache_entries_periodically();
+            evict_expired_hostname_cache_entries_periodically();
 
             std::this_thread::sleep_for(std::chrono::seconds{1});
         }
@@ -421,9 +432,6 @@ Options:
                  Write log messages to normal location and
                  log/test_mode_output.log.
       --version  Display version information and exit.
-
-Environment Variables:
-  spLogSql       Set to 1 to log SQL generated by GenQuery1.
 
 Signals:
   SIGTERM        Shutdown the server. Agents will complete the active request
@@ -837,6 +845,18 @@ Signals:
         return -1;
     } // wait_for_external_dependent_servers_to_start
 
+    auto set_environment_variables() -> void
+    {
+        // All environment variables are inherited by the agent factory and delay server due to
+        // the use of execv(), which is exactly what we want.
+        const auto config_handle = irods::server_properties::instance().map();
+        const auto& config = config_handle.get_json();
+        const auto& env_vars = config.at(irods::KW_CFG_ENVIRONMENT_VARIABLES);
+        for (auto&& [key, value] : env_vars.items()) {
+            setenv(key.c_str(), value.get_ref<const std::string&>().c_str(), 1);
+        }
+    } // set_environment_variables
+
     auto handle_shutdown() -> void
     {
         irods::notify_service_manager("STOPPING=1");
@@ -1237,9 +1257,9 @@ Signals:
     } // get_preferred_host
 
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    auto migrate_and_launch_delay_server(bool _write_to_stdout,
-                                         bool _enable_test_mode,
-                                         std::chrono::steady_clock::time_point& _time_start) -> void
+    auto migrate_and_launch_delay_server(std::chrono::steady_clock::time_point& _time_start,
+                                         bool _write_to_stdout,
+                                         bool _enable_test_mode) -> void
     {
         // The host property in server_config.json defines the true identity of the local server.
         // We cannot use localhost or the loopback address because the computer may have multiple
@@ -1460,6 +1480,36 @@ Signals:
             }
         }
     } // log_stacktrace_files
+
+    auto evict_expired_dns_cache_entries(std::chrono::steady_clock::time_point& _time_start) -> void
+    {
+        const auto cache_config = irods::get_advanced_setting<nlohmann::json>(irods::KW_CFG_DNS_CACHE);
+        const auto sleep_time = cache_config.at(irods::KW_CFG_CACHE_CLEARER_SLEEP_TIME_IN_SECONDS).get<int>();
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (now - _time_start < std::chrono::seconds{sleep_time}) {
+            return;
+        }
+
+        _time_start = now;
+        irods::experimental::net::dns_cache::erase_expired_entries();
+    } // evict_expired_dns_cache_entries
+
+    auto evict_expired_hostname_cache_entries(std::chrono::steady_clock::time_point& _time_start) -> void
+    {
+        const auto cache_config = irods::get_advanced_setting<nlohmann::json>(irods::KW_CFG_HOSTNAME_CACHE);
+        const auto sleep_time = cache_config.at(irods::KW_CFG_CACHE_CLEARER_SLEEP_TIME_IN_SECONDS).get<int>();
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (now - _time_start < std::chrono::seconds{sleep_time}) {
+            return;
+        }
+
+        _time_start = now;
+        irods::experimental::net::hostname_cache::erase_expired_entries();
+    } // evict_expired_hostname_cache_entries
 
     auto remove_leftover_agent_info_files_for_ips() -> void
     {

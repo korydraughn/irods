@@ -4684,6 +4684,7 @@ int get_canonical_name(const char *_hostname, char* _buf, size_t _len)
     snprintf(_buf, _len, "%s", p_addrinfo->ai_canonname);
 
     if (CLIENT_PT != ::ProcessType) {
+        // TODO Just fetch the eviction age from server_properties directly.
         const std::chrono::seconds age{irods::get_dns_cache_eviction_age()};
         const auto inserted = dnsc::insert_or_assign(key, *p_addrinfo, age);
 

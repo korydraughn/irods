@@ -489,6 +489,7 @@ sockOpenForInConn( rsComm_t *rsComm, int *portNum, char **addr, int proto ) {
                     std::strncpy(*addr, alias->data(), alias->size());
                 }
 
+                // TODO Just fetch the eviction age from server_properties directly.
                 const std::chrono::seconds age{irods::get_hostname_cache_eviction_age()};
                 const auto inserted = hnc::insert_or_assign("localhost", *addr, age);
 
