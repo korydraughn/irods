@@ -399,7 +399,7 @@ def setup_server_config(irods_config):
             irods_config.server_config['catalog_provider_hosts'] = [irods_config.server_config['host']]
         elif irods_config.is_consumer:
             irods_config.server_config['catalog_provider_hosts'] = [irods.lib.prompt(
-                'iRODS Catalog Provider\'s FQDN, hostname, or IP (253 characters max)',
+                'iRODS Catalog Provider FQDN, hostname, or IP (253 characters max)',
                 input_filter=irods.lib.character_count_filter(minimum=1, maximum=253, field='iRODS catalog provider host'))]
 
         irods_config.server_config['zone_port'] = irods.lib.default_prompt(
