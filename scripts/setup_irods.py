@@ -434,8 +434,8 @@ def setup_server_config(irods_config):
                 '-------------------------------------------------------------\n\n',
                 'Please confirm']) % (
                     irods_config.server_config['zone_name'],
-                    irods_config.server_config['catalog_provider_hosts'][0] if irods_config.is_consumer else '',
                     irods_config.server_config['zone_port'],
+                    irods_config.server_config['catalog_provider_hosts'][0] if irods_config.is_consumer else '',
                     irods_config.server_config['server_port_range_start'],
                     irods_config.server_config['server_port_range_end'],
                     irods_config.server_config['zone_user']
