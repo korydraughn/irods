@@ -204,7 +204,7 @@ def setup_server_host(irods_config):
     l = logging.getLogger(__name__)
 
     irods_config.server_config['host'] = irods.lib.default_prompt(
-        'iRODS server\'s FQDN, hostname, or IP (253 characters max)',
+        'iRODS FQDN, hostname, or IP (253 characters max)',
         default=[irods.lib.get_hostname()],
         input_filter=irods.lib.character_count_filter(minimum=1, maximum=253, field='iRODS server host'))
 
@@ -227,7 +227,7 @@ def determine_server_role(irods_config):
 
     # Get the new value from user via default_prompt
     irods_config.server_config['catalog_service_role'] = irods.lib.default_prompt(
-        'iRODS server\'s role',
+        'iRODS role',
         default=catalog_service_roles,
         previous=catalog_service_roles.index(default_catalog_service_role) + 1,
         input_filter=irods.lib.set_filter(catalog_service_roles, field='Server role'))
@@ -270,7 +270,7 @@ def get_and_create_default_resource_vault(irods_config):
     l.info(irods.lib.get_header('Setting up default vault'))
 
     default_resource_directory = irods.lib.default_prompt(
-        'iRODS server\'s vault directory',
+        'iRODS vault directory',
         default=[os.path.join(irods_config.irods_directory, 'Vault')])
     if not os.path.exists(default_resource_directory):
         os.makedirs(default_resource_directory, mode=0o700)
@@ -282,20 +282,20 @@ def get_irods_user_and_group(irods_config):
     l.info('The iRODS service account name needs to be defined.')
     if pwd.getpwnam(irods_config.irods_user).pw_uid == 0:
         irods_user = irods.lib.default_prompt(
-            'iRODS server\'s service account username',
+            'iRODS service account username',
             default=['irods'],
             input_filter=irods.lib.character_count_filter(minimum=1, field='iRODS Service Account Username'))
         irods_group = irods.lib.default_prompt(
-            'iRODS server\'s service account group',
+            'iRODS service account group',
             default=[irods_user],
             input_filter=irods.lib.character_count_filter(minimum=1, field='iRODS Service Account Group'))
     else:
         irods_user = irods.lib.default_prompt(
-            'iRODS server\'s service account username',
+            'iRODS service account username',
             default=[irods_config.irods_user],
             input_filter=irods.lib.character_count_filter(minimum=1, field='iRODS Service Account Username'))
         irods_group = irods.lib.default_prompt(
-            'iRODS server\'s service account group',
+            'iRODS service account group',
             default=[irods_config.irods_group],
             input_filter=irods.lib.character_count_filter(minimum=1, field='iRODS Service Account Group'))
     return (irods_user, irods_group)
@@ -391,7 +391,7 @@ def setup_server_config(irods_config):
 
     while True:
         irods_config.server_config['zone_name'] = irods.lib.default_prompt(
-            'iRODS server\'s zone name',
+            'iRODS zone name',
             default=[irods_config.server_config.get('zone_name', 'tempZone')],
             input_filter=irods.lib.character_count_filter(minimum=1, field='Zone name'))
 
@@ -408,29 +408,29 @@ def setup_server_config(irods_config):
             input_filter=irods.lib.int_filter(field='Zone port'))
 
         irods_config.server_config['server_port_range_start'] = irods.lib.default_prompt(
-            'iRODS server\'s parallel transfer port range (begin)',
+            'iRODS parallel transfer port range (begin)',
             default=[irods_config.server_config.get('server_port_range_start', 20000)],
             input_filter=irods.lib.int_filter(field='Parallel transfer port'))
 
         irods_config.server_config['server_port_range_end'] = irods.lib.default_prompt(
-            'iRODS server\'s parallel transfer port range (end)',
+            'iRODS parallel transfer port range (end)',
             default=[irods_config.server_config.get('server_port_range_end', 20199)],
             input_filter=irods.lib.int_filter(field='Parallel transfer port'))
 
         irods_config.server_config['zone_user'] = irods.lib.default_prompt(
-            'iRODS server\'s administrator username',
+            'iRODS administrator username',
             default=[irods_config.server_config.get('zone_user', 'rods')],
-            input_filter=irods.lib.character_count_filter(minimum=1, field='iRODS server\'s administrator username'))
+            input_filter=irods.lib.character_count_filter(minimum=1, field='iRODS administrator username'))
 
         confirmation_message = ''.join([
                 '\n',
                 '-------------------------------------------------------------\n',
                 'iRODS Zone Name:                            %s\n',
+                'iRODS Zone Port:                            %d\n',
                 'iRODS Catalog Provider Host:                %s\n' if irods_config.is_consumer else '%s',
-                'iRODS Server Port:                          %d\n',
                 'iRODS Parallel Transfer Port Range (begin): %d\n',
                 'iRODS Parallel Transfer Port Range (end):   %d\n',
-                'iRODS Server Administrator:                 %s\n',
+                'iRODS Administrator:                        %s\n',
                 '-------------------------------------------------------------\n\n',
                 'Please confirm']) % (
                     irods_config.server_config['zone_name'],
@@ -445,12 +445,12 @@ def setup_server_config(irods_config):
             break
 
     irods_config.server_config['zone_key'] = irods.lib.prompt(
-        'iRODS server\'s zone key',
+        'iRODS zone key',
         input_filter=irods.lib.character_count_filter(minimum=1, field='Zone key'),
         echo=False)
 
     irods_config.server_config['negotiation_key'] = irods.lib.prompt(
-        'iRODS server\'s negotiation key (32 characters)',
+        'iRODS negotiation key (32 characters)',
         input_filter=irods.lib.character_count_filter(minimum=32, maximum=32, field='Negotiation key'),
         echo=False)
 
@@ -463,7 +463,7 @@ def setup_client_environment(irods_config):
     print('\n', end='')
 
     irods_config.admin_password = irods.lib.prompt(
-        'iRODS server\'s administrator password',
+        'iRODS administrator password',
         input_filter=irods.lib.character_count_filter(minimum=3, maximum=maximum_password_length, field='Admin password'),
         echo=False)
 

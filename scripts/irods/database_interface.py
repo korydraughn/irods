@@ -118,12 +118,12 @@ def setup_database_config(irods_config):
                     oracle_home=os.getenv('ORACLE_HOME', None)))
 
         irods_config.database_config['db_host'] = lib.default_prompt(
-            'Database server\'s FQDN, hostname, or IP address (253 characters max)',
+            'Database FQDN, hostname, or IP address (253 characters max)',
             default=[irods_config.database_config.get('db_host', 'localhost')],
             input_filter=lib.character_count_filter(minimum=1, maximum=253, field='Database server host'))
 
         irods_config.database_config['db_port'] = lib.default_prompt(
-            'Database server\'s port',
+            'Database port',
             default=[irods_config.database_config.get('db_port', database_connect.get_default_port_for_database_type(irods_config.catalog_database_type))],
             input_filter=lib.int_filter(field='Database server port'))
 
