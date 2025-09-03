@@ -104,15 +104,17 @@ namespace
     volatile std::sig_atomic_t g_terminate_graceful = 0;
     volatile std::sig_atomic_t g_reload_config = 0;
     volatile std::sig_atomic_t g_agent_factory_initialized = 0;
+    volatile std::sig_atomic_t g_web_console_initialized = 0;
     // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
     // This global variable MUST always hold the max number of child processes forkable
     // by the main server process. It guarantees that the main server process reaps children
     // it's lost due to desync issues stemming from fork(), exec() and kill().
-    const int g_max_number_of_child_processes = 2;
+    const int g_max_number_of_child_processes = 3;
 
     pid_t g_pid_af = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     pid_t g_pid_ds = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    pid_t g_pid_wc = 0; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
     // Indicates whether the logging system has been initialized. This is meant to give
     // systems, which run before and after the logging system is ready, a way to determine
@@ -151,6 +153,7 @@ namespace
     auto launch_agent_factory(const char* _src_func, bool _write_to_stdout, bool _enable_test_mode) -> bool;
     auto handle_configuration_reload(bool _write_to_stdout, bool _enable_test_mode) -> void;
     auto launch_delay_server(bool _write_to_stdout, bool _enable_test_mode) -> void;
+    auto launch_web_console(const char* _src_func, bool _write_to_stdout, bool _enable_test_mode) -> bool;
     auto get_preferred_host(const std::string_view _host) -> std::string;
     auto migrate_and_launch_delay_server(bool _write_to_stdout, bool _enable_test_mode) -> void;
     auto log_stacktrace_files() -> void;
@@ -366,6 +369,7 @@ auto main(int _argc, char* _argv[]) -> int
             remove_leftover_agent_info_files_for_ips();
             launch_agent_factory(__func__, write_to_stdout, enable_test_mode);
             migrate_and_launch_delay_server(write_to_stdout, enable_test_mode);
+            launch_web_console(__func__, write_to_stdout, enable_test_mode);
             apply_access_time_updates();
             evict_expired_dns_cache_entries();
             evict_expired_hostname_cache_entries();
@@ -868,12 +872,21 @@ Signals:
             kill(g_pid_ds, SIGTERM);
         }
 
+        if (g_pid_wc > 0) {
+            kill(g_pid_wc, SIGTERM);
+        }
+
         waitpid(g_pid_af, nullptr, 0);
         log_server::info("{}: Agent Factory shutdown complete.", __func__);
 
         if (g_pid_ds > 0) {
             waitpid(g_pid_ds, nullptr, 0);
             log_server::info("{}: Delay Server shutdown complete.", __func__);
+        }
+
+        if (g_pid_wc > 0) {
+            waitpid(g_pid_wc, nullptr, 0);
+            log_server::info("{}: Web Console shutdown complete.", __func__);
         }
     } // handle_shutdown
 
@@ -887,12 +900,21 @@ Signals:
             kill(g_pid_ds, SIGTERM);
         }
 
+        if (g_pid_wc > 0) {
+            kill(g_pid_wc, SIGTERM);
+        }
+
         waitpid(g_pid_af, nullptr, 0);
         log_server::info("{}: Agent Factory shutdown complete.", __func__);
 
         if (g_pid_ds > 0) {
             waitpid(g_pid_ds, nullptr, 0);
             log_server::info("{}: Delay Server shutdown complete.", __func__);
+        }
+
+        if (g_pid_wc > 0) {
+            waitpid(g_pid_wc, nullptr, 0);
+            log_server::info("{}: Web Console shutdown complete.", __func__);
         }
     } // handle_shutdown_graceful
 
@@ -1049,6 +1071,108 @@ Signals:
         return true;
     } // launch_agent_factory
 
+    auto launch_web_console(const char* _src_func, bool _write_to_stdout, bool _enable_test_mode) -> bool
+    {
+        auto launch = (0 == g_pid_wc);
+
+        if (g_pid_wc > 0) {
+            if (const auto ec = kill(g_pid_wc, 0); ec == -1) {
+                if (EPERM == errno || ESRCH == errno) {
+                    launch = true;
+                    g_pid_wc = 0;
+                }
+            }
+        }
+
+        if (!launch) {
+            return false;
+        }
+
+        log_server::info("{}: Launching Web Console.", _src_func);
+
+        // If we're planning on calling one of the functions from the exec-family,
+        // then we're only allowed to use async-signal-safe functions following the call
+        // to fork(). To avoid potential issues, we build up the argument list before
+        // doing the fork-exec.
+
+        auto binary = (irods::get_irods_sbin_directory() / "irodsWebConsole").string();
+        //std::string hn_shm_name{irods::experimental::net::hostname_cache::shared_memory_name()};
+        //std::string dns_shm_name{irods::experimental::net::dns_cache::shared_memory_name()};
+        //std::string atime_queue_shm_name{irods::access_time_queue::shared_memory_name()};
+
+        // The access time resolution requires special care because it must accept negative integer
+        // values. However, Boost.Program_options will not accept negative integer values as positional
+        // arguments because it treats anything with a leading hyphen as an option name. To get around
+        // this, we have to pass the access time resolution via a non-positional option.
+        //std::string atime_res_opt = "--atime-resolution";
+
+        std::vector<char*> args{binary.data()};
+                                //hn_shm_name.data(),
+                                //dns_shm_name.data(),
+                                //atime_queue_shm_name.data(),
+                                //atime_res_opt.data(),
+                                //g_atime_resolution_in_seconds.data()};
+
+        std::string stdout_opt = "--stdout";
+        if (_write_to_stdout) {
+            args.push_back(stdout_opt.data());
+        }
+
+        std::string test_mode_opt = "--test-mode";
+        if (_enable_test_mode) {
+            args.push_back(test_mode_opt.data());
+        }
+
+        args.push_back(nullptr);
+
+        // Reset the initialization flag for the Web Console. This flag is how we know when the Web
+        // Console is ready to accept requests. This flag will be set to 1 when the Web Console
+        // sends the SIGUSR2 signal to the main server process.
+        g_web_console_initialized = 0;
+
+        g_pid_wc = fork();
+
+        if (0 == g_pid_wc) {
+            execv(args[0], args.data());
+
+            // If execv() fails, the POSIX standard recommends using _exit() instead of exit() to avoid
+            // flushing stdio buffers and handlers registered by the parent.
+            //
+            // In the case of C++, this is necessary to avoid triggering destructors. Triggering a destructor
+            // could result in assertions made by the struct/class being violatied. For some data types,
+            // violating an assertion results in program termination (i.e. SIGABRT).
+            _exit(1);
+        }
+        else if (-1 == g_pid_wc) {
+            g_pid_wc = 0;
+            log_server::error("{}: Could not launch Web Console.", __func__);
+            return false;
+        }
+
+        g_web_console_initialized = 1;
+
+        log_server::info("{}: Web Console PID = [{}].", __func__, g_pid_wc);
+
+#if 0
+        // Wait for the Web Console's signal that it has completed initialization. This effectively
+        // means the Web Console has opened its listening socket and is entering its main loop.
+        while (0 == g_web_console_initialized) {
+            // If this loop cannot make progress for some reason, allow the admin to stop the server
+            // without needing SIGKILL.
+            if (g_terminate || g_terminate_graceful) {
+                log_server::info(
+                    "{}: Received shutdown instruction. Ending wait loop for Web Console initialization.", __func__);
+                return false;
+            }
+
+            log_server::debug("{}: Waiting for Web Console to complete initialization.", __func__);
+            std::this_thread::sleep_for(std::chrono::milliseconds{250});
+        }
+#endif
+
+        return true;
+    } // launch_web_console
+
     auto handle_configuration_reload(bool _write_to_stdout, bool _enable_test_mode) -> void
     {
         irods::at_scope_exit reset_reload_flag{[] { g_reload_config = 0; }};
@@ -1152,6 +1276,11 @@ Signals:
             return;
         }
 
+        if (g_pid_wc > 0) {
+            log_server::info("{}: Sending SIGTERM to Web Console.", __func__);
+            kill(g_pid_wc, SIGTERM);
+        }
+
         if (g_pid_ds > 0) {
             log_server::info("{}: Sending SIGTERM to delay server.", __func__);
             kill(g_pid_ds, SIGTERM);
@@ -1159,6 +1288,9 @@ Signals:
 
         log_server::info("{}: Sending SIGQUIT to agent factory.", __func__);
         kill(g_pid_af, SIGQUIT);
+
+        // TODO Leave good comment for web console. Is this needed?
+        g_pid_wc = 0;
 
         // Reset the variable holding the delay server's PID so the delay server migration logic can handle
         // the relaunching of the delay server for us.
@@ -1200,6 +1332,9 @@ Signals:
         // Launch a new agent factory to serve client requests.
         // The previous agent factory is allowed to linger around until its children terminate.
         launch_agent_factory(__func__, _write_to_stdout, _enable_test_mode);
+
+        // Launch a new Web Console to serve client requests.
+        launch_web_console(__func__, _write_to_stdout, _enable_test_mode);
 
         // We do not need to manually launch the delay server because the delay server migration
         // logic will handle that for us.

@@ -24,6 +24,7 @@ add_subdirectory(main_server)
 add_subdirectory(hostname_resolves_to_local_address)
 add_subdirectory(delay_server)
 add_subdirectory(harness)
+add_subdirectory(web_console)
 
 target_link_objects(
   irods_server
