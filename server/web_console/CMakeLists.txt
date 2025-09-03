@@ -9,6 +9,7 @@ target_link_libraries(
 # irods_common
 # irods_plugin_dependencies
 # irods_server
+  irods_client
   "${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_chrono.so"
   "${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_filesystem.so"
   "${IRODS_EXTERNALS_FULLPATH_BOOST}/lib/libboost_program_options.so"
@@ -29,7 +30,7 @@ target_compile_definitions(
   PRIVATE
   ${IRODS_COMPILE_DEFINITIONS_PRIVATE}
 # ENABLE_RE
-  IRODS_ENABLE_SYSLOG
+# IRODS_ENABLE_SYSLOG
 )
 
 add_dependencies(all-server irodsWebConsole)

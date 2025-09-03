@@ -13,6 +13,20 @@
 //
 //------------------------------------------------------------------------------
 
+#include "irods/rodsClient.h"
+#include <irods/irods_at_scope_exit.hpp>
+#include <irods/dns_cache.hpp>
+#include <irods/hostname_cache.hpp>
+#include <irods/irods_configuration_keywords.hpp>
+#include <irods/irods_default_paths.hpp>
+#include <irods/irods_server_properties.hpp>
+#include <irods/client_connection.hpp>
+#include <irods/irods_query.hpp>
+#include <irods/query_builder.hpp>
+#include <irods/rcGlobalExtern.h>
+#include <nlohmann/json.hpp>
+#include <fstream>
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
@@ -156,8 +170,19 @@ handle_request(
 
     // Build the path to the requested file
     std::string path = path_cat(doc_root, req.target());
-    if(req.target().back() == '/')
+    if(req.target().back() == '/') {
         path.append("index.html");
+
+        irods::experimental::client_connection conn;
+        irods::experimental::query_builder qb;
+        qb.type(irods::query_type::specific);
+        auto array = nlohmann::json::array();
+        for (auto&& row : qb.build(static_cast<RcComm&>(conn), "access_minute")) {
+            array.push_back(row);
+        }
+
+        std::ofstream{"/etc/irods/web_console/minute.json"} << array.dump(4);
+    }
 
     // Attempt to open the file
     beast::error_code ec;
@@ -260,6 +285,45 @@ int main(int argc, char* argv[])
 {
     try
     {
+        load_client_api_plugins();
+
+        // Disabled for now. The current objective is to demonstrate returning
+        // JSON information around access time. We can convert to a server-side
+        // implementation once we've demonstrated success.
+#if 0
+        ::ProcessType = SERVER_PT;
+
+        const auto config_file_path = irods::get_irods_config_directory() / "server_config.json";
+        irods::server_properties::instance().init(config_file_path.c_str());
+
+        // Configure the legacy rodsLog API so messages are written to the legacy log category
+        // provided by the new logging API.
+        rodsLogLevel(rodsLog_derive_verbosity_level_from_legacy_log_level());
+        rodsLogSqlReq(0);
+
+        init_logger(getppid(), write_to_stdout /* write_to_stdout */, /* enable_test_mode */);
+
+        namespace hnc = irods::experimental::net::hostname_cache;
+
+        // TODO Make main server process forward shmem names to web console.
+        //irods::experimental::net::hostname_cache::init_no_create(hostname_cache_shm_name);
+        //irods::experimental::net::dns_cache::init_no_create(dns_cache_shm_name);
+
+        {
+            const auto cache_config = irods::get_advanced_setting<nlohmann::json>(irods::KW_CFG_HOSTNAME_CACHE);
+            hnc::init("irods_hostname_cache_web_console_unused", cache_config.at(irods::KW_CFG_SHARED_MEMORY_SIZE_IN_BYTES).get<int>());
+        }
+        irods::at_scope_exit deinit_hostname_cache{[] { hnc::deinit(); }};
+
+        namespace dnsc = irods::experimental::net::dns_cache;
+
+        {
+            const auto cache_config = irods::get_advanced_setting<nlohmann::json>(irods::KW_CFG_DNS_CACHE);
+            dnsc::init("irods_dns_cache_web_console_unused", cache_config.at(irods::KW_CFG_SHARED_MEMORY_SIZE_IN_BYTES).get<int>());
+        }
+        irods::at_scope_exit deinit_dns_cache{[] { dnsc::deinit(); }};
+#endif
+
         // Check command line arguments.
         //if (argc != 4)
         //{
