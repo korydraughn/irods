@@ -13,6 +13,12 @@
 //
 //------------------------------------------------------------------------------
 
+#include <irods/rodsClient.h>
+#include <irods/client_connection.hpp>
+#include <irods/query_builder.hpp>
+#include <nlohmann/json.hpp>
+#include <fstream>
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
@@ -156,8 +162,19 @@ handle_request(
 
     // Build the path to the requested file
     std::string path = path_cat(doc_root, req.target());
-    if(req.target().back() == '/')
+    if(req.target().back() == '/') {
         path.append("index.html");
+
+        irods::experimental::client_connection conn;
+        irods::experimental::query_builder qb;
+        qb.type(irods::query_type::specific);
+        auto array = nlohmann::json::array();
+        for (auto&& row : qb.build(static_cast<RcComm&>(conn), "access_minute")) {
+            array.push_back(row);
+        }
+
+        std::ofstream{"/etc/irods/web_console/minute.json"} << array.dump(4);
+    }
 
     // Attempt to open the file
     beast::error_code ec;
@@ -260,15 +277,8 @@ int main(int argc, char* argv[])
 {
     try
     {
-        // Check command line arguments.
-        //if (argc != 4)
-        //{
-        //    std::cerr <<
-        //        "Usage: http-server-sync <address> <port> <doc_root>\n" <<
-        //        "Example:\n" <<
-        //        "    http-server-sync 0.0.0.0 8080 .\n";
-        //    return EXIT_FAILURE;
-        //}
+        load_client_api_plugins();
+
         auto const address = net::ip::make_address("0.0.0.0");
         auto const port = 1248;
         auto const doc_root = std::make_shared<std::string>("/etc/irods/web_console");
