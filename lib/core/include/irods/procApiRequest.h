@@ -39,22 +39,25 @@ int procApiRequest(rcComm_t *conn,
 
 /// Executes an iRODS API request.
 ///
-/// Grants the caller control over which packing instructions are used when serializing the input
-/// data structures. This form of procApiRequest is useful for maintaining backward
-/// compartibility.
+/// Grants the caller control over which packing instructions are used during serializing and 
+/// deserialization of the data structures. This form of procApiRequest is useful for maintaining
+/// backward compartibility.
 ///
 /// \param[in]  conn        The RcComm used for communication.
 /// \param[in]  apiNumber   The integer which identifies the API to execute. See apiNumberData.h.
-/// \param[in]  packingInstruction \parblock The packing instruction to use for serialization.
-///                         Cannot be \p NULL. \endparblock
 /// \param[in]  packingInstructionTable \parblock The table holding various packing instructions.
 ///                         All packing instructions needed for serialization of the
 ///                         data structure must be defined in the table. If passed \p NULL, the
 ///                         global packing instruction table will be used. \endparblock
+/// \param[in]  inputPackingInstruction \parblock The packing instruction to use for serialization.
+///                         Cannot be \p NULL. \endparblock
 /// \param[in]  inputStruct \parblock The data to serialize, typically an input data structure.
 ///                         Can be passed \p NULL if no input is necessary. \endparblock
 /// \param[in]  inputBsBBuf The byte buffer to stream to the server.
 ///                         Can be passed \p NULL if no input byte stream is necessary.
+///                         \endparblock
+/// \param[in]  outputPackingInstruction \parblock The packing instruction to use for
+///                         deserialization. Can be set to \p NULL if no output is expected.
 ///                         \endparblock
 /// \param[out] outStruct   \parblock The output data structure to be filled by the server. The
 ///                         output will be heap-allocated and assigned to the pointer. Can be
@@ -69,10 +72,11 @@ int procApiRequest(rcComm_t *conn,
 /// \since 4.3.5
 int procApiRequest_raw(rcComm_t* conn,
                        int apiNumber,
-                       const char* packingInstruction,
                        const PackingInstruction* packingInstructionTable,
+                       const char* inputPackingInstruction,
                        const void* inputStruct,
                        const bytesBuf_t* inputBsBBuf,
+                       const char* outputPackingInstruction,
                        void** outStruct,
                        bytesBuf_t* outBsBBuf);
 

@@ -24,8 +24,8 @@ namespace
 {
     auto send_api_request(rcComm_t* conn,
                           int apiInx,
-                          const char* _packingInstruction,
                           const PackingInstruction* _packingInstructionTable,
+                          const char* _packingInstruction,
                           const void* inputStruct,
                           const bytesBuf_t* inputBsBBuf) -> int
     {
@@ -127,6 +127,196 @@ namespace
 
         return status;
     } // send_api_request
+
+int procApiReply_raw(rcComm_t *conn,
+                 int apiInx,
+                 const PackingInstruction* packingInstructionTable,
+                 const char* outputPackingInstruction,
+                 void **outStruct,
+                 bytesBuf_t *outBsBBuf,
+                 msgHeader_t *myHeader,
+                 bytesBuf_t *outStructBBuf,
+                 bytesBuf_t *myOutBsBBuf,
+                 bytesBuf_t *errorBBuf)
+{
+    if ( errorBBuf->len > 0 ) {
+        int status = unpack_struct(errorBBuf->buf,
+                               static_cast<void**>(static_cast<void*>(&conn->rError)),
+                               "RError_PI", RodsPackTable, conn->irodsProt,
+                               conn->svrVersion->relVersion);
+        if ( status < 0 ) {
+            rodsLogError( LOG_ERROR, status,
+                          "readAndProcApiReply:unpack_struct error. status = %d",
+                          status );
+        }
+    }
+
+    int retVal = myHeader->intInfo;
+
+    /* some sanity check */
+
+    irods::api_entry_table& RcApiTable = irods::get_client_api_table();
+    if ( RcApiTable[apiInx]->outPackInstruct != nullptr && outStruct == nullptr ) {
+        rodsLog( LOG_ERROR,
+                 "readAndProcApiReply: outStruct error for C apiNumber %d",
+                 RcApiTable[apiInx]->apiNumber );
+
+        if ( retVal < 0 ) {
+            return retVal;
+        }
+
+        return USER_API_INPUT_ERR;
+    }
+
+    if ( RcApiTable[apiInx]->outBsFlag > 0 && outBsBBuf == nullptr ) {
+        rodsLog( LOG_ERROR,
+                 "readAndProcApiReply: outBsBBuf error for D apiNumber %d",
+                 RcApiTable[apiInx]->apiNumber );
+        if ( retVal < 0 ) {
+            return retVal;
+        }
+
+        return USER_API_INPUT_ERR;
+    }
+
+    /* handle outStruct */
+    if ( outStructBBuf->len > 0 ) {
+        if ( outStruct != nullptr ) {
+            int status = unpack_struct(outStructBBuf->buf, outStruct,
+                                   outputPackingInstruction, packingInstructionTable,
+                                   conn->irodsProt, conn->svrVersion->relVersion);
+            if ( status < 0 ) {
+                rodsLogError( LOG_ERROR, status,
+                              "readAndProcApiReply:unpack_struct error. status = %d",
+                              status );
+
+                if ( retVal < 0 ) {
+                    return retVal;
+                }
+
+                return status;
+            }
+        }
+        else {
+            rodsLog( LOG_ERROR,
+                     "readAndProcApiReply: got unneeded outStruct for apiNumber %d",
+                     RcApiTable[apiInx]->apiNumber );
+        }
+    }
+
+    if ( myOutBsBBuf != nullptr && myOutBsBBuf->len > 0 ) {
+        if ( outBsBBuf != nullptr ) {
+            /* copy to out */
+            *outBsBBuf = *myOutBsBBuf;
+            memset( myOutBsBBuf, 0, sizeof( bytesBuf_t ) );
+        }
+        else {
+            rodsLog( LOG_ERROR,
+                     "readAndProcApiReply: got unneeded outBsBBuf for apiNumber %d",
+                     RcApiTable[apiInx]->apiNumber );
+        }
+    }
+
+    return retVal;
+} // procApiReply_raw
+
+int readAndProcApiReply_raw( rcComm_t *conn, int apiInx, const PackingInstruction* packingInstructionTable,
+        const char* outputPackingInstruction, void **outStruct, bytesBuf_t *outBsBBuf )
+{
+    int status = 0;
+    msgHeader_t myHeader;
+
+    /* bytesBuf_t outStructBBuf, errorBBuf, myOutBsBBuf; */
+    bytesBuf_t outStructBBuf;
+    bytesBuf_t errorBBuf;
+
+    cliChkReconnAtReadStart( conn );
+
+    memset( &outStructBBuf, 0, sizeof( bytesBuf_t ) );
+    memset( &errorBBuf, 0, sizeof( bytesBuf_t ) );
+    /* memset (&myOutBsBBuf, 0, sizeof (bytesBuf_t)); */
+
+    /* some sanity check */
+
+    irods::api_entry_table& RcApiTable = irods::get_client_api_table();
+    if ( outputPackingInstruction != nullptr && outStruct == nullptr ) {
+        rodsLog( LOG_ERROR, "%s: outStruct error for A apiNumber %d", __func__, RcApiTable[apiInx]->apiNumber );
+        cliChkReconnAtReadEnd( conn );
+        return USER_API_INPUT_ERR;
+    }
+
+    // TODO Do I need to require the outBsFlag be passed in too? \
+    // Then again, RcApiTable[apiInx]->outBsFlag is the apidef_t information. \
+    // Changing the packing instruction DOES NOT affect the output byte stream, so I think this is fine as is. \
+    // What if an API didn't originally have an output byte stream? Is it a different API if it does in the future? This feels like a different API. \
+    // Seems we need to define rules around all of this. Changing packing instructions clearly has downsides/challenges. \
+    // For now, let's move under the assumption that only the packing instructions are modified - i.e. byte stream properties never deviate from the original implementation.
+    if ( RcApiTable[apiInx]->outBsFlag > 0 && outBsBBuf == nullptr ) {
+        rodsLog( LOG_ERROR, "%s: outBsBBuf error for B apiNumber %d", __func__, RcApiTable[apiInx]->apiNumber );
+        cliChkReconnAtReadEnd( conn );
+        return USER_API_INPUT_ERR;
+    }
+
+    irods::network_object_ptr net_obj;
+    irods::error ret = irods::network_factory( conn, net_obj );
+    if ( !ret.ok() ) {
+        irods::log( PASS( ret ) );
+        return static_cast<int>(ret.code());
+    }
+
+    ret = readMsgHeader( net_obj, &myHeader, nullptr );
+    if ( !ret.ok() ) {
+#ifdef RODS_CLERVER
+        irods::log( PASS( ret ) );
+#else
+        if (ret.code() == SYS_HEADER_READ_LEN_ERR) {
+            ret = CODE(SYS_INTERNAL_ERR);
+        }
+#endif
+        if ( conn->svrVersion != nullptr && conn->svrVersion->reconnPort > 0 ) {
+            int savedStatus = static_cast<int>(ret.code());
+            /* try again. the socket might have changed */
+            conn->thread_ctx->lock->lock();
+            rodsLog( LOG_DEBUG,
+                     "readAndProcClientMsg:svrSwitchConnect.cliState = %d,agState=%d",
+                     conn->clientState, conn->agentState );
+            cliSwitchConnect( conn );
+            conn->thread_ctx->lock->unlock();
+            ret = readMsgHeader( net_obj, &myHeader, nullptr );
+
+            if ( !ret.ok() ) {
+                cliChkReconnAtReadEnd( conn );
+                return savedStatus;
+            }
+        }
+        else {
+            cliChkReconnAtReadEnd( conn );
+            return static_cast<int>(ret.code());
+        }
+
+    } // if !ret.ok
+
+    ret = readMsgBody( net_obj, &myHeader, &outStructBBuf, outBsBBuf,
+                       &errorBBuf, conn->irodsProt, nullptr );
+    if ( !ret.ok() ) {
+        irods::log( PASS( ret ) );
+        cliChkReconnAtReadEnd( conn );
+        return status;
+    } // if !ret.ok
+
+    cliChkReconnAtReadEnd( conn );
+
+    if ( strcmp( myHeader.type, RODS_API_REPLY_T ) == 0 ) {
+        status = procApiReply_raw( conn, apiInx, packingInstructionTable, outputPackingInstruction, outStruct, outBsBBuf,
+                               &myHeader, &outStructBBuf, nullptr, &errorBBuf );
+    }
+
+    clearBBuf( &outStructBBuf );
+    /* clearBBuf (&myOutBsBBuf); */
+    clearBBuf( &errorBBuf );
+
+    return status;
+} // readAndProcApiReply_raw
 } // anonymous namespace
 
 int procApiRequest(rcComm_t *conn,
@@ -167,10 +357,11 @@ int procApiRequest(rcComm_t *conn,
 
 int procApiRequest_raw(rcComm_t* conn,
                        int apiNumber,
-                       const char* packingInstruction,
                        const PackingInstruction* packingInstructionTable,
+                       const char* inputPackingInstruction,
                        const void* inputStruct,
                        const bytesBuf_t* inputBsBBuf,
+                       const char* outputPackingInstruction,
                        void** outStruct,
                        bytesBuf_t* outBsBBuf)
 {
@@ -189,7 +380,7 @@ int procApiRequest_raw(rcComm_t* conn,
     }
 
     if (const auto ec =
-            send_api_request(conn, apiInx, packingInstruction, packingInstructionTable, inputStruct, inputBsBBuf);
+            send_api_request(conn, apiInx, packingInstructionTable, inputPackingInstruction, inputStruct, inputBsBBuf);
         ec < 0)
     {
         rodsLogError(LOG_DEBUG, ec, "procApiRequest: sendApiRequest failed. status = %d", ec);
@@ -198,7 +389,7 @@ int procApiRequest_raw(rcComm_t* conn,
 
     conn->apiInx = apiInx;
 
-    return readAndProcApiReply(conn, apiInx, outStruct, outBsBBuf);
+    return readAndProcApiReply_raw(conn, apiInx, packingInstructionTable, outputPackingInstruction, outStruct, outBsBBuf);
 }
 
 int branchReadAndProcApiReply( rcComm_t *conn, int apiNumber, void **outStruct, bytesBuf_t *outBsBBuf )
@@ -587,4 +778,3 @@ int apiTableLookup(int apiNumber)
 
     return SYS_UNMATCHED_API_NUM;
 }
-
