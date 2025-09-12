@@ -72,7 +72,7 @@ int procApiRequest(rcComm_t *conn,
 /// \since 4.3.5
 int procApiRequest_raw(rcComm_t* conn,
                        int apiNumber,
-                       const PackingInstruction* packingInstructionTable,
+                       const struct PackingInstruction* packingInstructionTable,
                        const char* inputPackingInstruction,
                        const void* inputStruct,
                        const bytesBuf_t* inputBsBBuf,
