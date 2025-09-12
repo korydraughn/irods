@@ -4,6 +4,7 @@
 #include "irods/client_connection.hpp"
 #include "irods/packStruct.h"
 #include "irods/procApiRequest.h"
+#include "irods/rodsClient.h"
 #include "irods/rodsErrorTable.h"
 
 #include <algorithm>
@@ -13,6 +14,8 @@
 // NO LINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("procApiRequest_raw allows overriding packing instructions")
 {
+    load_client_api_plugins();
+
     struct api_output {
         int serverType;             // RCAT_ENABLED or RCAT_NOT_ENABLED
         uint serverBootTime;
