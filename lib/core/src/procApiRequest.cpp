@@ -20,23 +20,115 @@
 
 #include "irods/irods_threads.hpp"
 
-/* procApiRequest - This is the main function used by the client API
- * function to issue API requests and receive output returned from
- * the server.
- * rcComm_t *conn - the client communication handle.
- * int apiNumber - the API number of this call defined in apiNumber.h.
- * void *inputStruct - pointer to the input struct of this API. If there
- *     is no input struct, a NULL should be entered
- * bytesBuf_t *inputBsBBuf - pointer to the input byte stream. If there
- *     is no input byte stream, a NULL should be entered
- * void **outStruct - Pointer to pointer to the output struct. The outStruct
- *     will be allocated by this function and the pointer to this struct is
- *     passed back to the caller through this pointer. If there
- *     is no output struct, a NULL should be entered
- * bytesBuf_t *outBsBBuf - pointer to the output byte stream. If there
- *     is no output byte stream, a NULL should be entered
- *
- */
+namespace
+{
+    auto send_api_request(rcComm_t* conn,
+                          int apiInx,
+                          const char* _packingInstruction,
+                          const PackingInstruction* _packingInstructionTable,
+                          const void* inputStruct,
+                          const bytesBuf_t* inputBsBBuf) -> int
+    {
+        int status = 0;
+        bytesBuf_t* inputStructBBuf = nullptr;
+        bytesBuf_t* myInputStructBBuf = nullptr;
+
+        cliChkReconnAtSendStart(conn);
+
+        irods::api_entry_table& RcApiTable = irods::get_client_api_table();
+        auto itr = RcApiTable.find(apiInx);
+
+        if (itr == RcApiTable.end()) {
+            rodsLog(LOG_ERROR, "%s: Could not find API entry matching at index [%d].", __func__, apiInx);
+            return SYS_UNMATCHED_API_NUM;
+        }
+
+        if (_packingInstruction) {
+            if (inputStruct == nullptr) {
+                cliChkReconnAtSendEnd(conn);
+                return USER_API_INPUT_ERR;
+            }
+            status = pack_struct(inputStruct,
+                                 &inputStructBBuf,
+                                 _packingInstruction,
+                                 _packingInstructionTable,
+                                 0,
+                                 conn->irodsProt,
+                                 conn->svrVersion->relVersion);
+            if (status < 0) {
+                rodsLog(LOG_ERROR, "%s: Packing instruction error; error_code=[%d]", __func__, status);
+                cliChkReconnAtSendEnd(conn);
+                return status;
+            }
+
+            myInputStructBBuf = inputStructBBuf;
+        }
+        else {
+            myInputStructBBuf = nullptr;
+        }
+
+        if (itr->second->inBsFlag <= 0) {
+            inputBsBBuf = nullptr;
+        }
+
+        irods::network_object_ptr net_obj;
+        irods::error ret = irods::network_factory(conn, net_obj);
+        if (!ret.ok()) {
+            freeBBuf(inputStructBBuf);
+            rodsLog(LOG_ERROR,
+                    "%s: network_factory error: [%s], error_code=[%d]",
+                    __func__,
+                    ret.user_result().c_str(),
+                    ret.code());
+            return static_cast<int>(ret.code());
+        }
+
+        ret = sendRodsMsg(
+            net_obj, RODS_API_REQ_T, myInputStructBBuf, inputBsBBuf, nullptr, itr->second->apiNumber, conn->irodsProt);
+        if (!ret.ok()) {
+            rodsLog(LOG_ERROR, "%s: sendRodsMsg error: [%d].", __func__, ret.code());
+            if (conn->svrVersion != nullptr && conn->svrVersion->reconnPort > 0) {
+                const auto savedStatus = static_cast<int>(ret.code());
+                conn->thread_ctx->lock->lock();
+                int status1 = cliSwitchConnect(conn);
+                rodsLog(LOG_ERROR,
+                        "%s: cliSwitchConnect error: [%d]; clientState=[%d], agentState=[%d]",
+                        __func__,
+                        status1,
+                        conn->clientState,
+                        conn->agentState);
+                conn->thread_ctx->lock->unlock();
+                if (status1 > 0) {
+                    // Should not be here.
+                    rodsLog(LOG_ERROR, "%s: Switch connection and retry sendRodsMsg.", __func__);
+                    ret = sendRodsMsg(net_obj,
+                                      RODS_API_REQ_T,
+                                      myInputStructBBuf,
+                                      inputBsBBuf,
+                                      nullptr,
+                                      itr->second->apiNumber,
+                                      conn->irodsProt);
+                    if (!ret.ok()) {
+                        rodsLog(LOG_ERROR, "%s: %s; error_code=[%d].", __func__, ret.user_result().c_str(), ret.code());
+                    }
+                    else {
+                        status = savedStatus;
+                    }
+                } // if status1 > 0
+            } // if svrVersion != nullptr ...
+        }
+        else {
+            // be sure to pass along the return code from the
+            // plugin call
+            status = static_cast<int>(ret.code());
+        }
+
+        freeBBuf(inputStructBBuf);
+
+        return status;
+    } // send_api_request
+} // anonymous namespace
+
 int procApiRequest(rcComm_t *conn,
                    int apiNumber,
                    const void *inputStruct,
@@ -71,6 +163,42 @@ int procApiRequest(rcComm_t *conn,
     }
 
     return ec;
+}
+
+int procApiRequest_raw(rcComm_t* conn,
+                       int apiNumber,
+                       const char* packingInstruction,
+                       const PackingInstruction* packingInstructionTable,
+                       const void* inputStruct,
+                       const bytesBuf_t* inputBsBBuf,
+                       void** outStruct,
+                       bytesBuf_t* outBsBBuf)
+{
+    if (!conn) {
+        return USER__NULL_INPUT_ERR;
+    }
+
+    freeRError(conn->rError);
+    conn->rError = nullptr;
+
+    const int apiInx = apiTableLookup(apiNumber);
+
+    if (apiInx < 0) {
+        rodsLog(LOG_ERROR, "procApiRequest: apiTableLookup of apiNumber %d failed", apiNumber);
+        return apiInx;
+    }
+
+    if (const auto ec =
+            send_api_request(conn, apiInx, packingInstruction, packingInstructionTable, inputStruct, inputBsBBuf);
+        ec < 0)
+    {
+        rodsLogError(LOG_DEBUG, ec, "procApiRequest: sendApiRequest failed. status = %d", ec);
+        return ec;
+    }
+
+    conn->apiInx = apiInx;
+
+    return readAndProcApiReply(conn, apiInx, outStruct, outBsBBuf);
 }
 
 int branchReadAndProcApiReply( rcComm_t *conn, int apiNumber, void **outStruct, bytesBuf_t *outBsBBuf )
