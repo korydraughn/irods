@@ -3,6 +3,7 @@
 
 /// \file
 
+#include "irods/irods_re_structs.hpp"
 #include "irods/rodsUser.h"
 #include "irods/rods.h"
 #include "irods/rcGlobalExtern.h"
@@ -121,6 +122,9 @@ int msiDoSomething( msParam_t *inParam, msParam_t *outParam, ruleExecInfo_t *rei
 int msiString2StrArray( msParam_t *inBufferP, msParam_t* outStrArrayP, ruleExecInfo_t *rei );
 
 int msiTakeThreeArgumentsAndDoNothing(msParam_t *arg1, msParam_t *arg2, msParam_t *arg3, ruleExecInfo_t *rei);
+
+int msi_rodsadmin_mode_begin(ruleExecInfo_t* rei);
+int msi_rodsadmin_mode_end(ruleExecInfo_t* rei);
 
 namespace irods
 {

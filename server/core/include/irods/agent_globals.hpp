@@ -55,4 +55,7 @@ inline bool g_atime_invalid_resolution_in_seconds_detected = false;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 inline std::int32_t g_atime_resolution_in_seconds = 86400;
 
+// TODO
+inline bool g_rxExecMyRule_context = false;
+
 #endif // IRODS_AGENT_GLOBALS_HPP

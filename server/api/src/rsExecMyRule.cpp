@@ -1,5 +1,7 @@
 #include "irods/rsExecMyRule.hpp"
 
+#include "irods/agent_globals.hpp"
+#include "irods/irods_at_scope_exit.hpp"
 #include "irods/execMyRule.h"
 #include "irods/irods_logger.hpp"
 #include "irods/irods_re_plugin.hpp"
@@ -58,6 +60,9 @@ auto rsExecMyRule(RsComm* _comm, ExecMyRuleInp* _exec_inp, MsParamArray** _out_p
     if (remoteFlag == REMOTE_HOST) {
         return remoteExecMyRule(_comm, _exec_inp, _out_param_arr, remote_host);
     }
+
+    g_rxExecMyRule_context = true;
+    irods::at_scope_exit reset_context_flag{[] { g_rxExecMyRule_context = false; }};
 
     const char* inst_name_str = getValByKey(&_exec_inp->condInput, irods::KW_CFG_INSTANCE_NAME);
     std::string inst_name;

@@ -1,23 +1,26 @@
-/* For copyright information please refer to files in the COPYRIGHT directory
- */
-
 #define MAKE_IRODS_ERROR_MAP
 #include "irods/rodsErrorTable.h"
 const static std::map<const std::string, const int> irods_error_name_map = irods_error_map_construction::irods_error_name_map;
-#include "irods/private/re/reFuncDefs.hpp"
-#include "irods/private/re/utils.hpp"
-#include "irods/private/re/restructs.hpp"
-#include "irods/private/re/parser.hpp"
+
+#include "irods/agent_globals.hpp"
+#include "irods/irods_re_plugin.hpp"
+#include "irods/irods_rs_comm_query.hpp"
 #include "irods/private/re/arithmetics.hpp"
-#include "irods/private/re/datetime.hpp"
-#include "irods/private/re/index.hpp"
-#include "irods/private/re/rules.hpp"
-#include "irods/private/re/functions.hpp"
 #include "irods/private/re/configuration.hpp"
+#include "irods/private/re/datetime.hpp"
+#include "irods/private/re/debug.hpp"
+#include "irods/private/re/functions.hpp"
+#include "irods/private/re/index.hpp"
+#include "irods/private/re/parser.hpp"
+#include "irods/private/re/reFuncDefs.hpp"
 #include "irods/private/re/reVariableMap.gen.hpp"
 #include "irods/private/re/reVariableMap.hpp"
-#include "irods/private/re/debug.hpp"
-#include "irods/irods_re_plugin.hpp"
+#include "irods/private/re/restructs.hpp"
+#include "irods/private/re/rules.hpp"
+#include "irods/private/re/utils.hpp"
+
+#include <algorithm>
+#include <string_view>
 
 //    #include "irods/irods_ms_plugin.hpp"
 //    irods::ms_table MicrosTable;
@@ -1291,6 +1294,22 @@ Res *execRule( char *ruleNameInp, Res** args, unsigned int argc, int applyAllRul
         rodsLog( LOG_ERROR, "ruleName: [%s] must be fewer than %ju characters in length.",
                  ruleNameInp, sizeof( ruleName ) );
         ruleName[0] = '\0';
+    }
+
+    const auto rules_deny_list = {
+        std::string_view{"rodsadmin_mode_begin"},
+        std::string_view{"rodsadmin_mode_end"}
+    };
+
+    const auto requires_rodsadmin_privileges = [&ruleName](std::string_view _sv) {
+        return _sv == ruleName;
+    };
+
+    if (g_rxExecMyRule_context && !irods::is_privileged_client(*rei->rsComm)) {
+        if (std::any_of(std::begin(rules_deny_list), std::end(rules_deny_list), requires_rodsadmin_privileges)) {
+            rodsLog(LOG_ERROR, "%s: User not allowed to execute rule: [%s]", __func__, ruleName);
+            return newErrorRes(r, CAT_INSUFFICIENT_PRIVILEGE_LEVEL);
+        }
     }
 
     mapExternalFuncToInternalProc2( ruleName );
