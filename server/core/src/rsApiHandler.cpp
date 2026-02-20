@@ -104,7 +104,20 @@ int rsApiHandler(rsComm_t*   rsComm,
     // invoked via the same connection object.
     ix::key_value_proxy{rsComm->session_props}.clear();
 
-    void *myOutStruct = NULL;
+    irods::api_entry_table& RsApiTable = irods::get_server_api_table();
+
+    void *myOutStruct = nullptr;
+    irods::at_scope_exit free_myOutStruct{[&myOutStruct, &RsApiTable, apiInx] {
+        if (myOutStruct) {
+            if (RsApiTable[apiInx]->clearOutStruct) {
+                RsApiTable[apiInx]->clearOutStruct(myOutStruct);
+            }
+
+            std::free(myOutStruct);
+            myOutStruct = nullptr;
+        }
+    }};
+
     bytesBuf_t myOutBsBBuf;
     memset( &myOutBsBBuf, 0, sizeof( bytesBuf_t ) );
 
@@ -123,8 +136,6 @@ int rsApiHandler(rsComm_t*   rsComm,
         sendApiReply( rsComm, apiInx, status, myOutStruct, &myOutBsBBuf );
         return status;
     }
-
-    irods::api_entry_table& RsApiTable = irods::get_server_api_table();
 
     /* some sanity check */
     if ( inputStructBBuf->len > 0 && RsApiTable[apiInx]->inPackInstruct == NULL ) {
@@ -151,10 +162,21 @@ int rsApiHandler(rsComm_t*   rsComm,
         return SYS_API_INPUT_ERR;
     }
 
-    char *myInStruct = NULL;
+    char *myInStruct = nullptr;
+    irods::at_scope_exit free_myInStruct{[&myInStruct, &RsApiTable, apiInx] {
+        // clear the incoming packing instruction
+        if (myInStruct) {
+            if (RsApiTable[apiInx]->clearInStruct) {
+                RsApiTable[apiInx]->clearInStruct(myInStruct);
+            }
+
+            std::free(myInStruct);
+            myInStruct = nullptr;
+        }
+    }};
 
     if ( inputStructBBuf->len > 0 ) {
-        log_agent::debug("Unpacking byte buffer based on packing instruction [{}]", RsApiTable[apiInx]->inPackInstruct);
+        log_agent::info("Unpacking byte buffer based on packing instruction [{}] for API number [{}]", RsApiTable[apiInx]->inPackInstruct, apiNumber);
         status = unpack_struct( inputStructBBuf->buf, ( void ** )( static_cast< void * >( &myInStruct ) ),
                                ( char* )RsApiTable[apiInx]->inPackInstruct, RodsPackTable, rsComm->irodsProt,
                                rsComm->cliVersion.relVersion);
@@ -236,25 +258,6 @@ int rsApiHandler(rsComm_t*   rsComm,
 
     if (retVal != SYS_NO_HANDLER_REPLY_MSG) {
         status = sendAndProcApiReply(rsComm, apiInx, retVal, myOutStruct, &myOutBsBBuf);
-    }
-
-    // clear the incoming packing instruction
-    if (myInStruct) {
-        if (RsApiTable[apiInx]->clearInStruct) {
-            RsApiTable[apiInx]->clearInStruct(myInStruct);
-        }
-
-        std::free(myInStruct);
-        myInStruct = nullptr;
-    }
-
-    if (myOutStruct) {
-        if (RsApiTable[apiInx]->clearOutStruct) {
-            RsApiTable[apiInx]->clearOutStruct(myOutStruct);
-        }
-
-        std::free(myOutStruct);
-        myOutStruct = nullptr;
     }
 
     if (retVal >= 0 && status < 0) {
