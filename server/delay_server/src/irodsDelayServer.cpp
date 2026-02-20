@@ -496,7 +496,7 @@ namespace
                     std::free(rei_and_arg->rei->rsComm);
                 }
 
-                freeRuleExecInfoStruct(rei_and_arg->rei, (FREE_MS_PARAM | FREE_DOINP));
+                freeRuleExecInfoStructFull(rei_and_arg->rei);
 
                 return;
             }
@@ -505,7 +505,7 @@ namespace
                 std::free(rei.rsComm);
             }
 
-            freeRuleExecInfoInternals(&rei, (FREE_MS_PARAM | FREE_DOINP));
+            freeRuleExecInfoInternalsFull(&rei);
         }};
 
         // Execute rule.
