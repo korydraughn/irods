@@ -58,6 +58,7 @@
     <<EOF>>            { throw yy::parser::syntax_error{loc, fmt::format("missing closing single quote: [{}]", string_literal)}; }
 }
 [ \t\n]+               ;
+(?i:set)               return yy::parser::make_SET(loc);
 (?i:select)            return yy::parser::make_SELECT(loc);
 (?i:where)             return yy::parser::make_WHERE(loc);
 (?i:like)              return yy::parser::make_LIKE(loc);
@@ -98,6 +99,7 @@
 ","                    return yy::parser::make_COMMA(loc);
 "("                    return yy::parser::make_PAREN_OPEN(loc);
 ")"                    return yy::parser::make_PAREN_CLOSE(loc);
+";"                    return yy::parser::make_SEMICOLON(loc);
 [a-zA-Z][a-zA-Z0-9_]*  return yy::parser::make_IDENTIFIER(YYText(), loc);
 [0-9]+                 return yy::parser::make_POSITIVE_INTEGER(YYText(), loc);
 -[0-9]+                return yy::parser::make_NEGATIVE_INTEGER(YYText(), loc);

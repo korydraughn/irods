@@ -282,6 +282,18 @@ namespace irods::experimental::genquery2
         order_by order_by;
         range range;
         bool distinct = false;
+
+        // Affects how permissions are applied.
+        //
+        // If set to true, the parser is expected to use INNER/LEFT JOIN at the top lovel
+        // of the query. This results in permissions being expanded for all data objects
+        // and collections. Objects having multiple user permissions on them will cause
+        // duplication in the results.
+        //
+        // If set to false, the parser is expected to handle permissions through a subselect
+        // in the WHERE clause. This avoids row duplication and is good for aggregation
+        // focused queries .e.g. summation of data size at the logical layer.
+        bool expand_permissions = false;
     }; // struct select
 } // namespace irods::experimental::genquery2
 

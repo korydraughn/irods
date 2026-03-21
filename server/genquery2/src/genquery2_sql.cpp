@@ -388,9 +388,11 @@ namespace
         return sql;
     } // generate_joins_for_permissions
 
-    auto generate_condition_clause(gq_state& _state, const gq::options& _opts, const std::string& _conditions)
+    auto generate_condition_clause(gq_state& _state, const gq::options& _opts, const std::string& _conditions, bool _expand_permissions)
         -> std::string
     {
+        // TODO Update comment
+        //
         // Below is an example showing the correct SQL for permission checking when the user is identified
         // as a rodsadmin. While the additional joins aren't theoretically necessary, they are included to
         // cover cases where the rodsadmin has requested information that only exists in the permission
@@ -451,34 +453,59 @@ namespace
             sql += fmt::format(" where {}", _conditions);
 
             if (!_opts.admin_mode) {
-                if (d_iter != end && c_iter != end) {
-                    sql += fmt::format(" and pdu.user_name = ?"
-                                       " and pdu.zone_name = '{zone}'"
-                                       " and pdu.user_type_name != 'rodsgroup'"
-                                       " and pdoa.access_type_id >= 1050"
-                                       " and pcu.user_name = ?"
-                                       " and pcu.zone_name = '{zone}'"
-                                       " and pcu.user_type_name != 'rodsgroup'"
-                                       " and pcoa.access_type_id >= 1050",
-                                       fmt::arg("zone", _opts.user_zone));
-                    _state.values.emplace_back(_opts.user_name);
-                    _state.values.emplace_back(_opts.user_name);
+                if (_expand_permissions) {
+                    if (c_iter != end) {
+                        sql += fmt::format(" and pcu.user_name = ?"
+                                           " and pcu.zone_name = '{}'"
+                                           " and pcu.user_type_name != 'rodsgroup'"
+                                           " and pcoa.access_type_id >= 1050",
+                                           _opts.user_zone);
+                        _state.values.emplace_back(_opts.user_name);
+                    }
+
+                    if (d_iter != end) {
+                        sql += fmt::format(" and pdu.user_name = ?"
+                                           " and pdu.zone_name = '{}'"
+                                           " and pdu.user_type_name != 'rodsgroup'"
+                                           " and pdoa.access_type_id >= 1050",
+                                           _opts.user_zone);
+                        _state.values.emplace_back(_opts.user_name);
+                    }
                 }
-                else if (d_iter != end) {
-                    sql += fmt::format(" and pdu.user_name = ?"
-                                       " and pdu.zone_name = '{}'"
-                                       " and pdu.user_type_name != 'rodsgroup'"
-                                       " and pdoa.access_type_id >= 1050",
-                                       _opts.user_zone);
-                    _state.values.emplace_back(_opts.user_name);
-                }
-                else if (c_iter != end) {
-                    sql += fmt::format(" and pcu.user_name = ?"
-                                       " and pcu.zone_name = '{}'"
-                                       " and pcu.user_type_name != 'rodsgroup'"
-                                       " and pcoa.access_type_id >= 1050",
-                                       _opts.user_zone);
-                    _state.values.emplace_back(_opts.user_name);
+                else {
+                    if (c_iter != end) {
+                        sql += fmt::format(" and exists ("
+                                           "select 1 "
+                                           "from R_OBJT_ACCESS oa"
+                                           " left join R_USER_GROUP ug on oa.user_id = ug.group_user_id"
+                                           " left join R_USER_MAIN u on ug.user_id = u.user_id "
+                                           "where oa.object_id = {coll_table_name}.coll_id"
+                                           " and u.user_name = ?"
+                                           " and u.zone_name = '{zone}'"
+                                           " and u.user_type_name != 'rodsgroup'"
+                                           " and oa.access_type_id >= 1050"
+                                           ")",
+                                           fmt::arg("coll_table_name", c_iter->second),
+                                           fmt::arg("zone", _opts.user_zone));
+                        _state.values.emplace_back(_opts.user_name);
+                    }
+
+                    if (d_iter != end) {
+                        sql += fmt::format(" and exists ("
+                                           "select 1 "
+                                           "from R_OBJT_ACCESS oa"
+                                           " left join R_USER_GROUP ug on oa.user_id = ug.group_user_id"
+                                           " left join R_USER_MAIN u on ug.user_id = u.user_id "
+                                           "where oa.object_id = {data_table_name}.data_id"
+                                           " and u.user_name = ?"
+                                           " and u.zone_name = '{zone}'"
+                                           " and u.user_type_name != 'rodsgroup'"
+                                           " and oa.access_type_id >= 1050"
+                                           ")",
+                                           fmt::arg("data_table_name", d_iter->second),
+                                           fmt::arg("zone", _opts.user_zone));
+                        _state.values.emplace_back(_opts.user_name);
+                    }
                 }
             }
 
@@ -490,34 +517,62 @@ namespace
         //
 
         if (!_opts.admin_mode) {
-            if (d_iter != end && c_iter != end) {
-                sql += fmt::format(" where pdu.user_name = ?"
-                                   " and pdu.zone_name = '{zone}'"
-                                   " and pdu.user_type_name != 'rodsgroup'"
-                                   " and pdoa.access_type_id >= 1050"
-                                   " and pcu.user_name = ?"
-                                   " and pcu.zone_name = '{zone}'"
-                                   " and pcu.user_type_name != 'rodsgroup'"
-                                   " and pcoa.access_type_id >= 1050",
-                                   fmt::arg("zone", _opts.user_zone));
-                _state.values.emplace_back(_opts.user_name);
-                _state.values.emplace_back(_opts.user_name);
+            if (_expand_permissions) {
+                if (c_iter != end) {
+                    sql += fmt::format(" where pcu.user_name = ?"
+                                       " and pcu.zone_name = '{}'"
+                                       " and pcu.user_type_name != 'rodsgroup'"
+                                       " and pcoa.access_type_id >= 1050",
+                                       _opts.user_zone);
+                    _state.values.emplace_back(_opts.user_name);
+                }
+
+                if (d_iter != end) {
+                    sql += ((c_iter != end) ? " and" : " where");
+                    sql += fmt::format(" pdu.user_name = ?"
+                                       " and pdu.zone_name = '{}'"
+                                       " and pdu.user_type_name != 'rodsgroup'"
+                                       " and pdoa.access_type_id >= 1050",
+                                       _opts.user_zone);
+                    _state.values.emplace_back(_opts.user_name);
+                }
+
             }
-            else if (d_iter != end) {
-                sql += fmt::format(" where pdu.user_name = ?"
-                                   " and pdu.zone_name = '{}'"
-                                   " and pdu.user_type_name != 'rodsgroup'"
-                                   " and pdoa.access_type_id >= 1050",
-                                   _opts.user_zone);
-                _state.values.emplace_back(_opts.user_name);
-            }
-            else if (c_iter != end) {
-                sql += fmt::format(" where pcu.user_name = ?"
-                                   " and pcu.zone_name = '{}'"
-                                   " and pcu.user_type_name != 'rodsgroup'"
-                                   " and pcoa.access_type_id >= 1050",
-                                   _opts.user_zone);
-                _state.values.emplace_back(_opts.user_name);
+            else {
+                if (c_iter != end) {
+                    sql += fmt::format(" where exists ("
+                                       "select 1 "
+                                       "from R_OBJT_ACCESS oa"
+                                       " left join R_USER_GROUP ug on oa.user_id = ug.group_user_id"
+                                       " left join R_USER_MAIN u on ug.user_id = u.user_id "
+                                       "where oa.object_id = {coll_table_name}.coll_id"
+                                       " and u.user_name = ?"
+                                       " and u.zone_name = '{zone}'"
+                                       " and u.user_type_name != 'rodsgroup'"
+                                       " and oa.access_type_id >= 1050"
+                                       ")",
+                                       fmt::arg("coll_table_name", c_iter->second),
+                                       fmt::arg("zone", _opts.user_zone));
+                    _state.values.emplace_back(_opts.user_name);
+                }
+
+                if (d_iter != end) {
+                    sql += ((c_iter != end) ? " and" : " where");
+                    sql += fmt::format(" exists ("
+                                       "select 1 "
+                                       "from R_OBJT_ACCESS oa"
+                                       " left join R_USER_GROUP ug on oa.user_id = ug.group_user_id"
+                                       " left join R_USER_MAIN u on ug.user_id = u.user_id "
+                                       "where oa.object_id = {data_table_name}.data_id"
+                                       " and u.user_name = ?"
+                                       " and u.zone_name = '{zone}'"
+                                       " and u.user_type_name != 'rodsgroup'"
+                                       " and oa.access_type_id >= 1050"
+                                       ")",
+                                       fmt::arg("data_table_name", d_iter->second),
+                                       fmt::arg("zone", _opts.user_zone));
+                    _state.values.emplace_back(_opts.user_name);
+                }
             }
         }
 
@@ -1265,7 +1320,10 @@ namespace irods::experimental::genquery2
             // Q. What happens if a user attempts to query data objects, collections, and tickets in the same query?
             // Q. Should these questions be handled by specific queries instead?
 
-            sql += generate_joins_for_permissions(state, _opts);
+            if (_select.expand_permissions) {
+                sql += generate_joins_for_permissions(state, _opts);
+            }
+
             sql += generate_joins_for_metadata_columns(state);
 
             if (state.add_sql_for_data_resc_hier) {
@@ -1273,7 +1331,7 @@ namespace irods::experimental::genquery2
                     " inner join cte_drh on cte_drh.resc_id = {}.resc_id", state.table_aliases.at("R_RESC_MAIN"));
             }
 
-            sql += generate_condition_clause(state, _opts, conds);
+            sql += generate_condition_clause(state, _opts, conds, _select.expand_permissions);
             sql += generate_group_by_clause(state, _select.group_by, column_name_mappings);
             sql += generate_order_by_clause(state, _select.order_by, column_name_mappings);
             sql += generate_limit_clause(_opts, _select.range.number_of_rows);

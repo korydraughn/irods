@@ -103,6 +103,8 @@ This option causes make_* functions to be generated for each token kind.
     PAREN_OPEN
     ROWS
     SELECT
+    SEMICOLON
+    SET
     WHEN
     WHERE
 ;
@@ -157,6 +159,25 @@ genquery2:
 | select group_by range { std::swap(drv.select.group_by, $2); std::swap(drv.select.range, $3); }
 | select group_by order_by range { std::swap(drv.select.group_by, $2); std::swap(drv.select.order_by, $3); std::swap(drv.select.range, $4); }
 | select group_by range order_by { std::swap(drv.select.group_by, $2); std::swap(drv.select.order_by, $4); std::swap(drv.select.range, $3); }
+;
+
+configurations:
+  configuration
+| configurations configuration
+;
+
+configuration:
+  SET IDENTIFIER EQUAL IDENTIFIER SEMICOLON {
+    if ("permission_mode" == $2) {
+        if ("expanded" == $4) {
+            drv.select.expand_permissions = true;
+        }
+        else if ("filtered" != $4) {
+            throw std::invalid_argument{fmt::format("GenQuery2: Invalid option value for [permission_mode]: [{}]", $2)};
+        }
+    }
+    throw std::invalid_argument{fmt::format("GenQuery2: Unrecognized option name: [{}]", $2)};
+  }
 ;
 
 select:
@@ -296,7 +317,7 @@ string_literal_list:
 ;
 
 integer:
-  POSITIVE_INTEGER
+  POSITIVE_INTEGER { $$ = std::move($1); }
 | NEGATIVE_INTEGER { $$ = std::move($1); }
 ;
 
