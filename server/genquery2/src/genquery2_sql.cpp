@@ -350,46 +350,75 @@ namespace
 
         std::string sql;
 
+        // R_OBJT_ACCESS
+        // - DATA_ACCESS_PERM_ID = access_type_id
+        // - DATA_ACCESS_USER_ID = user_name
+        //
+        // R_TOKN_MAIN
+        // - DATA_ACCESS_PERM_NAME = token_name
+        //
+        // R_USER_MAIN
+        // - DATA_ACCESS_USER_NAME = user_name
+        // - DATA_ACCESS_USER_ZONE = zone_name
+
+        std::string join_keyword = "inner";
         if (_opts.admin_mode) {
-            if (const auto iter = _state.table_aliases.find("R_DATA_MAIN"); iter != std::end(_state.table_aliases)) {
-                sql += fmt::format(" left join R_OBJT_ACCESS pdoa on {}.data_id = pdoa.object_id"
-                                   " left join R_TOKN_MAIN pdt on pdoa.access_type_id = pdt.token_id"
-                                   " left join R_USER_GROUP pdug on pdoa.user_id = pdug.group_user_id"
-                                   " left join R_USER_MAIN pdu on pdug.user_id = pdu.user_id",
-                                   iter->second);
+            join_keyword = "left";
+        }
+
+        if (const auto iter = _state.table_aliases.find("R_COLL_MAIN"); iter != std::end(_state.table_aliases)) {
+            sql +=
+                fmt::format(" {} join R_OBJT_ACCESS pcoa on {}.data_id = pcoa.object_id", join_keyword, iter->second);
+
+            auto add_join = std::any_of(std::begin(_state.ast_column_ptrs),
+                                        std::end(_state.ast_column_ptrs),
+                                        [](auto* _col_ptr) { return "COLL_ACCESS_PERM_NAME" == _col_ptr->name; });
+            if (add_join) {
+                sql += fmt::format(" {} join R_TOKN_MAIN pct on pcoa.access_type_id = pct.token_id", join_keyword);
             }
 
-            if (const auto iter = _state.table_aliases.find("R_COLL_MAIN"); iter != std::end(_state.table_aliases)) {
-                sql += fmt::format(" left join R_OBJT_ACCESS pcoa on {}.coll_id = pcoa.object_id"
-                                   " left join R_TOKN_MAIN pct on pcoa.access_type_id = pct.token_id"
-                                   " left join R_USER_GROUP pcug on pcoa.user_id = pcug.group_user_id"
-                                   " left join R_USER_MAIN pcu on pcug.user_id = pcu.user_id",
-                                   iter->second);
+            add_join =
+                std::any_of(std::begin(_state.ast_column_ptrs), std::end(_state.ast_column_ptrs), [](auto* _col_ptr) {
+                    return "COLL_ACCESS_USER_ID" != _col_ptr->name && _col_ptr->name.starts_with("COLL_ACCESS_USER_");
+                });
+            if (add_join) {
+                sql += fmt::format(" {} join R_USER_GROUP pcug on pcoa.user_id = pcug.group_user_id"
+                                   " {} join R_USER_MAIN pcu on pcug.user_id = pcu.user_id",
+                                   join_keyword,
+                                   join_keyword);
             }
         }
-        else {
-            if (const auto iter = _state.table_aliases.find("R_DATA_MAIN"); iter != std::end(_state.table_aliases)) {
-                sql += fmt::format(" inner join R_OBJT_ACCESS pdoa on {}.data_id = pdoa.object_id"
-                                   " inner join R_TOKN_MAIN pdt on pdoa.access_type_id = pdt.token_id"
-                                   " inner join R_USER_GROUP pdug on pdoa.user_id = pdug.group_user_id"
-                                   " inner join R_USER_MAIN pdu on pdug.user_id = pdu.user_id",
-                                   iter->second);
+
+        if (const auto iter = _state.table_aliases.find("R_DATA_MAIN"); iter != std::end(_state.table_aliases)) {
+            sql +=
+                fmt::format(" {} join R_OBJT_ACCESS pdoa on {}.data_id = pdoa.object_id", join_keyword, iter->second);
+
+            auto add_join = std::any_of(std::begin(_state.ast_column_ptrs),
+                                        std::end(_state.ast_column_ptrs),
+                                        [](auto* _col_ptr) { return "DATA_ACCESS_PERM_NAME" == _col_ptr->name; });
+            if (add_join) {
+                sql += fmt::format(" {} join R_TOKN_MAIN pdt on pdoa.access_type_id = pdt.token_id", join_keyword);
             }
 
-            if (const auto iter = _state.table_aliases.find("R_COLL_MAIN"); iter != std::end(_state.table_aliases)) {
-                sql += fmt::format(" inner join R_OBJT_ACCESS pcoa on {}.coll_id = pcoa.object_id"
-                                   " inner join R_TOKN_MAIN pct on pcoa.access_type_id = pct.token_id"
-                                   " inner join R_USER_GROUP pcug on pcoa.user_id = pcug.group_user_id"
-                                   " inner join R_USER_MAIN pcu on pcug.user_id = pcu.user_id",
-                                   iter->second);
+            add_join =
+                std::any_of(std::begin(_state.ast_column_ptrs), std::end(_state.ast_column_ptrs), [](auto* _col_ptr) {
+                    return "DATA_ACCESS_USER_ID" != _col_ptr->name && _col_ptr->name.starts_with("DATA_ACCESS_USER_");
+                });
+            if (add_join) {
+                sql += fmt::format(" {} join R_USER_GROUP pdug on pdoa.user_id = pdug.group_user_id"
+                                   " {} join R_USER_MAIN pdu on pdug.user_id = pdu.user_id",
+                                   join_keyword,
+                                   join_keyword);
             }
         }
 
         return sql;
     } // generate_joins_for_permissions
 
-    auto generate_condition_clause(gq_state& _state, const gq::options& _opts, const std::string& _conditions, bool _expand_permissions)
-        -> std::string
+    auto generate_condition_clause(gq_state& _state,
+                                   const gq::options& _opts,
+                                   const std::string& _conditions,
+                                   bool _expand_permissions) -> std::string
     {
         // TODO Update comment
         //
@@ -536,7 +565,6 @@ namespace
                                        _opts.user_zone);
                     _state.values.emplace_back(_opts.user_name);
                 }
-
             }
             else {
                 if (c_iter != end) {
