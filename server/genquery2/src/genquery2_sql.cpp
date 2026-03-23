@@ -368,16 +368,18 @@ namespace
         }
 
         if (const auto iter = _state.table_aliases.find("R_COLL_MAIN"); iter != std::end(_state.table_aliases)) {
-            auto add_join = std::any_of(std::begin(_state.ast_column_ptrs),
-                                        std::end(_state.ast_column_ptrs),
-                                        [](auto* _col_ptr) { return "COLL_ACCESS_PERM_ID" == _col_ptr->name || "COLL_ACCESS_USER_ID" == _col_ptr->name; });
+            auto add_join =
+                std::any_of(std::begin(_state.ast_column_ptrs), std::end(_state.ast_column_ptrs), [](auto* _col_ptr) {
+                    return "COLL_ACCESS_PERM_ID" == _col_ptr->name || "COLL_ACCESS_USER_ID" == _col_ptr->name;
+                });
             if (add_join) {
-                sql += fmt::format(" {} join R_OBJT_ACCESS pcoa on {}.coll_id = pcoa.object_id", join_keyword, iter->second);
+                sql += fmt::format(
+                    " {} join R_OBJT_ACCESS pcoa on {}.coll_id = pcoa.object_id", join_keyword, iter->second);
             }
 
             add_join = std::any_of(std::begin(_state.ast_column_ptrs),
-                                        std::end(_state.ast_column_ptrs),
-                                        [](auto* _col_ptr) { return "COLL_ACCESS_PERM_NAME" == _col_ptr->name; });
+                                   std::end(_state.ast_column_ptrs),
+                                   [](auto* _col_ptr) { return "COLL_ACCESS_PERM_NAME" == _col_ptr->name; });
             if (add_join) {
                 sql += fmt::format(" {} join R_TOKN_MAIN pct on pcoa.access_type_id = pct.token_id", join_keyword);
             }
@@ -395,16 +397,18 @@ namespace
         }
 
         if (const auto iter = _state.table_aliases.find("R_DATA_MAIN"); iter != std::end(_state.table_aliases)) {
-            auto add_join = std::any_of(std::begin(_state.ast_column_ptrs),
-                                        std::end(_state.ast_column_ptrs),
-                                        [](auto* _col_ptr) { return "DATA_ACCESS_PERM_ID" == _col_ptr->name || "DATA_ACCESS_USER_ID" == _col_ptr->name; });
+            auto add_join =
+                std::any_of(std::begin(_state.ast_column_ptrs), std::end(_state.ast_column_ptrs), [](auto* _col_ptr) {
+                    return "DATA_ACCESS_PERM_ID" == _col_ptr->name || "DATA_ACCESS_USER_ID" == _col_ptr->name;
+                });
             if (add_join) {
-                sql += fmt::format(" {} join R_OBJT_ACCESS pdoa on {}.data_id = pdoa.object_id", join_keyword, iter->second);
+                sql += fmt::format(
+                    " {} join R_OBJT_ACCESS pdoa on {}.data_id = pdoa.object_id", join_keyword, iter->second);
             }
 
             add_join = std::any_of(std::begin(_state.ast_column_ptrs),
-                                        std::end(_state.ast_column_ptrs),
-                                        [](auto* _col_ptr) { return "DATA_ACCESS_PERM_NAME" == _col_ptr->name; });
+                                   std::end(_state.ast_column_ptrs),
+                                   [](auto* _col_ptr) { return "DATA_ACCESS_PERM_NAME" == _col_ptr->name; });
             if (add_join) {
                 sql += fmt::format(" {} join R_TOKN_MAIN pdt on pdoa.access_type_id = pdt.token_id", join_keyword);
             }
