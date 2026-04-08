@@ -544,60 +544,71 @@ class Test_Misc(session.make_sessions_mixin([('otherrods', 'rods')], [('alice', 
             self.admin.run_icommand(['iadmin', 'rmresc', resc_name])
 
     def test_strict_acl_peps_are_not_triggered__issue_8304(self):
-        attr_n = 'issue_8304_attr_name'
-        attr_v = 'issue_8304_attr_value'
-
-        # The following PEPs set metadata on the session collection if triggered.
-        pep_map = {
-            'irods_rule_engine_plugin-irods_rule_language': textwrap.dedent(f'''
-                pep_database_gen_query_access_control_setup_pre(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
-                    msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '');
-                }}
-
-                pep_database_gen_query_access_control_setup_post(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
-                    msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '');
-                }}
-
-                pep_database_gen_query_access_control_setup_finally(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
-                    msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '');
-                }}
-
-                pep_database_gen_query_access_control_setup_except(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
-                    msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '');
-                }}
-            '''),
-            'irods_rule_engine_plugin-python': textwrap.dedent(f'''
-                def pep_database_gen_query_access_control_setup_pre(rule_args, callback, rei):
-                    callback.msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '')
-
-                def pep_database_gen_query_access_control_setup_post(rule_args, callback, rei):
-                    callback.msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '')
-
-                def pep_database_gen_query_access_control_setup_finally(rule_args, callback, rei):
-                    callback.msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '')
-
-                def pep_database_gen_query_access_control_setup_except(rule_args, callback, rei):
-                    callback.msiModAVUMetadata('-C', '{self.user.session_collection}', 'set', '{attr_n}', '{attr_v}', '')
-            ''')
-        }
+        create_flag_file_script = 'issue_8304_create_flag_file.sh'
+        create_flag_file_script_path = f'{paths.irods_directory()}/msiExecCmd_bin/{create_flag_file_script}'
+        flag_file = f'{self.user.local_session_dir}/issue_8304.flag_file'
 
         try:
-            with temporary_core_file() as core:
-                # Add rule to core.re or core.py and reload the server's configuration so that
-                # the changes take effect.
-                core.add_rule(pep_map[self.plugin_name])
+            # Add a script to the msiExecCmd_bin directory which creates a flag file.
+            # msiExecCmd is used instead of metadata because using msiModAVUMetadata() results
+            # in agents failing to service requests.
+            with open(create_flag_file_script_path, 'w') as f:
+                f.write('#! /bin/bash\n')
+                f.write(f"touch '{flag_file}'")
+            os.chmod(create_flag_file_script_path, 0o744)
+
+            # The following PEPs create a flag file when triggered.
+            pep_map = {
+                'irods_rule_engine_plugin-irods_rule_language': textwrap.dedent(f'''\
+                    pep_database_gen_query_access_control_setup_pre(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
+                        msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+                    }}
+
+                    pep_database_gen_query_access_control_setup_post(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
+                        msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+                    }}
+
+                    pep_database_gen_query_access_control_setup_finally(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
+                        msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+                    }}
+
+                    pep_database_gen_query_access_control_setup_except(*inst, *ctx, *out, *user, *zone, *host, *priv, *ctrl) {{
+                        msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+                    }}
+                '''),
+                'irods_rule_engine_plugin-python': textwrap.dedent(f'''\
+                    def pep_database_gen_query_access_control_setup_pre(rule_args, callback, rei):
+                        callback.msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+
+                    def pep_database_gen_query_access_control_setup_post(rule_args, callback, rei):
+                        callback.msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+
+                    def pep_database_gen_query_access_control_setup_finally(rule_args, callback, rei):
+                        callback.msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+
+                    def pep_database_gen_query_access_control_setup_except(rule_args, callback, rei):
+                        callback.msiExecCmd('{create_flag_file_script}', '', '', '', '', *ignored);
+                ''')
+            }
+
+            try:
+                with temporary_core_file() as core:
+                    # Add rule to core.re or core.py and reload the server's configuration so that
+                    # the changes take effect.
+                    core.add_rule(pep_map[self.plugin_name])
+                    IrodsController().reload_configuration()
+
+                    # Trigger PEPs.
+                    self.user.assert_icommand(['iquest', 'select COLL_NAME'], 'STDOUT')
+
+                    # Show that no flag file was created. This indicates that the PEPs did not fire.
+                    self.assertFalse(os.path.exists(flag_file))
+
+            finally:
                 IrodsController().reload_configuration()
 
-                # Trigger the rule.
-                self.user.assert_icommand(['iquest', 'select COLL_NAME'], 'STDOUT')
-
-                # Show that no metadata was added to the collection. This indicates that the PEPs
-                # did not fire.
-                expected_output = [f'AVUs defined for collection {self.user.session_collection}:\nNone\n']
-                self.user.assert_icommand(['imeta', 'ls', '-C', self.user.session_collection], 'STDOUT', expected_output)
-
         finally:
-            IrodsController().reload_configuration()
+            os.unlink(create_flag_file_script_path)
 
 
 class test_server_side_libraries(unittest.TestCase):
