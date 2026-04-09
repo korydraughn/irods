@@ -139,6 +139,7 @@ namespace
     auto init_logger(pid_t _pid, bool _write_to_stdout, bool _enable_test_mode) -> void;
     auto check_catalog_schema_version() -> std::pair<bool, int>;
     auto setup_signal_handlers() -> int;
+    auto can_connect_to_catalog() -> bool;
     auto wait_for_external_dependent_servers_to_start() -> int;
     auto set_environment_variables() -> void;
 
@@ -755,6 +756,35 @@ Signals:
         return 0;
     } // setup_signal_handlers
 
+    auto can_connect_to_catalog() -> bool
+    {
+        std::string role;
+        try {
+            role = irods::get_server_property<std::string>(irods::KW_CFG_CATALOG_SERVICE_ROLE);
+        }
+        catch (const irods::exception& e) {
+            log_server::error("{}: Could not get catalog service role: {}", __func__, e.client_display_what());
+        }
+        catch (const std::exception& e) {
+            log_server::error(
+                "{}: Could not get catalog service role. Is the catalog service role defined in server_config.json?",
+                __func__);
+        }
+
+        if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == role) {
+            try {
+                // Try to connect to the catalog. If the catalog isn't accepting connections or
+                // the server configuration is incorrect, this function will throw an exception.
+                irods::experimental::catalog::new_database_connection();
+            }
+            catch (const std::exception&) {
+                return false;
+            }
+        }
+
+        return true;
+    } // can_connect_to_catalog
+
     auto wait_for_external_dependent_servers_to_start() -> int
     {
         std::string role;
@@ -771,6 +801,8 @@ Signals:
         }
 
         if (irods::KW_CFG_SERVICE_ROLE_PROVIDER == role) {
+            const auto start_time = std::chrono::steady_clock::now();
+
             // Wait for the catalog to accept connections.
             while (true) {
                 if (g_terminate) {
@@ -791,8 +823,15 @@ Signals:
                     // Connection was successful. The catalog is ready.
                     return 0;
                 }
-                catch (const std::exception& e) {
-                    log_server::debug("{}: Catalog not ready to accept connections.", __func__);
+                catch (const std::exception&) {
+                    if (std::chrono::steady_clock::now() - start_time > std::chrono::seconds{30}) {
+                        log_server::critical("{}: Possible catalog connectivity issue detected. Check database "
+                                             "configuration in server_config.json and .odbc.ini for discrepancies.",
+                                             __func__);
+                    }
+                    else {
+                        log_server::debug("{}: Catalog not ready to accept connections.", __func__);
+                    }
                 }
 
                 log_server::info("{}: Waiting for catalog to complete startup and accept connections.", __func__);
@@ -1205,6 +1244,20 @@ Signals:
         // logic will handle that for us.
 
         irods::notify_service_manager("READY=1\nSTATUS=Configuration reloaded");
+
+        // Notify the admin of catalog connectivity issues, if they exist. Because iRODS does not
+        // automatically sync database configuration across server_config.json and the .odbc.ini file
+        // (stored in the home directory of the service account), all we can do at this time is report
+        // connectivity issues. Rolling the configuration back cannot fix all situations (e.g. mismatch
+        // port numbers).
+        //
+        // TODO(#8561): Review the need for this code block once the database configurations in
+        // server_config.json and .odbc.ini are consolidated.
+        if (!can_connect_to_catalog()) {
+            log_server::critical("{}: Could not connect to catalog after reloading configuration. Check database "
+                                 "configuration in server_config.json and .odbc.ini for discrepancies.",
+                                 __func__);
+        }
     } // handle_configuration_reload
 
     auto launch_delay_server(bool _write_to_stdout, bool _enable_test_mode) -> void
