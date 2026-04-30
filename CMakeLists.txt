@@ -38,6 +38,15 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
   message(STATUS "Setting unspecified CMAKE_BUILD_TYPE to '${CMAKE_BUILD_TYPE}'. This is the correct setting for normal builds.")
 endif()
 
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported OUTPUT output LANGUAGES C CXX)
+if (supported)
+  message(STATUS "IPO/LTO (link-time optimization) enabled.")
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+  message(WARNING "IPO/LTO is not supported: ${output}")
+endif()
+
 include(IrodsExternals)
 include(IrodsCXXCompiler)
 
