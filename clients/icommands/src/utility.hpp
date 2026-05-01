@@ -58,10 +58,8 @@ namespace utils
         if (server_version && server_version->major < IRODS_VERSION_MAJOR) {
             fmt::print(stderr,
                        "Warning: Major version number mismatch detected between iCommands and server!\n\n"
-                       "   iCommands major version number   : {}\n"
-                       "   iRODS server major version number: {}\n\n"
-                       "To avoid compatibility issues, use an iCommands installation which matches the server's major "
-                       "version number.\n",
+                       "   iCommands   : {}\n"
+                       "   iRODS server: {}\n\n",
                        IRODS_VERSION_MAJOR,
                        server_version->major);
         }
