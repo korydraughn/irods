@@ -3,13 +3,16 @@
 
 #include <irods/authentication_plugin_framework.hpp>
 #include <irods/getRodsEnv.h>
+#include <irods/irods_version.h>
 #include <irods/rodsDef.h>
+#include <irods/version.hpp>
+
+#include <fmt/format.h>
+#include <nlohmann/json.hpp>
 
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
-
-#include <nlohmann/json.hpp>
 
 namespace utils
 {
@@ -45,6 +48,21 @@ namespace utils
 
         return false;
     } // option_specified
+
+    inline auto warn_if_connected_to_potentially_incompatible_server(const RcComm& _comm) -> void
+    {
+        const auto server_version = irods::to_version(_comm.svrVersion->relVersion);
+        if (server_version && server_version->major < IRODS_VERSION_MAJOR) {
+            fmt::print(stderr,
+                       "Warning: Major version number mismatch detected between iCommands and server!\n\n"
+                       "   iCommands major version number   : {}\n"
+                       "   iRODS server major version number: {}\n\n"
+                       "To avoid compatibility issues, use an iCommands installation which matches the server's major "
+                       "version number.\n",
+                       IRODS_VERSION_MAJOR,
+                       server_version->major);
+        }
+    } // warn_if_connected_to_potentially_incompatible_server
 } // namespace utils
 
 #endif // IRODS_ICOMMANDS_UTILITY_HPP
