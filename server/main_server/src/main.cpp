@@ -41,7 +41,6 @@
 #include <jsoncons/json.hpp>
 #include <jsoncons_ext/jsonschema/jsonschema.hpp>
 
-#include <pwd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -136,7 +135,8 @@ namespace
     auto print_version_info() -> void;
 
     auto set_boot_time_as_environment_variable() -> void;
-    auto terminate_if_launched_by_incorrect_system_user() -> void;
+    auto terminate_if_launched_with_root_privileges() -> void;
+    auto warn_if_launched_by_unexpected_user() -> void;
     auto validate_configuration() -> bool;
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
@@ -171,7 +171,6 @@ namespace
 auto main(int _argc, char* _argv[]) -> int
 {
     set_boot_time_as_environment_variable();
-    terminate_if_launched_by_incorrect_system_user();
 
     bool write_to_stdout = false;
     bool enable_test_mode = false;
@@ -209,6 +208,9 @@ auto main(int _argc, char* _argv[]) -> int
             print_version_info();
             return 0;
         }
+
+        terminate_if_launched_with_root_privileges();
+        warn_if_launched_by_unexpected_user();
 
         if (vm.count("validate-config") > 0) {
             return validate_configuration() ? 0 : 1;
@@ -254,6 +256,14 @@ auto main(int _argc, char* _argv[]) -> int
         rodsLogSqlReq(0);
 
         init_logger(getpid(), write_to_stdout, enable_test_mode);
+
+        log_server::info(
+            "{}: Launched by user with real UID=[{}], real GID=[{}], effective UID=[{}], effective GID=[{}].",
+            __func__,
+            getuid(),
+            getgid(),
+            geteuid(),
+            getegid());
 
         // Setting up signal handlers here removes the need for reacting to shutdown signals
         // such as SIGINT and SIGTERM during the startup sequence.
@@ -464,85 +474,53 @@ Signals:
             }
         }
         catch (const std::exception& e) {
-            fmt::print(stderr, "Error: Caught exception while setting server boot time as an environment variable: {}\n", e.what());
+            fmt::print(stderr,
+                       "Error: Caught exception while setting server boot time as an environment variable: {}\n",
+                       e.what());
         }
     } // set_boot_time_as_environment_variable
 
     // This function is meant to be called before the logger is initialized.
-    auto terminate_if_launched_by_incorrect_system_user() -> void
+    auto terminate_if_launched_with_root_privileges() -> void
     {
-        try {
-            const auto service_acct_file_path = irods::get_irods_config_directory() / "service_account.config";
-            std::ifstream in{service_acct_file_path};
-            if (!in) {
-                // A bad input stream signals that the user may not have the proper permissions to open
-                // the file.
-                fmt::print(stderr, "Error: Failed to open service account file [{}]. Cannot determine if user has permission to launch server. Exiting.\n", service_acct_file_path.c_str());
-                std::exit(1);
-            }
-
-            // Allocate a buffer large enough to hold the strings of a passwd struct.
-            auto buffer_size = sysconf(_SC_GETPW_R_SIZE_MAX);
-            if (buffer_size == -1) {
-                // Indeterminate value. Set the buffer to a value large enough to hold the strings
-                // of the passwd struct.
-                buffer_size = 16384;
-            }
-            auto buffer = std::make_unique<char[]>(buffer_size);
-
-            // The prefix identifying the service account user.
-            constexpr std::string_view key = "IRODS_SERVICE_ACCOUNT_NAME=";
-
-            // Read the file line by line until the service account user is found. The file is expected to
-            // contain exactly one line containing the information of interest.
-            std::string line;
-            while (in && std::getline(in, line)) {
-                if (!line.starts_with(key)) {
-                    continue;
-                }
-
-                // Throws if the starting position is greater than the size of the string.
-                const auto value = line.substr(key.size());
-
-                // Lookup the service account user's information. This information comes from the system.
-                passwd pwd; // NOLINT(cppcoreguidelines-pro-type-member-init)
-                passwd* result{};
-                const auto ec = getpwnam_r(value.c_str(), &pwd, buffer.get(), buffer_size, &result);
-                if (nullptr == result) {
-                    if (ec == 0) {
-                        fmt::print(stderr, "Warning: Service account user [{}] not found in system. Exiting.\n", value);
-                    }
-                    else {
-                        fmt::print(stderr, "Error: Could not retrieve information for user [{}] due to a system error: errno=[{}]. Exiting.\n", value, ec);
-                    }
-                    std::exit(1);
-                }
-
-                // Compare the effective UID of the server process with the UID of the service account user.
-                // Terminate if they are not identical.
-                if (const auto euid = geteuid(); euid != pwd.pw_uid) {
-                    fmt::print(
-                        stderr,
-                        "Warning: UID [{}] of server process does not match UID [{}] of service account user [{}]. Exiting.\n",
-                        euid,
-                        pwd.pw_uid,
-                        value);
-                    std::exit(1);
-                }
-
-                // The user who is attempting to launch the server matches the system user defined in the
-                // file. Return immediately since there's no more work to do.
-                return;
-            }
-
-            fmt::print(stderr, "Error: Could not find service account user in file [{}]. User not allowed to launch server. Exiting.\n", service_acct_file_path.c_str());
+        if (geteuid() == 0) {
+            fmt::print(stderr, "Warning: Launching server with root privileges is not allowed. Exiting.\n");
             std::exit(1);
         }
-        catch (const std::exception& e) {
-            fmt::print(stderr, "Error: Caught exception while verifying the user's permission to launch server: {}\n", e.what());
+
+        // Guard against setuid-related security vulnerabilities.
+        if (getuid() != geteuid()) {
+            fmt::print(
+                stderr, "Warning: Real UID [{}] and effective UID [{}] must match. Exiting.\n", getuid(), geteuid());
             std::exit(1);
         }
-    } // terminate_if_launched_by_incorrect_system_user
+    } // terminate_if_launched_with_root_privileges
+
+    // This function is meant to be called before the logger is initialized.
+    auto warn_if_launched_by_unexpected_user() -> void
+    {
+        const auto home_dir = irods::get_irods_home_directory();
+        struct stat stat_info; // NOLINT(cppcoreguidelines-pro-type-member-init)
+        if (stat(home_dir.c_str(), &stat_info) != 0) {
+            fmt::print(stderr,
+                       "Warning: Stat of service account home directory [{}] failed. Cannot verify if user who "
+                       "launched the server is appropriate.\n",
+                       home_dir.c_str());
+            return;
+        }
+
+        if (!S_ISDIR(stat_info.st_mode)) {
+            fmt::print(
+                stderr, "Warning: [{}] must be the home directory of the service account user.\n", home_dir.c_str());
+        }
+
+        if (const auto uid = getuid(); uid != stat_info.st_uid) {
+            fmt::print(stderr,
+                       "Warning: Server launched by user with UID [{}]. Expected user with UID [{}].\n",
+                       uid,
+                       stat_info.st_uid);
+        }
+    } // warn_if_launched_by_unexpected_user
 
     auto validate_configuration() -> bool
     {
