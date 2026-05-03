@@ -52,10 +52,21 @@ namespace utils
         return false;
     } // option_specified
 
+    // Prints a warning to stderr if the major version number of the iCommands does
+    // not match the major version number of the connected server.
+    //
+    // Prints a warning to stderr if the version of the server cannot be determined.
+    // It is recommended that the user verify they are connecting to a trusted server
+    // before proceeding.
     inline auto warn_if_connected_to_potentially_incompatible_server(const RcComm& _comm) -> void
     {
         const auto server_version = irods::to_version(_comm.svrVersion->relVersion);
-        if (server_version && server_version->major < IRODS_VERSION_MAJOR) {
+        if (!server_version) {
+            fmt::print(stderr,
+                       "Warning: Could not determine version of server. Make sure you are connected to a trusted iRODS "
+                       "server.\n\n");
+        }
+        else if (server_version->major != IRODS_VERSION_MAJOR) {
             fmt::print(stderr,
                        "Warning: Major version number mismatch detected between iCommands and server!\n\n"
                        "   iCommands   : {}\n"
