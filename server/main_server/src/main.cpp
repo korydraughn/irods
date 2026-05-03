@@ -137,6 +137,7 @@ namespace
 
     auto set_boot_time_as_environment_variable() -> void;
     auto terminate_if_launched_as_root() -> void;
+    auto terminate_if_directories_and_files_are_inaccessible() -> void;
     auto validate_configuration() -> bool;
     auto daemonize() -> void;
     auto create_pid_file(const std::string& _pid_file) -> int;
@@ -172,6 +173,7 @@ auto main(int _argc, char* _argv[]) -> int
 {
     set_boot_time_as_environment_variable();
     terminate_if_launched_as_root();
+    terminate_if_directories_and_files_are_inaccessible();
 
     bool write_to_stdout = false;
     bool enable_test_mode = false;
@@ -256,6 +258,7 @@ auto main(int _argc, char* _argv[]) -> int
         init_logger(getpid(), write_to_stdout, enable_test_mode);
 
         log_server::info("{}: real UID=[{}], real GID=[{}], effective UID=[{}], effective GID=[{}]", __func__, getuid(), getgid(), geteuid(), getegid());
+
         // Setting up signal handlers here removes the need for reacting to shutdown signals
         // such as SIGINT and SIGTERM during the startup sequence.
         if (setup_signal_handlers() == -1) {
@@ -485,11 +488,47 @@ Signals:
         }
     } // terminate_if_launched_as_root
 
-            }
+    auto terminate_if_directories_and_files_are_inaccessible() -> void
+    {
+        const auto irods_home_dir = irods::get_irods_home_directory();
+        const auto irods_config_dir = irods::get_irods_config_directory();
 
+        const auto directories_requiring_write_perms = {
+            irods_home_dir,
+            irods_home_dir / "log",
+            irods::get_irods_msiExecCmd_bin_directory(),
+            irods::get_irods_proc_directory(),
+            irods::get_irods_default_plugin_directory(),
+            irods::get_irods_lib_directory(),
+            irods_config_dir,
+        };
+        for (auto&& path : directories_requiring_write_perms) {
+            if (access(path.c_str(), F_OK | R_OK | W_OK | X_OK) != 0) {
+                fmt::print(stderr, "Error: Server [{}] inaccessible.", path.c_str());
+                std::exit(1);
+            }
+        }
+
+        const auto server_config = irods::get_irods_config_directory() / "server_config.json";
+        if (access(server_config.c_str(), F_OK | R_OK | W_OK) != 0) {
             std::exit(1);
         }
+
+        // Check the following paths if they exist.
+        const auto optional_directories_requiring_write_perms = {
+            irods::get_irods_stacktrace_directory(),
+            irods::get_irods_runstate_directory(),
+        };
+        for (auto&& path : optional_directories_requiring_write_perms) {
+            if (!std::filesystem::exists(path.c_str())) {
+                continue;
+            }
+
+            if (access(path.c_str(), F_OK | R_OK | W_OK | X_OK) != 0) {
+                std::exit(1);
+            }
         }
+    } // terminate_if_directories_and_files_are_inaccessible
 
     auto validate_configuration() -> bool
     {
