@@ -235,7 +235,6 @@ auto main(int _argc, char* _argv[]) -> int
         }
 
         if (create_pid_file(pid_file) != 0) {
-            fmt::print(stderr, "Error: could not create PID file [{}].\n", pid_file);
             return 1;
         }
     }
@@ -668,7 +667,7 @@ Signals:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg, hicpp-signed-bitwise)
         const auto fd = open(_pid_file.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (fd == -1) {
-            fmt::print("Could not open PID file.\n");
+            fmt::print(stderr, "Error: Could not open PID file.\n");
             return 1;
         }
 
@@ -676,7 +675,7 @@ Signals:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         const auto flags = fcntl(fd, F_GETFD);
         if (flags == -1) {
-            fmt::print("Could not retrieve open flags for PID file.\n");
+            fmt::print(stderr, "Error: Could not retrieve open flags for PID file.\n");
             return 1;
         }
 
@@ -685,7 +684,7 @@ Signals:
         // Keep in mind that record locks are NOT inherited by forked child processes.
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg, hicpp-signed-bitwise)
         if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1) {
-            fmt::print("Could not set FD_CLOEXEC on PID file.\n");
+            fmt::print(stderr, "Error: Could not set FD_CLOEXEC on PID file.\n");
             return 1;
         }
 
@@ -702,21 +701,22 @@ Signals:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         if (fcntl(fd, F_SETLK, &input) == -1) {
             if (EAGAIN == errno || EACCES == errno) {
-                fmt::print("Could not acquire write lock for PID file. Another instance "
-                           "could be running already.\n");
+                fmt::print(
+                    stderr,
+                    "Error: Could not acquire write lock for PID file. Another instance could be running already.\n");
                 return 1;
             }
         }
 
         if (ftruncate(fd, 0) == -1) {
-            fmt::print("Could not truncate PID file's contents.\n");
+            fmt::print(stderr, "Error: Could not truncate PID file's contents.\n");
             return 1;
         }
 
         const auto contents = fmt::format("{}\n", getpid());
         // NOLINTNEXTLINE(google-runtime-int)
         if (write(fd, contents.data(), contents.size()) != static_cast<long>(contents.size())) {
-            fmt::print("Could not write PID to PID file.\n");
+            fmt::print(stderr, "Error: Could not write PID to PID file.\n");
             return 1;
         }
 
