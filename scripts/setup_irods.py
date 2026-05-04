@@ -97,6 +97,7 @@ def setup_server(irods_config, json_configuration_file=None, test_mode=False):
         irods_user, irods_group = get_irods_user_and_group(irods_config)
 
     setup_service_account(irods_config, irods_user, irods_group)
+    configure_tmpfiles_for_pid_file_directory(irods_user, irods_group)
 
     # Do the rest of the setup as the irods user
     if os.getuid() == 0:
@@ -363,6 +364,36 @@ def setup_service_account(irods_config, irods_user, irods_group):
 
     #owner of top-level directory changed, clear the cache
     irods_config.clear_cache()
+
+def configure_tmpfiles_for_pid_file_directory(irods_user, irods_group):
+    l = logging.getLogger(__name__)
+    l.info(irods.lib.get_header('Adding configuration to tmpfiles.d for PID file directory'))
+
+    tmpfiles_dir = '/etc/tmpfiles.d'
+    if not os.path.exists(tmpfiles_dir):
+        l.info(f'[{tmpfiles_dir}] does not exist. Skipping.')
+        return
+
+    # Do not overwrite an existing configuration file.
+    tmpfiles_conf = f'{tmpfiles_dir}/irods.conf'
+    if os.path.exists(tmpfiles_conf):
+        l.info(f'[{tmpfiles_conf}] already exists. Skipping.')
+        return
+
+    # Do not proceed if both /run and /var/run are missing.
+    run_dir = '/run'
+    if not os.path.exists(run_dir):
+        run_dir = '/var/run'
+        if not os.path.exists(run_dir):
+            return
+
+    with open(tmpfiles_conf, 'wt') as f:
+        f.write('# Create the iRODS location to hold PID files.\n')
+        f.write('#\n')
+        f.write('# Type Path Mode User Group Age Argument\n')
+        f.write(f'd     {run_dir}/irods   0755 {irods_user} {irods_group} -\n')
+
+    l.info(f'Created [{tmpfiles_conf}].')
 
 def setup_storage(irods_config):
     create_local_storage = determine_local_storage(irods_config)
