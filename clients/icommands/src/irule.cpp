@@ -210,7 +210,7 @@ main( int argc, char **argv ) {
                 exit( 10 );
             }
 
-            /* if the input file name starts with "i:", then get the file from iRODS server */
+            // If the input file name starts with "i:", get the file from the iRODS server.
             if ( !strncmp( fileName, "i:", 2 ) ) {
                 status = getRodsEnv( &myEnv );
 
