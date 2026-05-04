@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from pathlib import Path
 import argparse
 import os
 import sys
@@ -369,28 +370,30 @@ def configure_tmpfiles_for_pid_file_directory(irods_user, irods_group):
     l = logging.getLogger(__name__)
     l.info(irods.lib.get_header('Adding configuration to tmpfiles.d for PID file directory'))
 
-    tmpfiles_dir = '/etc/tmpfiles.d'
-    if not os.path.exists(tmpfiles_dir):
+    tmpfiles_dir = Path('/etc/tmpfiles.d')
+    if not tmpfiles_dir.exists():
         l.info(f'[{tmpfiles_dir}] does not exist. Skipping.')
         return
 
     # Do not overwrite an existing configuration file.
-    tmpfiles_conf = f'{tmpfiles_dir}/irods.conf'
-    if os.path.exists(tmpfiles_conf):
+    tmpfiles_conf = tmpfiles_dir / 'irods.conf'
+    if tmpfiles_conf.exists():
         l.info(f'[{tmpfiles_conf}] already exists. Skipping.')
         return
 
     # Do not proceed if both /run and /var/run are missing.
-    run_dir = '/run'
-    if not os.path.exists(run_dir):
-        run_dir = '/var/run'
-        if not os.path.exists(run_dir):
+    run_dir = Path('/run')
+    if not run_dir.is_dir():
+        run_dir = Path('/var/run')
+        # is_dir() follows symlinks by default. This is important because
+        # /var/run tends to be a symlink to /run on modern systems.
+        if not run_dir.is_dir():
             return
 
-    with open(tmpfiles_conf, 'wt') as f:
+    with tmpfiles_conf.open('wt') as f:
         f.write('# Create the iRODS location to hold PID files.\n')
         f.write('#\n')
-        f.write('# Type Path Mode User Group Age Argument\n')
+        f.write('# Type Path Mode User Group Age\n')
         f.write(f'd     {run_dir}/irods   0755 {irods_user} {irods_group} -\n')
 
     l.info(f'Created [{tmpfiles_conf}].')
