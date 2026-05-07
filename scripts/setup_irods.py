@@ -390,6 +390,10 @@ def configure_tmpfiles_for_pid_file_directory(irods_user, irods_group):
     l = logging.getLogger(__name__)
     l.info(irods.lib.get_header('Adding configuration to tmpfiles.d for PID file directory'))
 
+    # TODO Figure out how we can determine if someone is setting up
+    # a server installed via non-package install.
+    #
+    # Return immediately if this is a non-package install.
     tmpfiles_dir = Path('/etc/tmpfiles.d')
     if not tmpfiles_dir.exists():
         l.info(f'[{tmpfiles_dir}] does not exist. Skipping.')
@@ -401,14 +405,11 @@ def configure_tmpfiles_for_pid_file_directory(irods_user, irods_group):
         l.info(f'[{tmpfiles_conf}] already exists. Skipping.')
         return
 
-    # Do not proceed if both /run and /var/run are missing.
-    run_dir = Path('/run')
+    # Do not proceed if the runstate directory is missing. On Linux,
+    # this is usually /run or /var/run.
+    run_dir = Path(irods.paths.runstate_directory())
     if not run_dir.is_dir():
-        run_dir = Path('/var/run')
-        # is_dir() follows symlinks by default. This is important because
-        # /var/run tends to be a symlink to /run on modern systems.
-        if not run_dir.is_dir():
-            return
+        return
 
     with tmpfiles_conf.open('wt') as f:
         f.write('# Create the iRODS location to hold PID files.\n')
