@@ -9,6 +9,7 @@
 #include "irods/physPath.hpp"
 #include "irods/rcGlobalExtern.h"
 #include "irods/rcMisc.h"
+#include "irods/reSysDataObjOpr.hpp"
 #include "irods/resource.hpp"
 #include "irods/rodsConnect.h"
 #include "irods/rodsDef.h"
@@ -39,6 +40,7 @@
 #include <fcntl.h> // JMC - backport 4598
 
 #include <cstring>
+#include <ctime>
 
 int getLeafRescPathName(const std::string& _resc_hier, std::string& _ret_string);
 
@@ -325,9 +327,31 @@ setPathForRandomScheme( char *objPath, const char *vaultPath, char *userName,
         return status;
     }
 
-    snprintf( outPath, MAX_NAME_LEN,
-              "%s/%s/%d/%d/%s.%d", vaultPath, userName, dir1, dir2,
-              logicalFileName, ( uint ) time( NULL ) );
+    if (get_random_scheme_suffix_style() == 1) {
+        const auto rnd_str = irods::generate_random_alphanumeric_string(get_random_scheme_suffix_length());
+        std::snprintf(outPath,
+                      MAX_NAME_LEN,
+                      "%s/%s/%d/%d/%s.%d.%s",
+                      vaultPath,
+                      userName,
+                      dir1,
+                      dir2,
+                      logicalFileName,
+                      static_cast<unsigned int>(std::time(nullptr)),
+                      rnd_str.c_str());
+    }
+    else {
+        std::snprintf(outPath,
+                      MAX_NAME_LEN,
+                      "%s/%s/%d/%d/%s.%d",
+                      vaultPath,
+                      userName,
+                      dir1,
+                      dir2,
+                      logicalFileName,
+                      static_cast<unsigned int>(std::time(nullptr)));
+    }
+
     return 0;
 }
 

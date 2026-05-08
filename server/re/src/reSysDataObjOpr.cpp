@@ -1,21 +1,36 @@
 /// \file
 
-#include "irods/rcMisc.h"
 #include "irods/reSysDataObjOpr.hpp"
+
+#include "irods/apiNumber.h"
+#include "irods/dataObjOpr.hpp"
 #include "irods/genQuery.h"
 #include "irods/getRescQuota.h"
-#include "irods/dataObjOpr.hpp"
-#include "irods/resource.hpp"
-#include "irods/physPath.hpp"
-#include "irods/rsGenQuery.hpp"
-#include "irods/rsModDataObjMeta.hpp"
-#include "irods/rsDataObjRepl.hpp"
-#include "irods/apiNumber.h"
 #include "irods/irodsDelayServer.hpp"
+#include "irods/irods_logger.hpp"
 #include "irods/irods_resource_backport.hpp"
 #include "irods/irods_server_api_table.hpp"
 #include "irods/irods_server_properties.hpp"
-#include "irods/irods_logger.hpp"
+#include "irods/msParam.h"
+#include "irods/msi_preconditions.hpp"
+#include "irods/physPath.hpp"
+#include "irods/rcMisc.h"
+#include "irods/resource.hpp"
+#include "irods/rsDataObjRepl.hpp"
+#include "irods/rsGenQuery.hpp"
+#include "irods/rsModDataObjMeta.hpp"
+#include <algorithm>
+#include <initializer_list>
+
+namespace
+{
+    using log_msi = irods::experimental::log::microservice;
+
+    // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+    int g_random_scheme_suffix_style = 0;
+    int g_random_scheme_suffix_length = 5;
+    // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+} // anonymous namespace
 
 /**
  * \fn msiSetDefaultResc (msParam_t *xdefaultRescList, msParam_t *xoptionStr, ruleExecInfo_t *rei)
@@ -1111,6 +1126,62 @@ msiSetRandomScheme( ruleExecInfo_t *rei ) {
     }
     return 0;
 }
+
+auto get_random_scheme_suffix_style() -> int
+{
+    return g_random_scheme_suffix_style;
+}
+
+auto get_random_scheme_suffix_length() -> int
+{
+    return g_random_scheme_suffix_length;
+}
+
+auto msi_set_random_scheme_suffix_style(MsParam* _suffix_style, ruleExecInfo_t* _rei) -> int
+{
+    _rei->status = 0;
+
+    IRODS_MSI_REQUIRE_VALID_POINTER(_suffix_style);
+    IRODS_MSI_REQUIRE_TYPE(_suffix_style->type, INT_MS_T);
+    IRODS_MSI_REQUIRE_VALID_POINTER(_suffix_style->inOutStruct);
+
+    const auto new_style = *static_cast<int*>(_suffix_style->inOutStruct);
+    if (new_style < 0 || new_style > 1) {
+        log_msi::warn(
+            "{}: Invalid suffix style [{}] for vault path scheme. Expected 0 or 1. Using previous style of [{}].",
+            __func__,
+            new_style,
+            g_random_scheme_suffix_style);
+        return 0;
+    }
+
+    g_random_scheme_suffix_style = new_style;
+
+    return 0;
+} // msi_set_random_scheme_suffix_style
+
+auto msi_set_random_scheme_suffix_length(MsParam* _suffix_length, ruleExecInfo_t* _rei) -> int
+{
+    _rei->status = 0;
+
+    IRODS_MSI_REQUIRE_VALID_POINTER(_suffix_length);
+    IRODS_MSI_REQUIRE_TYPE(_suffix_length->type, INT_MS_T);
+    IRODS_MSI_REQUIRE_VALID_POINTER(_suffix_length->inOutStruct);
+
+    const auto new_length = *static_cast<int*>(_suffix_length->inOutStruct);
+    if (new_length < 1 || new_length > 32) {
+        log_msi::warn("{}: Invalid suffix length [{}] for vault path scheme. Length must satisfy the range [0, 32]. "
+                      "Using previous length of [{}].",
+                      __func__,
+                      new_length,
+                      g_random_scheme_suffix_length);
+        return 0;
+    }
+
+    g_random_scheme_suffix_length = new_length;
+
+    return 0;
+} // msi_set_random_scheme_suffix_length
 
 /**
  * \fn msiSetRescQuotaPolicy (msParam_t *xflag, ruleExecInfo_t *rei)

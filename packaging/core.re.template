@@ -292,11 +292,19 @@ acSetChkFilePathPerm {msiSetChkFilePathPerm("disallowPathReg"); }
 #      The advantage with the RANDOM scheme is renaming operations (imv, irm)
 #      are much faster because there is no need to rename the
 #      corresponding physical path.
+#    msi_set_random_scheme_suffix_style(style) - Set the style used during
+#      path generation. "style" must be 0 (default) or 1 (append random bytes
+#      to the end of the path). This microservice gives administrators a way
+#      to control filename collisions at the physical layer. This microservice
+#      has no effect if the VaultPath scheme isn't set to RANDOM.
+#    msi_set_random_scheme_suffix_length(length) - Set the length of the suffix
+#      used during path generation. "length" must satisfy the range [1, 32].
+#      The suffix style must be set to 1 for this microservice to have an effect.
 # This default is GRAFT_PATH scheme with addUserName == yes and trimDirCnt == 1.
 # Note : if trimDirCnt is greater than 1, the home or trash entry will be
 # taken out.
-# acSetVaultPathPolicy {msiSetRandomScheme; }
-acSetVaultPathPolicy {msiSetGraftPathScheme("no","1"); }
+# acSetVaultPathPolicy { msiSetRandomScheme; msi_set_random_scheme_suffix_style(0); msi_set_random_scheme_suffix_length(5); }
+acSetVaultPathPolicy { msiSetGraftPathScheme("no","1"); }
 #
 # 18) acPreProcForCollCreate - This is the PreProcessing rule for creating
 # a collection. Currently there is no function written specifically

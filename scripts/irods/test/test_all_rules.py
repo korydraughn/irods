@@ -1,4 +1,3 @@
-from __future__ import print_function
 import getpass
 import json
 import os
@@ -1809,6 +1808,73 @@ OUTPUT ruleExecOut
 
         finally:
             IrodsController().reload_configuration()
+
+    def test_vault_path_random_scheme_customization_options__issue_8917(self):
+        def do_test_with_suffix_style(suffix_style, expected_output, suffix_length=None):
+            try:
+                if isinstance(suffix_length, int):
+                    pep_map = {
+                        'irods_rule_engine_plugin-irods_rule_language': textwrap.dedent(f'''\
+                            acSetVaultPathPolicy()
+                            {{
+                                msiSetRandomScheme();
+                                msi_set_random_scheme_suffix_style({suffix_style});
+                                msi_set_random_scheme_suffix_length({suffix_length});
+                            }}
+                            '''),
+                        'irods_rule_engine_plugin-python': textwrap.dedent(f'''\
+                            def acSetVaultPathPolicy(rule_args, callback, rei):
+                                callback.msiSetRandomScheme()
+                                callback.msi_set_random_scheme_suffix_style({suffix_style})
+                                callback.msi_set_random_scheme_suffix_length({suffix_length});
+                            ''')
+                    }
+                else:
+                    pep_map = {
+                        'irods_rule_engine_plugin-irods_rule_language': textwrap.dedent(f'''\
+                            acSetVaultPathPolicy()
+                            {{
+                                msiSetRandomScheme();
+                                msi_set_random_scheme_suffix_pattern({suffix_style});
+                            }}
+                            '''),
+                        'irods_rule_engine_plugin-python': textwrap.dedent(f'''\
+                            def acSetVaultPathPolicy(rule_args, callback, rei):
+                                callback.msiSetRandomScheme()
+                                callback.msi_set_random_scheme_suffix_pattern({suffix_style})
+                            ''')
+                    }
+
+                with temporary_core_file() as core:
+                    core.add_rule(pep_map[plugin_name])
+                    IrodsController().reload_configuration()
+
+                    data_object = f'{self.user0.session_collection}/issue_8917-{suffix_style}'
+                    self.user0.assert_icommand(['itouch', data_object])
+                    self.user0.assert_icommand(['ils', '-L', data_object], 'STDOUT', expected_output, use_regex=True)
+
+            finally:
+                IrodsController().reload_configuration()
+
+        # Appends 5 random bytes between ascii '0' and 'z' inclusive. This also verifies
+        # the default suffix length is 5.
+        do_test_with_suffix_style(1, [r'.+/\d+/\d+/.+[.].{10,}[.].{5}'])
+
+        # Show that the suffix length can be any value as long as it's greater than 0.
+        for suffix_length in [12, 3]:
+            with self.subTest(f'suffix length of [{suffix_length}]'):
+                do_test_with_suffix_style(1, [fr'.+/\d+/\d+/.+[.].{{10,}}[.].{suffix_length}'], suffix_length)
+
+        # Show that an invalid suffix length results in the default length being used.
+        for suffix_length in [0, -7]:
+            with self.subTest(f'suffix length of [{suffix_length}]'):
+                do_test_with_suffix_style(1, [r'.+/\d+/\d+/.+[.].{10,}[.].{5}'], suffix_length)
+
+        # The legacy behavior - i.e. The same as setting 1, but without the 5 trailing bytes.
+        # Setting the suffix pattern ID to a value other than 1 is the same as setting it to 0.
+        expected_output = [r'.+/\d+/\d+/.+\..{10,}']
+        do_test_with_suffix_style(5, expected_output)
+        do_test_with_suffix_style(0, expected_output)
 
 class Test_msiDataObjRepl_checksum_keywords(session.make_sessions_mixin([('otherrods', 'rods')], [('alice', 'apass')]), unittest.TestCase):
     global plugin_name
