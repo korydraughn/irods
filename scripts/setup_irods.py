@@ -406,8 +406,14 @@ def configure_tmpfiles_for_pid_file_directory(irods_user, irods_group):
         l.info(f'[{sysconf_dir}] indicates this is a non-package install. Skipping.')
         return
 
+    # Do not proceed if the tmpfiles.d does not exist.
+    tmpfiles_dir = sysconf_dir / 'tmpfiles.d'
+    if not tmpfiles_dir.exists():
+        l.info(f'[{tmpfiles_dir}] does not exist. Skipping.')
+        return
+
     # Do not overwrite an existing configuration file.
-    tmpfiles_conf = sysconf_dir / 'tmpfiles.d/irods.conf'
+    tmpfiles_conf = tmpfiles_dir / 'irods.conf'
     if tmpfiles_conf.exists():
         l.info(f'[{tmpfiles_conf}] already exists. Skipping.')
         return
