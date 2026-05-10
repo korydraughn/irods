@@ -390,17 +390,24 @@ def configure_tmpfiles_for_pid_file_directory(irods_user, irods_group):
     l = logging.getLogger(__name__)
     l.info(irods.lib.get_header('Adding configuration to tmpfiles.d for PID file directory'))
 
-    # TODO Figure out how we can determine if someone is setting up
-    # a server installed via non-package install.
+    # Return immediately if the parent of SYSCONFDIR (/etc) is something
+    # other than "/". This signals that a non-package install is likely
+    # in progress. This step isn't necessary for non-package installs
+    # because the server creates it PID file under the install directory.
     #
-    # Return immediately if this is a non-package install.
-    tmpfiles_dir = Path('/etc/tmpfiles.d')
-    if not tmpfiles_dir.exists():
-        l.info(f'[{tmpfiles_dir}] does not exist. Skipping.')
+    # Users with root privileges can perform non-package installs which
+    # look nearly identical to packaged installs. Disallowing such situations
+    # isn't a goal of this function.
+    #
+    # For cases where the user DOES NOT have root privileges, they will
+    # not be able to perform a non-package when the install prefix is "/".
+    sysconf_dir = Path(paths.sysconf_directory())
+    if sysconf_dir.parent != Path('/')
+        l.info(f'[{sysconf_dir}] indicates this is a non-package install. Skipping.')
         return
 
     # Do not overwrite an existing configuration file.
-    tmpfiles_conf = tmpfiles_dir / 'irods.conf'
+    tmpfiles_conf = sysconf_dir / 'tmpfiles.d/irods.conf'
     if tmpfiles_conf.exists():
         l.info(f'[{tmpfiles_conf}] already exists. Skipping.')
         return
