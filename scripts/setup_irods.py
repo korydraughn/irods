@@ -401,7 +401,7 @@ def configure_tmpfiles_for_pid_file_directory(irods_user, irods_group):
     #
     # For cases where the user DOES NOT have root privileges, they will
     # not be able to perform a non-package when the install prefix is "/".
-    sysconf_dir = Path(paths.sysconf_directory())
+    sysconf_dir = Path(irods.paths.sysconf_directory())
     if sysconf_dir.parent != Path('/'):
         l.info(f'[{sysconf_dir}] indicates this is a non-package install. Skipping.')
         return
