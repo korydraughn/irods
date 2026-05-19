@@ -769,6 +769,7 @@ msiSetQuota( msParam_t *type, msParam_t *name, msParam_t *resource, msParam_t *v
     return status;
 }
 
+// FIXME Update signature to require the admin-only rule execution key.
 int msi_set_logical_quota(msParam_t* _coll_name,
                           msParam_t* _bytes_value,
                           msParam_t* _objects_value,
@@ -790,20 +791,20 @@ int msi_set_logical_quota(msParam_t* _coll_name,
     }
 
     char* parsed_coll_name;
-    char* parsed_bytes_value;
-    char* parsed_objects_value;
     // Parse collection name
-    if ((parsed_coll_name = parseMspForStr(_coll_name)) == nullptr) {
+    if (parsed_coll_name = parseMspForStr(_coll_name); parsed_coll_name == nullptr) {
         log_msi::error("{}: Null or non-string collection name specified.", __func__);
         return USER_PARAM_TYPE_ERR;
     }
 
-    if ((parsed_bytes_value = parseMspForStr(_bytes_value)) == nullptr) {
+    char* parsed_bytes_value;
+    if (parsed_bytes_value = parseMspForStr(_bytes_value); parsed_bytes_value == nullptr) {
         log_msi::error("{}: Null or non-string byte value specified.", __func__);
         return USER_PARAM_TYPE_ERR;
     }
 
-    if ((parsed_objects_value = parseMspForStr(_objects_value)) == nullptr) {
+    char* parsed_objects_value;
+    if (parsed_objects_value = parseMspForStr(_objects_value); parsed_objects_value == nullptr) {
         log_msi::error("{}: Null or non-string object value specified.", __func__);
         return USER_PARAM_TYPE_ERR;
     }
