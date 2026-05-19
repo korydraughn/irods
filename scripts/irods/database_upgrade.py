@@ -10,6 +10,7 @@ import shutil
 import tempfile
 import textwrap
 import time
+#import uuid
 
 def run_update(irods_config, cursor, is_upgrade):
     l = logging.getLogger(__name__)
@@ -303,6 +304,11 @@ def run_update(irods_config, cursor, is_upgrade):
 
         # Add grid configuration setting for toggling logical quota enforcement
         database_connect.execute_sql_statement(cursor, "insert into R_GRID_CONFIGURATION values ('logical_quotas', 'enabled', '0');")
+
+        # Generate a UUID which will serve as the value for enforcing admin-only rules and microservices.
+        #key = str(uuid.uuid4())
+        #database_connect.execute_sql_statement(cursor, f"insert into R_GRID_CONFIGURATION values ('policy', 'admin_only_rule_execution_key', '{key}');")
+
     else:
         raise IrodsError('Upgrade to schema version %d is unsupported.' % (new_schema_version))
 
