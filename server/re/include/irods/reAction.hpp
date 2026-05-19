@@ -155,6 +155,9 @@ int msiString2StrArray( msParam_t *inBufferP, msParam_t* outStrArrayP, ruleExecI
 
 int msiTakeThreeArgumentsAndDoNothing(msParam_t *arg1, msParam_t *arg2, msParam_t *arg3, ruleExecInfo_t *rei);
 
+// TODO documentation
+int msi_fail_if_admin_only_key_is_invalid(MsParam* _key, RuleExecInfo* _rei);
+
 namespace irods
 {
     // clang-format off
@@ -290,6 +293,7 @@ namespace irods
         table_["msi_genquery2_next_row"] = new irods::ms_table_entry("msi_genquery2_next_row", 1, std::function<int(msParam_t*, ruleExecInfo_t*)>(msi_genquery2_next_row));
         table_["msi_genquery2_column"] = new irods::ms_table_entry("msi_genquery2_column", 3, std::function<int(msParam_t*, msParam_t*, msParam_t*, ruleExecInfo_t*)>(msi_genquery2_column));
         table_["msi_genquery2_free"] = new irods::ms_table_entry("msi_genquery2_free", 1, std::function<int(msParam_t*, ruleExecInfo_t*)>(msi_genquery2_free));
+        table_["msi_fail_if_admin_only_key_is_invalid"] = new irods::ms_table_entry("msi_fail_if_admin_only_key_is_invalid", 1, std::function<int(msParam_t*, ruleExecInfo_t*)>(msi_fail_if_admin_only_key_is_invalid));
     }; // ms_table::ms_table
 
     // NOLINTEND(cppcoreguidelines-owning-memory)

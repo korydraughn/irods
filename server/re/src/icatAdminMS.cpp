@@ -1,6 +1,7 @@
 /// \file
 
 #include "irods/icatHighLevelRoutines.hpp"
+#include "irods/irods_rs_comm_query.hpp"
 #include "irods/msParam.h"
 #include "irods/rcMisc.h"
 #include "irods/generalAdmin.h"
@@ -10,6 +11,7 @@
 #include "irods/rsGeneralAdmin.hpp"
 #include "irods/irods_re_structs.hpp"
 #include "irods/irods_logger.hpp"
+#include "irods/msi_preconditions.hpp"
 
 #define IRODS_FILESYSTEM_ENABLE_SERVER_SIDE_API
 #include "irods/filesystem.hpp"
@@ -824,3 +826,25 @@ int msi_set_logical_quota(msParam_t* _coll_name,
 
     return rsGeneralAdmin(_rei->rsComm, &generalAdminInp);
 } // msi_set_logical_quota
+
+auto msi_fail_if_admin_only_key_is_invalid(MsParam* _key, RuleExecInfo* _rei) -> int
+{
+    IRODS_MSI_REQUIRE_VALID_POINTER(_key);
+    IRODS_MSI_REQUIRE_VALID_POINTER(_rei);
+
+    if (irods::is_privileged_client(*_rei->rsComm)) {
+        log_msi::debug("{}: User is a rodsadmin. Skipping check.", __func__);
+        return 0;
+    }
+
+    IRODS_MSI_REQUIRE_TYPE(_key->type, STR_MS_T);
+    IRODS_MSI_REQUIRE_VALID_POINTER(_key->inOutStruct);
+
+    const std::string_view key_to_check = static_cast<const char*>(_key->inOutStruct);
+    if (key_to_check != "12345") { // TODO Use a dummy value for now.
+        log_msi::debug("{}: Invalid admin-only key [{}].", __func__, key_to_check);
+        return SYS_NOT_ALLOWED;
+    }
+    
+    return 0;
+} // msi_fail_if_admin_only_key_is_invalid
