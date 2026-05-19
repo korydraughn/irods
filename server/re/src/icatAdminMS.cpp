@@ -827,6 +827,24 @@ int msi_set_logical_quota(msParam_t* _coll_name,
     return rsGeneralAdmin(_rei->rsComm, &generalAdminInp);
 } // msi_set_logical_quota
 
+//            PEP                    irule
+//            -------                -------
+// rodsuser   allowed (must use key) nope
+// rodsadmin  allowed                allowed (discouraged to pass key)
+//
+// ---
+//
+// case 1 - rodsuser + PEP
+// - 
+//
+// case 2 - rodsuser + irule
+//
+// case 3 - rodsadmin + PEP
+//
+// case 4 - rodsadmin + irule
+//
+// ---
+// this is not an escalation
 auto msi_fail_if_admin_only_key_is_invalid(MsParam* _key, RuleExecInfo* _rei) -> int
 {
     IRODS_MSI_REQUIRE_VALID_POINTER(_key);
