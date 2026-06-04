@@ -50,18 +50,16 @@ namespace irods::experimental::io
     public:
         basic_data_object_buf()
             : base_type{}
-            , buf_{}
-            , transport_{}
         {
         }
 
-        basic_data_object_buf(basic_data_object_buf&& _other)
+        basic_data_object_buf(basic_data_object_buf&& _other) noexcept
             : basic_data_object_buf{}
         {
             swap(_other);
         }
 
-        basic_data_object_buf& operator=(basic_data_object_buf&& _other)
+        basic_data_object_buf& operator=(basic_data_object_buf&& _other) noexcept
         {
             close();
             swap(_other);
@@ -87,7 +85,7 @@ namespace irods::experimental::io
             _lhs.swap(_rhs);
         }
 
-        bool is_open() const noexcept
+        [[nodiscard]] bool is_open() const noexcept
         {
             return transport_ && transport_->is_open();
         }
@@ -208,27 +206,27 @@ namespace irods::experimental::io
             return sb;
         }
 
-        int file_descriptor() const noexcept
+        [[nodiscard]] int file_descriptor() const noexcept
         {
             return transport_->file_descriptor();;
         }
 
-        const root_resource_name& root_resource_name() const
+        [[nodiscard]] const root_resource_name& root_resource_name() const
         {
             return transport_->root_resource_name();
         }
 
-        const leaf_resource_name& leaf_resource_name() const
+        [[nodiscard]] const leaf_resource_name& leaf_resource_name() const
         {
             return transport_->leaf_resource_name();
         }
 
-        const replica_number& replica_number() const
+        [[nodiscard]] const replica_number& replica_number() const
         {
             return transport_->replica_number();
         }
 
-        const replica_token& replica_token() const
+        [[nodiscard]] const replica_token& replica_token() const
         {
             return transport_->replica_token();
         }
@@ -264,7 +262,7 @@ namespace irods::experimental::io
             return traits_type::to_int_type(*this->gptr());
         }
 
-        int_type overflow(int_type _c = traits_type::eof()) override
+        int_type overflow(int_type _c = traits_type::eof()) override // NOLINT(google-default-arguments)
         {
             prepare_for_output();
 
@@ -315,7 +313,7 @@ namespace irods::experimental::io
             return 0;
         }
 
-        int_type pbackfail(int_type _c = traits_type::eof()) override
+        int_type pbackfail(int_type _c = traits_type::eof()) override // NOLINT(google-default-arguments)
         {
             // If the "next" pointer of the "Get" area points to the beginning of the
             // "Get" area, then return immediately.
@@ -335,9 +333,10 @@ namespace irods::experimental::io
             return traits_type::not_eof(_c);
         }
 
+        // NOLINTNEXTLINE(google-default-arguments)
         pos_type seekoff(off_type _off,
                          std::ios_base::seekdir _dir,
-                         std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
+                         [[maybe_unused]] std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
         {
             if (this->sync() != 0) {
                 return seek_error;
@@ -346,7 +345,8 @@ namespace irods::experimental::io
             return transport_->seekpos(_off, _dir);
         }
 
-        pos_type seekpos(pos_type _pos, std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
+        // NOLINTNEXTLINE(google-default-arguments)
+        pos_type seekpos(pos_type _pos, [[maybe_unused]] std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
         {
             if (this->sync() != 0) {
                 return seek_error;
@@ -420,8 +420,8 @@ namespace irods::experimental::io
             return 0;
         }
 
-        std::array<char_type, buffer_size> buf_;
-        transport<char_type>* transport_;
+        std::array<char_type, buffer_size> buf_{};
+        transport<char_type>* transport_{};
     }; // basic_data_object_buf
 
     // Provides a default openmode for basic_dstream constructors and open()
@@ -534,14 +534,14 @@ namespace irods::experimental::io
             open(_transport, _replica_token, _path, _leaf_resource_name, _mode);
         }
 
-        basic_dstream(basic_dstream&& _other)
+        basic_dstream(basic_dstream&& _other) noexcept
             : GeneralStream{std::move(_other)}
             , buf_{std::move(_other.buf_)}
         {
             this->set_rdbuf(&buf_);
         }
 
-        basic_dstream& operator=(basic_dstream&& _other)
+        basic_dstream& operator=(basic_dstream&& _other) noexcept
         {
             GeneralStream::operator=(std::move(_other));
             buf_ = std::move(_other.buf_);
@@ -563,10 +563,11 @@ namespace irods::experimental::io
 
         basic_data_object_buf<char_type, traits_type>* rdbuf() const
         {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
             return const_cast<basic_data_object_buf<char_type, traits_type>*>(&buf_);
         }
 
-        bool is_open() const noexcept
+        [[nodiscard]] bool is_open() const noexcept
         {
             return buf_.is_open();
         }
@@ -660,27 +661,27 @@ namespace irods::experimental::io
             }
         }
 
-        int file_descriptor() const noexcept
+        [[nodiscard]] int file_descriptor() const noexcept
         {
             return buf_.file_descriptor();
         }
 
-        const root_resource_name& root_resource_name() const
+        [[nodiscard]] const root_resource_name& root_resource_name() const
         {
             return buf_.root_resource_name();
         }
 
-        const leaf_resource_name& leaf_resource_name() const
+        [[nodiscard]] const leaf_resource_name& leaf_resource_name() const
         {
             return buf_.leaf_resource_name();
         }
 
-        const replica_number& replica_number() const
+        [[nodiscard]] const replica_number& replica_number() const
         {
             return buf_.replica_number();
         }
 
-        const replica_token& replica_token() const
+        [[nodiscard]] const replica_token& replica_token() const
         {
             return buf_.replica_token();
         }
@@ -711,4 +712,3 @@ namespace irods::experimental::io
 } // namespace irods::experimental::io
 
 #endif // IRODS_IO_DSTREAM_HPP
-

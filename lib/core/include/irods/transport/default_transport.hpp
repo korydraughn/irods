@@ -95,11 +95,6 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         explicit basic_transport(rxComm& _comm)
             : transport<CharT>{}
             , comm_{&_comm}
-            , fd_{uninitialized_file_descriptor}
-            , root_resc_name_{}
-            , leaf_resc_name_{}
-            , replica_number_{}
-            , replica_token_{}
         {
         }
 
@@ -170,6 +165,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             });
         }
 
+        // NOLINTNEXTLINE(google-default-arguments)
         bool close(const on_close_success* _on_close_success = nullptr) override
         {
             using json = nlohmann::json;
@@ -227,7 +223,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             bytesBuf_t input_buffer{};
             input_buffer.len = input.len;
-            input_buffer.buf = const_cast<char_type*>(_buffer);
+            input_buffer.buf = const_cast<char_type*>(_buffer); // NOLINT(cppcoreguidelines-pro-type-const-cast)
 
             last_error_ = rxDataObjWrite(comm_, &input, &input_buffer);
 
@@ -261,7 +257,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
             at_scope_exit free_memory{[&output] {
                 if (output) { // NOLINT(readability-implicit-bool-conversion)
-                    std::free(output); // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
+                    std::free(output); // NOLINT(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
                 }
             }};
 
@@ -273,32 +269,32 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             return output->offset;
         }
 
-        bool is_open() const noexcept override
+        [[nodiscard]] bool is_open() const noexcept override
         {
             return fd_ >= minimum_valid_file_descriptor;
         }
 
-        int file_descriptor() const noexcept override
+        [[nodiscard]] int file_descriptor() const noexcept override
         {
             return fd_;
         }
 
-        const root_resource_name& root_resource_name() const override
+        [[nodiscard]] const root_resource_name& root_resource_name() const override
         {
             return root_resc_name_;
         }
 
-        const leaf_resource_name& leaf_resource_name() const override
+        [[nodiscard]] const leaf_resource_name& leaf_resource_name() const override
         {
             return leaf_resc_name_;
         }
 
-        const replica_number& replica_number() const override
+        [[nodiscard]] const replica_number& replica_number() const override
         {
             return replica_number_;
         }
 
-        const replica_token& replica_token() const override
+        [[nodiscard]] const replica_token& replica_token() const override
         {
             return replica_token_;
         }
@@ -318,19 +314,24 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             if (ios_base::in == m) {
                 return O_RDONLY;
             }
-            else if (ios_base::out == m || (ios_base::out | ios_base::trunc) == m) {
+
+            if (ios_base::out == m || (ios_base::out | ios_base::trunc) == m) {
                 return O_CREAT | O_WRONLY | O_TRUNC;
             }
-            else if (ios_base::app == m || (ios_base::out | ios_base::app) == m) {
+
+            if (ios_base::app == m || (ios_base::out | ios_base::app) == m) {
                 return O_CREAT | O_WRONLY | O_APPEND;
             }
-            else if ((ios_base::out | ios_base::in) == m) {
+
+            if ((ios_base::out | ios_base::in) == m) {
                 return O_RDWR;
             }
-            else if ((ios_base::out | ios_base::in | ios_base::trunc) == m) {
+
+            if ((ios_base::out | ios_base::in | ios_base::trunc) == m) {
                 return O_CREAT | O_RDWR | O_TRUNC;
             }
-            else if ((ios_base::out | ios_base::in | ios_base::app) == m ||
+
+            if ((ios_base::out | ios_base::in | ios_base::app) == m ||
                      (ios_base::in | ios_base::app) == m)
             {
                 return O_CREAT | O_RDWR | O_APPEND;
@@ -341,7 +342,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         bool seek_to_end_if_required(std::ios_base::openmode _mode)
         {
-            if (std::ios_base::ate & _mode) {
+            if ((std::ios_base::ate & _mode) == std::ios_base::ate) {
                 if (seek_error == seekpos(0, std::ios_base::end)) {
                     return false;
                 }
@@ -373,6 +374,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             char* json_output{}; 
             at_scope_exit free_json_output{[&json_output] {
                 if (json_output) {
+                    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc)
                     std::free(json_output);
                 }
             }};
@@ -410,11 +412,11 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         }
 
         rxComm* comm_;
-        int fd_;
-        struct root_resource_name root_resc_name_;
-        struct leaf_resource_name leaf_resc_name_;
-        struct replica_number replica_number_;
-        struct replica_token replica_token_;
+        int fd_ = uninitialized_file_descriptor;
+        struct root_resource_name root_resc_name_{};
+        struct leaf_resource_name leaf_resc_name_{};
+        struct replica_number replica_number_{};
+        struct replica_token replica_token_{};
         int last_error_ = 0;
     }; // basic_transport
 

@@ -78,7 +78,7 @@ namespace irods::experimental::io
         using off_type    = typename traits_type::off_type;
         // clang-format on
 
-        virtual ~transport() {}
+        virtual ~transport() = default;
 
         /// Creates or opens a data object in the specified mode.
         ///
@@ -177,7 +177,7 @@ namespace irods::experimental::io
         /// \return A boolean.
         /// \retval true  On success.
         /// \retval false On failure.
-        virtual bool close(const on_close_success* _on_close_success = nullptr) = 0;
+        virtual bool close(const on_close_success* _on_close_success = nullptr) = 0; // NOLINT(google-default-arguments)
 
         /// Fills the specified buffer with bytes received from the server.
         ///
@@ -208,7 +208,7 @@ namespace irods::experimental::io
         /// \return A boolean.
         /// \retval true  If the replica is open.
         /// \retval false Otherwise.
-        virtual bool is_open() const noexcept = 0;
+        [[nodiscard]] virtual bool is_open() const noexcept = 0;
 
         /// The underlying file descriptor.
         ///
@@ -216,22 +216,22 @@ namespace irods::experimental::io
         ///
         /// \return An integer.
         /// \retval Implementation defined.
-        virtual int file_descriptor() const noexcept = 0;
+        [[nodiscard]] virtual int file_descriptor() const noexcept = 0;
 
         /// The name of the root resource where the replica resides.
-        virtual const root_resource_name& root_resource_name() const = 0;
+        [[nodiscard]] virtual const root_resource_name& root_resource_name() const = 0;
 
         /// The name of the leaf resource where the replica resides.
-        virtual const leaf_resource_name& leaf_resource_name() const = 0;
+        [[nodiscard]] virtual const leaf_resource_name& leaf_resource_name() const = 0;
 
         /// The replica number that identifies the replica.
-        virtual const replica_number& replica_number() const = 0;
+        [[nodiscard]] virtual const replica_number& replica_number() const = 0;
 
         /// The replica token attached to the replica.
         ///
         /// Replica tokens only apply to write operations. Replica opened only for reads do
         /// not produce replica tokens.
-        virtual const replica_token& replica_token() const = 0;
+        [[nodiscard]] virtual const replica_token& replica_token() const = 0;
 
         /// Returns the error code of the last operation.
         ///
@@ -241,4 +241,3 @@ namespace irods::experimental::io
 } // irods::experimental::io
 
 #endif // IRODS_IO_TRANSPORT_HPP
-
