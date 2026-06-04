@@ -72,7 +72,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
     template <typename CharT>
     class basic_transport : public transport<CharT>
     {
-    public:
+      public:
         // clang-format off
         using char_type   = typename transport<CharT>::char_type;
         using traits_type = typename transport<CharT>::traits_type;
@@ -81,7 +81,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         using off_type    = typename traits_type::off_type;
         // clang-format on
 
-    private:
+      private:
         // clang-format off
         inline static constexpr auto uninitialized_file_descriptor = -1;
         inline static constexpr auto minimum_valid_file_descriptor = 3;
@@ -91,7 +91,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
         inline static const     auto seek_error                    = pos_type{off_type{-1}};
         // clang-format on
 
-    public:
+      public:
         explicit basic_transport(rxComm& _comm)
             : transport<CharT>{}
             , comm_{&_comm}
@@ -304,7 +304,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
             return last_error_;
         }
 
-    private:
+      private:
         int make_open_flags(std::ios_base::openmode _mode) noexcept
         {
             using std::ios_base;
@@ -413,10 +413,14 @@ namespace irods::experimental::io::NAMESPACE_IMPL
 
         rxComm* comm_;
         int fd_ = uninitialized_file_descriptor;
+
+        // clang-format off
         struct root_resource_name root_resc_name_{};
         struct leaf_resource_name leaf_resc_name_{};
         struct replica_number replica_number_{};
         struct replica_token replica_token_{};
+        // clang-format on
+
         int last_error_ = 0;
     }; // basic_transport
 

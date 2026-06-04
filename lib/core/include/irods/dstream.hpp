@@ -25,7 +25,7 @@ namespace irods::experimental::io
     class basic_data_object_buf final
         : public std::basic_streambuf<CharT, Traits>
     {
-    public:
+      public:
         // clang-format off
         using char_type   = CharT;
         using traits_type = Traits;
@@ -36,7 +36,7 @@ namespace irods::experimental::io
 
         static_assert(std::is_same_v<char_type, char>, R"(character type must be "char")");
 
-    private:
+      private:
         using base_type = std::basic_streambuf<CharT, Traits>;
 
         // clang-format off
@@ -47,7 +47,7 @@ namespace irods::experimental::io
         inline static const     auto seek_error           = pos_type{off_type{-1}};
         // clang-format on
 
-    public:
+      public:
         basic_data_object_buf()
             : base_type{}
         {
@@ -236,7 +236,7 @@ namespace irods::experimental::io
             return transport_->last_error();
         }
 
-    protected:
+      protected:
         int_type underflow() override
         {
             prepare_for_input();
@@ -355,7 +355,7 @@ namespace irods::experimental::io
             return transport_->seekpos(_pos, std::ios_base::beg);
         }
 
-    private:
+      private:
         void prepare_for_input()
         {
             // Return if the pointers of "Get" area have already been set up.
@@ -462,7 +462,7 @@ namespace irods::experimental::io
     class basic_dstream final
         : public GeneralStream
     {
-    public:
+      public:
         // clang-format off
         using char_type   = typename GeneralStream::char_type;
         using traits_type = typename GeneralStream::traits_type;
@@ -691,7 +691,7 @@ namespace irods::experimental::io
             return buf_.last_error();
         }
 
-    private:
+      private:
         basic_data_object_buf<char_type, traits_type> buf_;
     }; // basic_dstream
 
