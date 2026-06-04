@@ -316,13 +316,13 @@ auto read_data_object(rodsEnv& env,
     }
 
     if (!in) {
-        std::cerr << "Error: Cannot open data object.\n";
+        std::cerr << "Error: Cannot open data object: " << in.last_error() << '\n';
         return 1;
     }
 
     if (const auto offset = vm["offset"].as<int_type>(); offset >= 0) {
         if (!in.seekg(offset)) {
-            std::cerr << "Error: Could not seek to offset.\n";
+            std::cerr << "Error: Could not seek to offset: " << in.last_error() << '\n';
             return 1;
         }
     }
@@ -383,13 +383,13 @@ auto write_data_object(rodsEnv& env, const po::variables_map& vm, io::client::de
     }
 
     if (!out) {
-        std::cerr << "Error: Cannot open data object.\n";
+        std::cerr << "Error: Cannot open data object: " << out.last_error() << '\n';
         return 1;
     }
 
     if (const auto offset = vm["offset"].as<int_type>(); offset >= 0) {
         if (!out.seekp(offset)) {
-            std::cerr << "Error: Could not seek to offset.\n";
+            std::cerr << "Error: Could not seek to offset: " << out.last_error() << '\n';
             return 1;
         }
     }
@@ -410,4 +410,3 @@ auto write_data_object(rodsEnv& env, const po::variables_map& vm, io::client::de
 
     return 0;
 }
-
