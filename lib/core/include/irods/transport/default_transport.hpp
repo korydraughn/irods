@@ -331,9 +331,7 @@ namespace irods::experimental::io::NAMESPACE_IMPL
                 return O_CREAT | O_RDWR | O_TRUNC;
             }
 
-            if ((ios_base::out | ios_base::in | ios_base::app) == m ||
-                     (ios_base::in | ios_base::app) == m)
-            {
+            if ((ios_base::out | ios_base::in | ios_base::app) == m || (ios_base::in | ios_base::app) == m) {
                 return O_CREAT | O_RDWR | O_APPEND;
             }
 

@@ -336,7 +336,8 @@ namespace irods::experimental::io
         // NOLINTNEXTLINE(google-default-arguments)
         pos_type seekoff(off_type _off,
                          std::ios_base::seekdir _dir,
-                         [[maybe_unused]] std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
+                         [[maybe_unused]] std::ios_base::openmode _which = std::ios_base::in |
+                                                                           std::ios_base::out) override
         {
             if (this->sync() != 0) {
                 return seek_error;
@@ -346,7 +347,9 @@ namespace irods::experimental::io
         }
 
         // NOLINTNEXTLINE(google-default-arguments)
-        pos_type seekpos(pos_type _pos, [[maybe_unused]] std::ios_base::openmode _which = std::ios_base::in | std::ios_base::out) override
+        pos_type seekpos(pos_type _pos,
+                         [[maybe_unused]] std::ios_base::openmode _which = std::ios_base::in |
+                                                                           std::ios_base::out) override
         {
             if (this->sync() != 0) {
                 return seek_error;
