@@ -361,8 +361,8 @@ auto main(int _argc, char* _argv[]) -> int
 
             remove_leftover_agent_info_files_for_ips();
             launch_agent_factory(__func__, write_to_stdout, enable_test_mode);
-            migrate_and_launch_delay_server(write_to_stdout, enable_test_mode);
-            apply_access_time_updates();
+            //migrate_and_launch_delay_server(write_to_stdout, enable_test_mode);
+            //apply_access_time_updates();
             evict_expired_dns_cache_entries();
             evict_expired_hostname_cache_entries();
 
