@@ -393,6 +393,7 @@ irods::error ssl_socket_write(
     if (!_buffer || !_ssl) {
         return ERROR(SYS_INVALID_INPUT_PARAM, "Buffer or ssl pointer are null.");
     }
+    rodsLog(LOG_NOTICE, "%s: SSL* pointers = [ssl: %p]", __func__, (void*) _ssl);
 
     // local variables for write
     int   len_to_write = _length;
@@ -590,14 +591,20 @@ irods::error ssl_client_start(irods::plugin_context& _ctx,
     // in the property map
     irods::buffer_crypt::array_t key;
     if (const auto err = _ctx.prop_map().get<irods::buffer_crypt::array_t>(SHARED_KEY, key); !err.ok()) {
+        rodsLog(LOG_NOTICE, "%s: SHARED_KEY does not exist. Generating key.", __func__);
         // if no key exists then ship a new key and set the property
         if (const auto ret = irods::buffer_crypt::generate_key(key, _env->rodsEncryptionKeySize); !ret.ok()) {
             irods::log(PASS(ret));
         }
+        const auto hex_secret = fmt::format("{:02X}", fmt::join(key, ":"));
+        rodsLog(LOG_NOTICE, "%s: Generated SHARED SECRET (HEX) = [%s]", __func__, hex_secret.c_str());
 
         if (const auto ret = _ctx.prop_map().set<irods::buffer_crypt::array_t>(SHARED_KEY, key); !ret.ok()) {
             irods::log(PASS(ret));
         }
+    }
+    else {
+        rodsLog(LOG_NOTICE, "%s: SHARED_KEY exists. skipping generation of key.", __func__);
     }
 
     if (!_ctx.prop_map().has_entry(SHARED_KEY)) {
@@ -623,6 +630,7 @@ irods::error ssl_client_start(irods::plugin_context& _ctx,
     }
 
     // use a message header to contain the encryption environment
+    rodsLog(LOG_NOTICE, "%s: writing msg header for encryption env - msg_header = [%i]", __func__, msg_header.msgLen);
     if (const auto err = writeMsgHeader(ssl_obj, &msg_header); !err.ok()) {
         return PASSMSG("writeMsgHeader failed.", err);
     }
@@ -632,6 +640,8 @@ irods::error ssl_client_start(irods::plugin_context& _ctx,
     key_bbuf.len = key.size();
     key_bbuf.buf = &key[0];
     char msg_type[] = { "SHARED_SECRET" };
+    const auto hex_secret = fmt::format("{:02X}", fmt::join(key, ":"));
+    rodsLog(LOG_NOTICE, "%s: sending SHARED SECRET (HEX) = [%s]", __func__, hex_secret.c_str());
     if (const auto err = sendRodsMsg(ssl_obj, msg_type, &key_bbuf, 0, 0, 0, XML_PROT); !err.ok()) {
         return PASSMSG("writeMsgHeader failed.", err);
     }
@@ -701,6 +711,7 @@ irods::error ssl_agent_start(irods::plugin_context& _ctx)
         return ERROR(SSL_HANDSHAKE_ERROR, err_str.c_str());
     }
 
+    rodsLog(LOG_NOTICE, "%s: SSL* pointers = [ssl: %p], [ssl_ctx: %p]", __func__, (void*) ssl, (void*) ctx);
     ssl_obj->ssl( ssl );
     ssl_obj->ssl_ctx( ctx );
 
@@ -724,11 +735,15 @@ irods::error ssl_agent_start(irods::plugin_context& _ctx)
     ssl_obj->num_hash_rounds( msg_header.bsLen );
     ssl_obj->encryption_algorithm( msg_header.type );
 
+    rodsLog(LOG_NOTICE, "%s: key size=[%i], salt size=[%i], hash rounds=[%i], algo=[%s]", __func__,
+            ssl_obj->key_size(), ssl_obj->salt_size(), ssl_obj->num_hash_rounds(), ssl_obj->encryption_algorithm().c_str());
+
     // wait for a message header containing a shared secret
     std::memset(&msg_header, 0, sizeof(msg_header));
     if (const auto err = readMsgHeader(ssl_obj, &msg_header, &tv); !err.ok()) {
         return PASSMSG("Read message header failed.", err);
     }
+    rodsLog(LOG_NOTICE, "%s: read msg header - body/msgLen = [%i]", __func__, msg_header.msgLen);
 
     // call interface to read message body
     bytesBuf_t msg_buf{};
@@ -751,6 +766,8 @@ irods::error ssl_agent_start(irods::plugin_context& _ctx)
     unsigned char* secret_ptr = static_cast< unsigned char* >( msg_buf.buf );
     irods::buffer_crypt::array_t key;
     key.assign( secret_ptr, &secret_ptr[ msg_buf.len ] );
+    const auto hex_secret = fmt::format("{:02X}", fmt::join(key, ":"));
+    rodsLog(LOG_NOTICE, "%s: SHARED SECRET (HEX) = [%s]", __func__, hex_secret.c_str());
 
     ssl_obj->shared_secret( key );
     if (const auto err = _ctx.prop_map().set<irods::buffer_crypt::array_t>(SHARED_KEY, key); !err.ok()) {
