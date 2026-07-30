@@ -253,6 +253,7 @@ static int ssl_post_connection_check(
     }
 
     X509* cert = SSL_get1_peer_certificate(ssl);
+    rodsLog(LOG_NOTICE, "%s: certificate=[%p]", __func__, (void*) cert);
     if ( cert == NULL ) {
         rodsLog(LOG_NOTICE, "%s: No certificate presented.", __func__);
         /* no certificate presented */
@@ -290,8 +291,7 @@ static int ssl_post_connection_check(
     if ( !match &&
             ( X509_NAME_get_text_by_NID( X509_get_subject_name( cert ),
                                          NID_commonName, name_text, sizeof( name_text ) ) != -1 ) ) {
-        rodsLog(LOG_NOTICE, "%s: Checking common name. name text pointer=[%p], name text=[%s]", __func__,
-                (void*) name_text, name_text);
+        rodsLog(LOG_NOTICE, "%s: Checking common name. name text=[%s]", __func__, name_text);
         if ( !strcasecmp( name_text, peer ) ) {
             rodsLog(LOG_NOTICE, "%s: Matched common name.", __func__);
             match = true;
@@ -308,9 +308,11 @@ static int ssl_post_connection_check(
     X509_free( cert );
 
     if ( match ) {
+        rodsLog(LOG_NOTICE, "%s: Returning 1.", __func__);
         return 1;
     }
     else {
+        rodsLog(LOG_NOTICE, "%s: Returning 0.", __func__);
         return 0;
     }
 
