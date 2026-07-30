@@ -230,6 +230,9 @@ static int ssl_post_connection_check(
     SSL *ssl,
     const char *peer ) {
 
+    rodsLog(LOG_NOTICE, "%s: ssl pointer=[%p], peer pointer=[%p], peer=[%s]", __func__,
+            (void*) ssl, (void*) peer, (peer ? peer : "<null>"));
+
     rodsEnv env;
     int status = getRodsEnv( &env );
     if ( status < 0 ) {
@@ -242,6 +245,7 @@ static int ssl_post_connection_check(
     }
 
     char *verify_server = env.irodsSSLVerifyServer;
+    rodsLog(LOG_NOTICE, "%s: certificate verification=[%s]", __func__, (verify_server ? verify_server : "<null>"));
     if ( strlen( verify_server ) > 0 && strcmp( verify_server, "hostname" ) ) {
         /* not being asked to verify that the peer hostname
            is in the certificate. */
@@ -250,16 +254,19 @@ static int ssl_post_connection_check(
 
     X509* cert = SSL_get1_peer_certificate(ssl);
     if ( cert == NULL ) {
+        rodsLog(LOG_NOTICE, "%s: No certificate presented.", __func__);
         /* no certificate presented */
         return 0;
     }
 
     if ( peer == NULL ) {
+        rodsLog(LOG_NOTICE, "%s: No hostname/peer passed for verification.", __func__);
         /* no hostname passed to verify */
         X509_free( cert );
         return 0;
     }
 
+    rodsLog(LOG_NOTICE, "%s: Checking if peer name matches any of the subjectAltNames listed in the certificate.", __func__);
     /* check if the peer name matches any of the subjectAltNames
        listed in the certificate */
     bool match = false;
@@ -269,6 +276,7 @@ static int ssl_post_connection_check(
         auto* name = sk_GENERAL_NAME_value( names, i );
         if ( name && name->type == GEN_DNS ) {
             if ( !strcasecmp( reinterpret_cast<const char*>(ASN1_STRING_get0_data( name->d.dNSName )), peer ) ) {
+                rodsLog(LOG_NOTICE, "%s: Found a match.", __func__);
                 match = true;
                 break;
             }
@@ -276,17 +284,22 @@ static int ssl_post_connection_check(
     }
     sk_GENERAL_NAME_free( names );
 
+    rodsLog(LOG_NOTICE, "%s: Determining if common name should be checked.", __func__);
     /* if no match above, check the common name in the certificate */
     char name_text[256];
     if ( !match &&
             ( X509_NAME_get_text_by_NID( X509_get_subject_name( cert ),
                                          NID_commonName, name_text, sizeof( name_text ) ) != -1 ) ) {
+        rodsLog(LOG_NOTICE, "%s: Checking common name. name text pointer=[%p], name text=[%s]", __func__,
+                (void*) name_text, name_text);
         if ( !strcasecmp( name_text, peer ) ) {
+            rodsLog(LOG_NOTICE, "%s: Matched common name.", __func__);
             match = true;
         }
         else if ( name_text[0] == '*' ) { /* wildcard domain */
             const char *tmp = strchr( peer, '.' );
             if ( tmp && !strcasecmp( tmp, name_text + 1 ) ) {
+                rodsLog(LOG_NOTICE, "%s: Matched wildcard domain name.", __func__);
                 match = true;
             }
         }
