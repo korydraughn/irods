@@ -17,6 +17,7 @@ const static std::map<const std::string, const int> irods_error_name_map = irods
 #include "irods/private/re/reVariableMap.gen.hpp"
 #include "irods/private/re/reVariableMap.hpp"
 #include "irods/private/re/debug.hpp"
+#include "irods/private/re/typing.hpp"
 #include "irods/irods_re_plugin.hpp"
 
 //    #include "irods/irods_ms_plugin.hpp"
@@ -716,10 +717,10 @@ Res* evaluateFunction3( Node *appRes, int applyAll, Node *node, Env *env, ruleEx
     }
     /* try to type all input parameters */
     coercionType = node->subtrees[1]->coercionType;
-    if ( coercionType != NULL ) {
+    if (coercionType != nullptr) {
         /*for(i=0;i<n;i++) {
-             if((ioParam[i] == 'i' || ioParam[i] == 'p') && nodeArgs[i]->exprType != NULL) {
-                if(unifyWith(args[i]->exprType, nodeArgs[i]->exprType, env->current, r) == NULL) {
+             if((ioParam[i] == 'i' || ioParam[i] == 'p') && nodeArgs[i]->exprType != nullptr) {
+                if(unifyWith(args[i]->exprType, nodeArgs[i]->exprType, env->current, r) == nullptr) {
                     snprintf(buf, ERR_MSG_LEN, "error: dynamically typed parameter does not have expected type.");
                                         generateErrMsg(buf, nodeArgs[i]->expr, nodeArgs[i]->base, buf2);
                                         addRErrorMsg(errmsg, TYPE_ERROR, buf2);
@@ -729,28 +730,30 @@ Res* evaluateFunction3( Node *appRes, int applyAll, Node *node, Env *env, ruleEx
             }
         }*/
 
-
-        ExprType *argType = newTupleRes( n, &args[0], r )->exprType;
-        if ( typeFuncParam( node->subtrees[1], argType, coercionType, env->current, localTypingConstraints, errmsg, newRegion ) != 0 ) {
-            res = newErrorRes( r, RE_TYPE_ERROR );
+        ExprType* argType = newTupleRes(n, args.data(), r)->exprType;
+        if (typeFuncParam(
+                node->subtrees[1], argType, coercionType, env->current, localTypingConstraints, errmsg, newRegion) != 0)
+        {
+            res = newErrorRes(r, RE_TYPE_ERROR);
             RETURN;
         }
         /* solve local typing constraints */
         /* typingConstraintsToString(localTypingConstraints, buf, 1024);
         printf("%s\n", buf); */
-        Node *errnode;
-        if ( !solveConstraints( localTypingConstraints, env->current, errmsg, &errnode, r ) ) {
-            res = newErrorRes( r, RE_DYNAMIC_TYPE_ERROR );
+        Node *errnode = nullptr;
+        if (solveConstraints(localTypingConstraints, env->current, errmsg, &errnode, r) == 0U) {
+            res = newErrorRes(r, RE_DYNAMIC_TYPE_ERROR);
             RETURN;
         }
         /*printVarTypeEnvToStdOut(localTVarEnv); */
         /* do the input value conversion */
-        ExprType **coercionTypes = coercionType->subtrees;
-        for ( i = 0; i < n; i++ ) {
-            if ( ( ( ioParam[i] & IO_TYPE_INPUT ) == IO_TYPE_INPUT ) && ( nodeArgs[i]->option & OPTION_COERCE ) != 0 ) {
-                argsProcessed[i] = processCoercion( nodeArgs[i], args[i], coercionTypes[i], env->current, errmsg, newRegion );
-                if ( getNodeType( argsProcessed[i] ) == N_ERROR ) {
-                    res = ( Res * )argsProcessed[i];
+        ExprType* const* coercionTypes = coercionType->subtrees;
+        for (i = 0; i < n; i++) {
+            if (((ioParam[i] & IO_TYPE_INPUT) == IO_TYPE_INPUT) && (nodeArgs[i]->option & OPTION_COERCE) != 0) {
+                argsProcessed[i] =
+                    processCoercion(nodeArgs[i], args[i], coercionTypes[i], env->current, errmsg, newRegion);
+                if (getNodeType( argsProcessed[i]) == N_ERROR) {
+                    res = static_cast<Res*>(argsProcessed[i]);
                     RETURN;
                 }
             }
@@ -760,75 +763,75 @@ Res* evaluateFunction3( Node *appRes, int applyAll, Node *node, Env *env, ruleEx
         }
     }
     else {
-        memcpy( &argsProcessed[0], &args[0], sizeof( Res * ) * n );
+        memcpy(argsProcessed.data(), args.data(), sizeof(Res*) * n);
     }
 
-
-    if ( GlobalREAuditFlag > 0 ) {
+    if (GlobalREAuditFlag > 0) {
         RuleEngineEventParam param;
         param.actionName = fn;
         param.ruleIndex = -1;
-        reDebug( EXEC_ACTION_BEGIN, -4, &param, node, env, rei );
+        reDebug(EXEC_ACTION_BEGIN, -4, &param, node, env, rei);
     }
 
-    if ( fd != NULL ) {
-      if(discardResult)
-        switch ( getNodeType( fd ) ) {
-        case N_FD_DECONSTRUCTOR:
-            res = newUnspecifiedRes( r );
-            break;
-        case N_FD_CONSTRUCTOR:
-            res = newUnspecifiedRes( r );
-            break;
-        case N_FD_FUNCTION:
-            res = (Res *) FD_SMSI_FUNC_PTR( fd )( &argsProcessed[0], n, node, rei, reiSaveFlag,  env, errmsg, newRegion );
-            if(getNodeType(res) != N_ERROR) {
-                switch ( TYPE( res ) ) {
-                    case T_BREAK:
-                    case T_SUCCESS:
-                        break;
-                    default:
-                        res = newUnspecifiedRes( r );
-                        break;
-                }
+    if (fd != nullptr) {
+        if (discardResult != 0) {
+            switch (getNodeType(fd)) {
+                case N_FD_DECONSTRUCTOR:
+                case N_FD_CONSTRUCTOR:
+                    res = newUnspecifiedRes(r);
+                    break;
+                case N_FD_FUNCTION:
+                    res =
+                        FD_SMSI_FUNC_PTR(fd)(argsProcessed.data(), n, node, rei, reiSaveFlag,  env, errmsg, newRegion);
+                    if(getNodeType(res) != N_ERROR) {
+                        switch (TYPE(res)) {
+                            case T_BREAK:
+                            case T_SUCCESS:
+                                break;
+                            default:
+                                res = newUnspecifiedRes(r);
+                                break;
+                        }
+                    }
+                    break;
+                case N_FD_EXTERNAL:
+                case N_FD_RULE_INDEX_LIST:
+                    res = execAction3(
+                        fn, argsProcessed.data(), n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion);
+                    break;
+                default:
+                    res = newErrorRes(r, RE_UNSUPPORTED_AST_NODE_TYPE);
+                    generateAndAddErrMsg(
+                        "unsupported function descriptor type", node, RE_UNSUPPORTED_AST_NODE_TYPE, errmsg);
+                    RETURN;
             }
-            break;
-        case N_FD_EXTERNAL:
-            res = execAction3( fn, &argsProcessed[0], n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion );
-            break;
-        case N_FD_RULE_INDEX_LIST:
-            res = execAction3( fn, &argsProcessed[0], n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion );
-            break;
-        default:
-            res = newErrorRes( r, RE_UNSUPPORTED_AST_NODE_TYPE );
-            generateAndAddErrMsg( "unsupported function descriptor type", node, RE_UNSUPPORTED_AST_NODE_TYPE, errmsg );
-            RETURN;
         }
-      else
-        switch ( getNodeType( fd ) ) {
-        case N_FD_DECONSTRUCTOR:
-            res = deconstruct( &argsProcessed[0], FD_PROJ( fd ) );
-            break;
-        case N_FD_CONSTRUCTOR:
-            res = construct( fn, &argsProcessed[0], n, instantiate( node->exprType, env->current, 1, r ), r );
-            break;
-        case N_FD_FUNCTION:
-            res = ( Res * ) FD_SMSI_FUNC_PTR( fd )( &argsProcessed[0], n, node, rei, reiSaveFlag,  env, errmsg, newRegion );
-            break;
-        case N_FD_EXTERNAL:
-            res = execAction3( fn, &argsProcessed[0], n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion );
-            break;
-        case N_FD_RULE_INDEX_LIST:
-            res = execAction3( fn, &argsProcessed[0], n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion );
-            break;
-        default:
-            res = newErrorRes( r, RE_UNSUPPORTED_AST_NODE_TYPE );
-            generateAndAddErrMsg( "unsupported function descriptor type", node, RE_UNSUPPORTED_AST_NODE_TYPE, errmsg );
-            RETURN;
+        else {
+            switch (getNodeType(fd)) {
+                case N_FD_DECONSTRUCTOR:
+                    res = deconstruct(argsProcessed.data(), FD_PROJ(fd));
+                    break;
+                case N_FD_CONSTRUCTOR:
+                    res = construct(fn, argsProcessed.data(), n, instantiate(node->exprType, env->current, 1, r), r);
+                    break;
+                case N_FD_FUNCTION:
+                    res = FD_SMSI_FUNC_PTR(fd)(argsProcessed.data(), n, node, rei, reiSaveFlag, env, errmsg, newRegion);
+                    break;
+                case N_FD_EXTERNAL:
+                case N_FD_RULE_INDEX_LIST:
+                    res = execAction3(
+                        fn, argsProcessed.data(), n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion);
+                    break;
+                default:
+                    res = newErrorRes(r, RE_UNSUPPORTED_AST_NODE_TYPE);
+                    generateAndAddErrMsg(
+                        "unsupported function descriptor type", node, RE_UNSUPPORTED_AST_NODE_TYPE, errmsg);
+                    RETURN;
+                }
         }
     }
     else {
-        res = execAction3( fn, &argsProcessed[0], n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion );
+        res = execAction3(fn, argsProcessed.data(), n, applyAll, node, nEnv, rei, reiSaveFlag, errmsg, newRegion);
     }
 
     if ( GlobalREAuditFlag > 0 ) {
