@@ -4290,3 +4290,171 @@ class Test_Logical_Quotas(
                     "0",
                 ]
             )
+
+
+    def test_logical_quotas_do_not_overcount_collections_with_like_wildcards__issue_9050(self):
+        file_name = "test_logical_quota_like_wildcards"
+        file_path = os.path.join(self.quota_user.local_session_dir, file_name)
+
+        # The failure that this test guards against is as follows:
+        # With a quota set on .../%potato, logical quotas will count data objects
+        # whose collection path matches .../%potato/%
+        # This means a data object like .../badpotato/obj will not be counted, but
+        # .../badpotato/inner/obj will be, since obj's enclosing collection name
+        # matches the pattern. (.../badpotato/inner matches .../%potato/%)
+        subcoll_path = f"{self.quota_user.session_collection}/%potato"
+        other_subcoll_path = f"{self.quota_user.session_collection}/_tomato"
+        uncounted_subcoll_path = f"{self.quota_user.session_collection}/badpotato"
+        other_uncounted_subcoll_path = f"{self.quota_user.session_collection}/btomato"
+
+        deep_subcoll = f"inner"
+
+        file_size = 4096
+        max_bytes = 10000
+        max_objects = 10000
+        lib.make_file(
+            file_path,
+            file_size,
+            contents="arbitrary",
+        )
+        try:
+            self.quota_user.assert_icommand(["imkdir", subcoll_path])
+            self.quota_user.assert_icommand(["imkdir", other_subcoll_path])
+            self.quota_user.assert_icommand(["imkdir", uncounted_subcoll_path])
+            self.quota_user.assert_icommand(["imkdir", other_uncounted_subcoll_path])
+
+            self.quota_user.assert_icommand(["imkdir", f"{other_uncounted_subcoll_path}/{deep_subcoll}"])
+            self.quota_user.assert_icommand(["imkdir", f"{uncounted_subcoll_path}/{deep_subcoll}"])
+
+            self.admin.assert_icommand(
+                [
+                    "iadmin",
+                    "set_logical_quota",
+                    subcoll_path,
+                    str(max_bytes),
+                    str(max_objects),
+                ]
+            )
+            _, out, _ = self.admin.assert_icommand(
+                ["iadmin", "list_logical_quotas"], "STDOUT_SINGLELINE", subcoll_path
+            )
+
+            self.assertTrue(
+                (
+                    self.llq_output_template
+                    % (
+                        subcoll_path,
+                        str(max_bytes),
+                        str(max_objects),
+                        str(-max_bytes),
+                        str(-max_objects),
+                    )
+                )
+                in out
+            )
+
+            self.admin.assert_icommand(
+                [
+                    "iadmin",
+                    "set_logical_quota",
+                    other_subcoll_path,
+                    str(max_bytes),
+                    str(max_objects),
+                ]
+            )
+            _, out, _ = self.admin.assert_icommand(
+                ["iadmin", "list_logical_quotas"], "STDOUT_SINGLELINE", subcoll_path
+            )
+
+            self.assertTrue(
+                (
+                    self.llq_output_template
+                    % (
+                        other_subcoll_path,
+                        str(max_bytes),
+                        str(max_objects),
+                        str(-max_bytes),
+                        str(-max_objects),
+                    )
+                )
+                in out
+            )
+
+            self.quota_user.assert_icommand(
+                [
+                    "iput",
+                    file_path,
+                    f"{uncounted_subcoll_path}/{deep_subcoll}/{file_name}",
+                ]
+            )
+
+            self.admin.assert_icommand(["iadmin", "calculate_logical_usage"])
+
+            _, out, _ = self.admin.assert_icommand(
+                ["iadmin", "list_logical_quotas"], "STDOUT_SINGLELINE", subcoll_path
+            )
+
+            # Should remain unchanged.
+            self.assertTrue(
+                (
+                    self.llq_output_template
+                    % (
+                        subcoll_path,
+                        str(max_bytes),
+                        str(max_objects),
+                        str(-max_bytes),
+                        str(-max_objects),
+                    )
+                )
+                in out
+            )
+
+            self.quota_user.assert_icommand(
+                [
+                    "iput",
+                    file_path,
+                    f"{other_uncounted_subcoll_path}/{deep_subcoll}/{file_name}",
+                ]
+            )
+
+            self.admin.assert_icommand(["iadmin", "calculate_logical_usage"])
+
+            _, out, _ = self.admin.assert_icommand(
+                ["iadmin", "list_logical_quotas"], "STDOUT_SINGLELINE", other_subcoll_path
+            )
+
+            # Should remain unchanged.
+            self.assertTrue(
+                (
+                    self.llq_output_template
+                    % (
+                        other_subcoll_path,
+                        str(max_bytes),
+                        str(max_objects),
+                        str(-max_bytes),
+                        str(-max_objects),
+                    )
+                )
+                in out
+            )
+
+        finally:
+            self.admin.run_icommand(
+                [
+                    "iadmin",
+                    "set_logical_quota",
+                    subcoll_path,
+                    "0",
+                    "0",
+                ]
+            )
+
+            self.admin.run_icommand(
+                [
+                    "iadmin",
+                    "set_logical_quota",
+                    other_subcoll_path,
+                    "0",
+                    "0",
+                ]
+            )

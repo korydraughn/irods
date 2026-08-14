@@ -16644,7 +16644,9 @@ irods::error db_calc_logical_usage_and_quota_op(irods::plugin_context& _ctx, [[m
                    "R_COLL_MAIN RCM1, "
                    "R_COLL_MAIN RCM2 "
               "WHERE R_DATA_MAIN.coll_id = RCM2.coll_id "
-                "AND (RCM2.coll_name LIKE CONCAT(RCM1.coll_name, ?, '%') "
+                // Escape all LIKE wildcards from the coll name by replacing them out.
+                // MySQL only: backslashes are escape characters by default, so they need to be doubled.
+                "AND (RCM2.coll_name LIKE CONCAT(REPLACE(REPLACE(REPLACE(RCM1.coll_name, '\\\\', '\\\\\\\\'), '%', '\\\\%'), '_', '\\\\_'), ?, '%') ESCAPE '\\\\' "
                      "OR RCM2.coll_name = RCM1.coll_name)) ranked_objs "
            // Only count one data object that is top-ranked.
            "WHERE ranked_objs.replica_rank = 1 "
@@ -16686,7 +16688,7 @@ irods::error db_calc_logical_usage_and_quota_op(irods::plugin_context& _ctx, [[m
                    "R_COLL_MAIN RCM2 "
               "WHERE R_DATA_MAIN.coll_id = RCM2.coll_id "
                 "AND RCM1.coll_id = R_LOGICAL_QUOTA_MAIN.coll_id "
-                "AND (RCM2.coll_name LIKE (RCM1.coll_name || ? || '%') "
+                "AND (RCM2.coll_name LIKE (REPLACE(REPLACE(REPLACE(RCM1.coll_name, '\\', '\\\\'), '%', '\\%'), '_', '\\_') || ? || '%') ESCAPE '\\' "
                      "OR RCM2.coll_name = RCM1.coll_name)) AS ranked_objs "
            "WHERE ranked_objs.replica_rank = 1)",
 #endif
