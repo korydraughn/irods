@@ -183,8 +183,8 @@ class Test_Python_Rule_Engine_Plugin(session.make_sessions_mixin([('otherrods', 
     @unittest.skipUnless(plugin_name == 'irods_rule_engine_plugin-python', 'only applicable for python REP')
     def test_all_peps_fire_as_expected_when_irods_rule_language_plugin_is_also_enabled__issue_9072(self):
         # Enable the NREP. While the NREP isn't used, its presence is required to prove the PREP operates
-        # as intended. It has been observed that the iRODS 5 server (starting with 5.0.0) introduced a
-        # regression, resulting in the except and finally PEPs not firing.
+        # as intended. It has been observed that the iRODS 5 server (from 5.0.0 to 5.0.2) had a regression,
+        # resulting in the except and finally PEPs not firing.
         with append_native_re_to_server_config():
             with temporary_core_file(plugin_name=PYTHON_RULE_ENGINE_PLUGIN_NAME) as core_py:
                 attr_n_pre = 'issue_9072_pre'
